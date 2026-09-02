@@ -23,8 +23,8 @@ export const registerSchema = z.object({
   organizationId: z.string().uuid('Invalid organization identifier').optional(),
   departmentId: z.string().uuid('Invalid department identifier').optional(),
   role: z
-    .nativeEnum(Role, {
-      errorMap: () => ({ message: 'Role must be TRAINEE, TRAINER, or ADMIN' }),
+    .enum([Role.TRAINEE, Role.TRAINER], {
+      errorMap: () => ({ message: 'Registration is only permitted for TRAINEE and TRAINER roles' }),
     })
     .default(Role.TRAINEE)
     .optional(),

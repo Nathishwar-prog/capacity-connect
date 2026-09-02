@@ -5,6 +5,8 @@ import {
   AuthResponse,
   AuthUser,
   ApiResponse,
+  OnboardingMeta,
+  TraineeOnboardingInput,
 } from '../types/auth.types';
 
 export const authApi = {
@@ -46,6 +48,22 @@ export const authApi = {
    */
   getMe: async (): Promise<AuthUser> => {
     const response = await apiClient.get<ApiResponse<AuthUser>>('/auth/me');
+    return response.data.data;
+  },
+
+  /**
+   * Fetch departments and skills for trainee profile setup
+   */
+  getOnboardingMeta: async (): Promise<OnboardingMeta> => {
+    const response = await apiClient.get<ApiResponse<OnboardingMeta>>('/auth/onboarding-meta');
+    return response.data.data;
+  },
+
+  /**
+   * Submit trainee onboarding profile setup
+   */
+  submitTraineeOnboarding: async (data: TraineeOnboardingInput): Promise<AuthUser> => {
+    const response = await apiClient.post<ApiResponse<AuthUser>>('/auth/onboarding', data);
     return response.data.data;
   },
 };

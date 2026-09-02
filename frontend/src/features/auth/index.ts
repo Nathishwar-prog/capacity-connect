@@ -7,3 +7,5 @@ export * from './hooks/useLogout';
 export * from './hooks/useCurrentUser';
 export * from './components/LoginForm';
 export * from './components/RegisterForm';
+export * from './components/TraineeOnboardingModal';
+export * from './hooks/useOnboarding';

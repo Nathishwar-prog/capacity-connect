@@ -74,3 +74,32 @@ export interface ApiErrorResponse {
   errors?: unknown;
   stack?: string;
 }
+
+export interface DepartmentMeta {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+}
+
+export interface SkillMeta {
+  id: string;
+  name: string;
+  code: string;
+  category: string | null;
+}
+
+export interface OnboardingMeta {
+  departments: DepartmentMeta[];
+  skills: SkillMeta[];
+}
+
+export interface TraineeOnboardingInput {
+  firstName?: string;
+  lastName?: string;
+  departmentId: string;
+  designation: string;
+  skills: string[];
+  interests: string[];
+  bio?: string;
+}

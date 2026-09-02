@@ -26,8 +26,8 @@ export const registerValidationSchema = z
       .toLowerCase()
       .trim(),
     phone: z.string().trim().optional(),
-    role: z.enum(['TRAINEE', 'TRAINER', 'ADMIN'], {
-      required_error: 'Please select a role',
+    role: z.enum(['TRAINEE', 'TRAINER'], {
+      required_error: 'Please select whether you are joining as a Trainee or Trainer',
     }),
     password: z
       .string({ required_error: 'Password is required' })

@@ -14,13 +14,17 @@ export const useCurrentUser = () => {
       setUser({
         id: user.id,
         organizationId: user.organizationId,
+        organizationName: user.organizationName,
         departmentId: user.departmentId,
+        departmentName: user.departmentName,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
         status: user.status,
         permissions: user.permissions,
+        traineeProfile: user.traineeProfile,
+        trainerProfile: user.trainerProfile,
       });
       return user;
     },

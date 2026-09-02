@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '../database/client';
-import { Role, UserStatus } from '@prisma/client';
+import { Role, UserStatus, SkillSource } from '@prisma/client';
 import { RegisterDto, AuthUserDto, AuthResponseDto } from '../dto/auth.dto';
 import { PasswordUtils } from '../auth/password.utils';
 import { TokenUtils, TokenPayload } from '../auth/token.utils';
@@ -406,6 +406,109 @@ export class AuthService {
 
     const permissions = permissionsMap[user.role] || [];
     return this.mapToAuthUser(user, permissions);
+  }
+
+  public async getOnboardingMeta(): Promise<{
+    departments: Array<{ id: string; name: string; code: string; description: string | null }>;
+    skills: Array<{ id: string; name: string; code: string; category: string | null }>;
+  }> {
+    const departments = await prisma.department.findMany({
+      select: { id: true, name: true, code: true, description: true },
+      orderBy: { name: 'asc' },
+    });
+    const skills = await prisma.skill.findMany({
+      select: { id: true, name: true, code: true, category: true },
+      orderBy: { name: 'asc' },
+    });
+    return { departments, skills };
+  }
+
+  public async submitTraineeOnboarding(
+    userId: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      departmentId?: string;
+      designation: string;
+      skills: string[];
+      interests: string[];
+      bio?: string;
+    },
+  ): Promise<AuthUserDto> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { traineeProfile: true },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Update User details if provided
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.firstName ? { firstName: data.firstName } : {}),
+        ...(data.lastName ? { lastName: data.lastName } : {}),
+        ...(data.departmentId ? { departmentId: data.departmentId } : {}),
+      },
+    });
+
+    // Upsert Trainee Profile with 100% completion
+    await prisma.traineeProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        designation: data.designation,
+        bio: data.bio || null,
+        interests: data.interests || [],
+        profileCompletion: 100,
+      },
+      update: {
+        designation: data.designation,
+        bio: data.bio || null,
+        interests: data.interests || [],
+        profileCompletion: 100,
+      },
+    });
+
+    // Connect user skills
+    if (data.skills && data.skills.length > 0) {
+      for (const skillItem of data.skills) {
+        let skill = await prisma.skill.findFirst({
+          where: {
+            OR: [{ id: skillItem }, { name: { equals: skillItem, mode: 'insensitive' } }],
+          },
+        });
+
+        if (!skill) {
+          skill = await prisma.skill.create({
+            data: {
+              name: skillItem,
+              code: `SKILL-${skillItem.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}`,
+              category: 'General',
+            },
+          });
+        }
+
+        const existingUserSkill = await prisma.userSkill.findFirst({
+          where: { userId, skillId: skill.id },
+        });
+
+        if (!existingUserSkill) {
+          await prisma.userSkill.create({
+            data: {
+              userId,
+              skillId: skill.id,
+              proficiencyLevel: 2,
+              source: SkillSource.PROFILE,
+            },
+          });
+        }
+      }
+    }
+
+    return this.getMe(userId);
   }
 }
 

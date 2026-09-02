@@ -46,5 +46,17 @@ router.get(
   asyncHandler(authController.getMe),
 );
 
+router.get(
+  '/onboarding-meta',
+  authenticate,
+  asyncHandler(authController.getOnboardingMeta),
+);
+
+router.post(
+  '/onboarding',
+  authenticate,
+  asyncHandler(authController.submitTraineeOnboarding),
+);
+
 export default router;
 export { router as authRouter };

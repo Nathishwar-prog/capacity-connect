@@ -30,10 +30,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
         <div className="flex items-center gap-2">
-          <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
-          <span className="text-sm">Checking authorization...</span>
+          <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+          <span className="text-xs font-semibold">Checking authorization...</span>
         </div>
       </div>
     );
@@ -51,19 +51,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!isRoleAllowed) {
       return (
         <div className="min-h-[70vh] flex items-center justify-center p-4">
-          <div className="max-w-md w-full p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+          <div className="max-w-md w-full p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold text-slate-100">Access Restricted</h2>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Your account role (<span className="text-indigo-400 font-semibold">{userRole}</span>)
-              does not have permission to view this section. Allowed roles:{' '}
-              <span className="text-slate-300 font-medium">{allowedRoles.join(', ')}</span>.
+            <h2 className="text-xl font-extrabold text-slate-900">Access Restricted</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Your account role (<span className="text-indigo-600 font-bold">{userRole}</span>) does
+              not have authorization to view this section. Allowed roles:{' '}
+              <span className="text-slate-800 font-bold">{allowedRoles.join(', ')}</span>.
             </p>
             <button
               onClick={() => router.push('/')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Return to Dashboard</span>
@@ -85,18 +85,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!isPermAllowed) {
       return (
         <div className="min-h-[70vh] flex items-center justify-center p-4">
-          <div className="max-w-md w-full p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+          <div className="max-w-md w-full p-8 rounded-3xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold text-slate-100">Permission Required</h2>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h2 className="text-xl font-extrabold text-slate-900">Permission Required</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
               You are missing required permissions ({requiredPermissions.join(', ')}) to access this
               feature.
             </p>
             <button
               onClick={() => router.push('/')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Return to Dashboard</span>

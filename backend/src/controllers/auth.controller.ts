@@ -103,6 +103,26 @@ export class AuthController {
       data: user,
     });
   };
+
+  public getOnboardingMeta = async (_req: Request, res: Response): Promise<Response> => {
+    const meta = await this.authService.getOnboardingMeta();
+    return ResponseHelper.success({
+      res,
+      message: 'Onboarding metadata retrieved successfully',
+      data: meta,
+    });
+  };
+
+  public submitTraineeOnboarding = async (req: Request, res: Response): Promise<Response> => {
+    const userId = req.user!.userId;
+    const updatedUser = await this.authService.submitTraineeOnboarding(userId, req.body);
+
+    return ResponseHelper.success({
+      res,
+      message: 'Trainee profile setup completed successfully',
+      data: updatedUser,
+    });
+  };
 }
 
 export default AuthController;

@@ -33,13 +33,17 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
         setUser({
           id: user.id,
           organizationId: user.organizationId,
+          organizationName: user.organizationName,
           departmentId: user.departmentId,
+          departmentName: user.departmentName,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
           status: user.status,
           permissions: user.permissions,
+          traineeProfile: user.traineeProfile,
+          trainerProfile: user.trainerProfile,
         });
 
         // Seed TanStack query cache
@@ -66,19 +70,19 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
   // Render smooth branded loading screen during initial session verification
   if (isInitializing) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-slate-100 p-4">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-900 p-4">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-lg shadow-slate-200/50 flex items-center justify-center text-indigo-600">
               <ShieldCheck className="w-8 h-8 animate-pulse" />
             </div>
-            <div className="absolute -bottom-1 -right-1 p-1 bg-slate-900 rounded-full border border-slate-800">
-              <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+            <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full border border-slate-200 shadow-sm">
+              <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
             </div>
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-slate-100">Capacity Connect</h3>
-            <p className="text-xs text-slate-400">Verifying secure session...</p>
+            <h3 className="text-base font-extrabold text-slate-900">Capacity Connect</h3>
+            <p className="text-xs font-medium text-slate-500">Verifying secure session...</p>
           </div>
         </div>
       </div>

@@ -23,13 +23,17 @@ export const useRegister = (options?: UseRegisterOptions) => {
         {
           id: data.user.id,
           organizationId: data.user.organizationId,
+          organizationName: data.user.organizationName,
           departmentId: data.user.departmentId,
+          departmentName: data.user.departmentName,
           email: data.user.email,
           firstName: data.user.firstName,
           lastName: data.user.lastName,
           role: data.user.role,
           status: data.user.status,
           permissions: data.user.permissions,
+          traineeProfile: data.user.traineeProfile,
+          trainerProfile: data.user.trainerProfile,
         },
         data.accessToken,
       );
