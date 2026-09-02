@@ -3,7 +3,7 @@ import { UserController } from '../controllers/user.controller';
 import { UserService } from '../services/user.service';
 import { UserRepository } from '../repositories/user.repository';
 import { validate } from '../validators/validate.middleware';
-import { authenticate, requireRole, requirePermission } from '../auth/auth.middleware';
+import { authenticate, requireRole } from '../auth/auth.middleware';
 import {
   createUserSchema,
   updateUserSchema,
@@ -13,47 +13,61 @@ import { asyncHandler } from '../errors/async.handler';
 
 const router = Router();
 
-// Instantiate dependencies manually to show Dependency Injection (DI) setup
 const userRepository = new UserRepository();
 const userService = new UserService(userRepository);
 const userController = new UserController(userService);
 
-// --- Public Endpoints ---
-router.post(
-  '/register',
-  validate({ body: createUserSchema }),
-  asyncHandler(userController.register),
-);
+// All user management routes require authentication
+router.use(authenticate);
 
-router.post('/login', asyncHandler(userController.login));
-
-router.post('/refresh', asyncHandler(userController.refresh));
-
-router.post('/logout', asyncHandler(userController.logout));
-
-// --- Protected Endpoints ---
-router.get('/me', authenticate, asyncHandler(userController.getProfile));
-
-router.patch(
-  '/me',
-  authenticate,
-  validate({ body: updateUserSchema }),
-  asyncHandler(userController.updateProfile),
-);
-
-// --- Admin / Management Endpoints ---
+// --- Admin Endpoints ---
 router.get(
   '/',
-  authenticate,
   requireRole(['ADMIN', 'SUPER_ADMIN']),
   asyncHandler(userController.getUserList),
 );
 
+router.post(
+  '/',
+  requireRole(['ADMIN', 'SUPER_ADMIN']),
+  validate({ body: createUserSchema }),
+  asyncHandler(userController.register),
+);
+
+// --- User Profile by ID ---
+router.get(
+  '/:id',
+  validate({ params: userIdParamSchema }),
+  asyncHandler(async (req, res) => {
+    const user = await userService.getUserById(req.params.id);
+    const { UserDtoMapper } = await import('../dto/user.dto');
+    const { ResponseHelper } = await import('../errors/response.helper');
+    return ResponseHelper.success({
+      res,
+      message: 'User retrieved successfully',
+      data: UserDtoMapper.toResponse(user),
+    });
+  }),
+);
+
+router.patch(
+  '/:id',
+  validate({ params: userIdParamSchema, body: updateUserSchema }),
+  asyncHandler(async (req, res) => {
+    const user = await userService.updateUser(req.params.id, req.body);
+    const { UserDtoMapper } = await import('../dto/user.dto');
+    const { ResponseHelper } = await import('../errors/response.helper');
+    return ResponseHelper.success({
+      res,
+      message: 'User updated successfully',
+      data: UserDtoMapper.toResponse(user),
+    });
+  }),
+);
+
 router.delete(
   '/:id',
-  authenticate,
   requireRole(['SUPER_ADMIN']),
-  requirePermission(['users:delete']),
   validate({ params: userIdParamSchema }),
   asyncHandler(userController.deleteUser),
 );
