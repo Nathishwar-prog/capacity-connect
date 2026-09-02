@@ -18,9 +18,14 @@ export class UserController {
 
   public login = async (req: Request, res: Response): Promise<Response> => {
     const { email, password } = req.body;
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] as string | undefined;
+
     const { accessToken, refreshToken, user } = await this.userService.authenticate(
       email,
       password,
+      ipAddress,
+      userAgent,
     );
 
     // Save refreshToken to HttpOnly Cookie
@@ -38,6 +43,8 @@ export class UserController {
   public refresh = async (req: Request, res: Response): Promise<Response> => {
     // Get refresh token from cookie or body
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] as string | undefined;
 
     const { TokenUtils } = await import('../auth/token.utils');
     if (!refreshToken) {
@@ -46,7 +53,7 @@ export class UserController {
     }
 
     const { accessToken, newRefreshToken } =
-      await this.userService.refreshAccessToken(refreshToken);
+      await this.userService.refreshAccessToken(refreshToken, ipAddress, userAgent);
     TokenUtils.setRefreshCookie(res, newRefreshToken);
 
     return ResponseHelper.success({

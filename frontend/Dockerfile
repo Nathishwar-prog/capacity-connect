@@ -1,24 +1,29 @@
-# Stage 1: Build
-FROM node:18-alpine AS builder
-
+# Stage 1: Install dependencies
+FROM node:18-alpine AS deps
 WORKDIR /app
-
 COPY package*.json ./
-
 RUN npm ci
 
+# Stage 2: Build Next.js application
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# Stage 2: Runtime (Nginx)
-FROM nginx:1.25-alpine AS runner
+# Stage 3: Production runner
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-# Add standard Nginx configuration to support client-side routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 3000
+ENV PORT 3000
 
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "start"]

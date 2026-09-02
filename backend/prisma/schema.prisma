@@ -1,49 +1,1143 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ==============================================================================
+// CAPACITY CONNECT — ENTERPRISE DATABASE SCHEMA (SOURCE OF TRUTH)
+// Digital Capacity Building and Learning Management Portal
+// ==============================================================================
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // Switch to "mongodb" if using MongoDB
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+
+// ==============================================================================
+// 1. ENUMS
+// ==============================================================================
 
 enum Role {
   SUPER_ADMIN
   ADMIN
-  MANAGER
-  USER
+  TRAINER
+  TRAINEE
 }
 
-model User {
-  id            String         @id @default(uuid()) // For MongoDB, use: @id @default(auto()) @map("_id") @db.ObjectId
-  email         String         @unique
-  password      String
-  firstName     String?
-  lastName      String?
-  role          Role           @default(USER)
-  isActive      Boolean        @default(true) // For MongoDB, use same type
-  permissions   String[]       // Array of permissions. Supported by PostgreSQL, for others mapped via Role rules
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  DEACTIVATED
+}
 
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum SkillSource {
+  PROFILE
+  ASSESSMENT
+  COURSE_COMPLETION
+  CERTIFICATE
+  TRAINER_EVALUATION
+  AI_ANALYSIS
+}
+
+enum CertificateStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum CourseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum CourseStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum LessonContentType {
+  VIDEO
+  PDF
+  ARTICLE
+  QUIZ
+  LINK
+  DOCUMENT
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+}
+
+enum ResourceType {
+  VIDEO
+  PDF
+  PRESENTATION
+  DOCUMENT
+  LINK
+  IMAGE
+}
+
+enum ResourceStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum AssessmentType {
+  MCQ
+  QUESTIONNAIRE
+  PRACTICAL
+  SURVEY
+}
+
+enum AssessmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+  ABANDONED
+}
+
+enum CompetencySource {
+  PROFILE
+  ASSESSMENT
+  COURSE_COMPLETION
+  CERTIFICATE
+  TRAINER_EVALUATION
+  AI_ANALYSIS
+}
+
+enum GapPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GapStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum RecommendationType {
+  COURSE
+  TRAINER
+  RESOURCE
+  LEARNING_PATH
+}
+
+enum RecommendationSource {
+  RULE_ENGINE
+  AI
+  ADMIN
+}
+
+enum RecommendationStatus {
+  ACTIVE
+  VIEWED
+  ACCEPTED
+  DISMISSED
+  EXPIRED
+}
+
+enum MatchSource {
+  RULE_ENGINE
+  AI
+  ADMIN
+}
+
+enum FeedbackStatus {
+  PENDING_MODERATION
+  PUBLISHED
+  HIDDEN
+  FLAGGED
+}
+
+enum AnnouncementType {
+  GENERAL
+  COURSE
+  ACHIEVEMENT
+  LEARNING_CONTENT
+  SYSTEM
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NotificationType {
+  SYSTEM
+  COURSE
+  ASSESSMENT
+  ENROLLMENT
+  ACHIEVEMENT
+  RECOMMENDATION
+  FEEDBACK
+  ANNOUNCEMENT
+}
+
+enum AchievementType {
+  COURSE_COMPLETION
+  ASSESSMENT_EXCELLENCE
+  SKILL_MASTERY
+  STREAK
+  BADGE
+}
+
+// ==============================================================================
+// 2. IDENTITY & ORGANIZATION
+// ==============================================================================
+
+model Organization {
+  id          String             @id @default(uuid())
+  name        String
+  code        String             @unique
+  description String?
+  logoUrl     String?
+  status      OrganizationStatus @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relationships
+  departments   Department[]
+  users         User[]
+  courses       Course[]
+  resources     Resource[]
+  announcements Announcement[]
+  auditLogs     AuditLog[]
+
+  @@map("organizations")
+}
+
+model Department {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  code           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("departments")
+}
+
+// ==============================================================================
+// 3. USER & AUTHENTICATION SESSIONS
+// ==============================================================================
+
+model User {
+  id             String     @id @default(uuid())
+  organizationId String
+  departmentId   String?
+  email          String     @unique
+  passwordHash   String
+  firstName      String
+  lastName       String?
+  phone          String?
+  avatarUrl      String?
+  role           Role       @default(TRAINEE)
+  status         UserStatus @default(PENDING)
+  emailVerified  Boolean    @default(false)
+  lastLoginAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+
+  // Organization & Profile Relationships
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  department     Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  traineeProfile TraineeProfile?
+  trainerProfile TrainerProfile?
+
+  // Auth & Audit
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  // Skills & Professional Experience
+  userSkills      UserSkill[]
+  qualifications  Qualification[]
+  workExperiences WorkExperience[]
+  certificates    Certificate[]
+
+  // Learning & Instruction
+  taughtCourses      Course[]            @relation("TrainerCourses")
+  enrollments        Enrollment[]
+  lessonProgress     LessonProgress[]
+  uploadedResources  Resource[]          @relation("ResourceUploader")
+  createdAssessments Assessment[]        @relation("TrainerAssessments")
+  assessmentAttempts AssessmentAttempt[]
+
+  // Competencies & Development
+  userCompetencies UserCompetency[]
+  skillGaps        SkillGap[]
+  recommendations  Recommendation[] @relation("UserRecommendations")
+  trainerRecsGiven Recommendation[] @relation("TrainerRecommendations")
+  traineeMatches   TrainerMatch[]   @relation("TraineeMatches")
+  trainerMatches   TrainerMatch[]   @relation("TrainerMatches")
+
+  // Social & Engagement
+  feedbackGiven        Feedback[]     @relation("FeedbackAuthor")
+  feedbackReceived     Feedback[]     @relation("TrainerFeedback")
+  createdAnnouncements Announcement[] @relation("AnnouncementAuthor")
+  notifications        Notification[]
+  achievements         Achievement[]
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([role])
+  @@index([status])
   @@map("users")
 }
 
-model RefreshToken {
-  id        String   @id @default(uuid()) // For MongoDB, use: @id @default(auto()) @map("_id") @db.ObjectId
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isRevoked Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+model RolePermissionMapping {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
 
+  role       AppRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission AppPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model AppRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermissionMapping[]
+
+  @@map("roles")
+}
+
+model AppPermission {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermissionMapping[]
+
+  @@map("permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  ipAddress String?
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String?
+  oldValues      Json?
+  newValues      Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ==============================================================================
+// 4. USER PROFILES
+// ==============================================================================
+
+model TraineeProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  designation       String?
+  bio               String?
+  interests         String[] @default([])
+  profileCompletion Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("trainee_profiles")
+}
+
+model TrainerProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  designation      String
+  organizationName String?
+  bio              String
+  yearsExperience  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expertise TrainerExpertise[]
+
+  @@map("trainer_profiles")
+}
+
+// ==============================================================================
+// 5. SKILLS, QUALIFICATIONS & CERTIFICATES
+// ==============================================================================
+
+model Skill {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  category    String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userSkills       UserSkill[]
+  trainerExpertise TrainerExpertise[]
+
+  @@index([category])
+  @@index([code])
+  @@map("skills")
+}
+
+model UserSkill {
+  id               String      @id @default(uuid())
+  userId           String
+  skillId          String
+  proficiencyLevel Int         @default(1)
+  yearsExperience  Int?
+  source           SkillSource @default(PROFILE)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
+  @@map("user_skills")
+}
+
+model TrainerExpertise {
+  id               String   @id @default(uuid())
+  trainerId        String
+  skillId          String
+  proficiencyLevel Int      @default(1)
+  yearsExperience  Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  trainer TrainerProfile @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  skill   Skill          @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@unique([trainerId, skillId])
+  @@index([trainerId])
+  @@index([skillId])
+  @@map("trainer_expertise")
+}
+
+model Qualification {
+  id           String    @id @default(uuid())
+  userId       String
+  degree       String
+  fieldOfStudy String
+  institution  String
+  startDate    DateTime?
+  endDate      DateTime?
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("qualifications")
+}
+
+model WorkExperience {
+  id          String    @id @default(uuid())
+  userId      String
+  companyName String
+  jobTitle    String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("work_experiences")
+}
+
+model Certificate {
+  id                  String            @id @default(uuid())
+  userId              String
+  title               String
+  issuingOrganization String
+  credentialId        String?
+  issueDate           DateTime
+  expiryDate          DateTime?
+  certificateUrl      String?
+  verificationStatus  CertificateStatus @default(PENDING)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  user          User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifications CertificateVerification[]
+
+  @@index([userId])
+  @@index([verificationStatus])
+  @@map("certificates")
+}
+
+model CertificateVerification {
+  id                 String    @id @default(uuid())
+  certificateId      String
+  verificationMethod String
+  provider           String?
+  verificationUrl    String?
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  metadata           Json?
+  createdAt          DateTime  @default(now())
+
+  certificate Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId])
+  @@map("certificate_verifications")
+}
+
+// ==============================================================================
+// 6. COURSES & LEARNING
+// ==============================================================================
+
+model Course {
+  id              String           @id @default(uuid())
+  organizationId  String
+  trainerId       String
+  title           String
+  slug            String           @unique
+  description     String
+  thumbnailUrl    String?
+  category        String
+  difficulty      CourseDifficulty @default(BEGINNER)
+  durationMinutes Int              @default(0)
+  status          CourseStatus     @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  trainer            User               @relation("TrainerCourses", fields: [trainerId], references: [id], onDelete: Restrict)
+  modules            CourseModule[]
+  enrollments        Enrollment[]
+  courseResources    CourseResource[]
+  assessments        Assessment[]
+  courseCompetencies CourseCompetency[]
+  recommendations    Recommendation[]
+  feedbacks          Feedback[]
+
+  // Self-referencing Many-to-Many Prerequisites
+  prerequisites   CoursePrerequisite[] @relation("CoursePrerequisites")
+  prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteForCourses")
+
+  @@index([organizationId])
+  @@index([trainerId])
+  @@index([status])
+  @@index([category])
+  @@index([slug])
+  @@map("courses")
+}
+
+model CoursePrerequisite {
+  courseId             String
+  prerequisiteCourseId String
+
+  course             Course @relation("CoursePrerequisites", fields: [courseId], references: [id], onDelete: Cascade)
+  prerequisiteCourse Course @relation("PrerequisiteForCourses", fields: [prerequisiteCourseId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, prerequisiteCourseId])
+  @@index([courseId])
+  @@index([prerequisiteCourseId])
+  @@map("course_prerequisites")
+}
+
+model CourseModule {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  description String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([courseId, orderIndex])
+  @@map("course_modules")
+}
+
+model Lesson {
+  id              String            @id @default(uuid())
+  moduleId        String
+  title           String
+  description     String?
+  contentType     LessonContentType @default(VIDEO)
+  content         String?
+  resourceUrl     String?
+  durationMinutes Int?
+  orderIndex      Int               @default(0)
+  isPreview       Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  module          CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessonProgress  LessonProgress[]
+  lessonResources LessonResource[]
+
+  @@index([moduleId, orderIndex])
+  @@map("lessons")
+}
+
+model Enrollment {
+  id                 String           @id @default(uuid())
+  userId             String
+  courseId           String
+  status             EnrollmentStatus @default(ENROLLED)
+  progressPercentage Float            @default(0)
+  enrolledAt         DateTime         @default(now())
+  startedAt          DateTime?
+  completedAt        DateTime?
+  lastAccessedAt     DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  lessonProgress LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id                 String    @id @default(uuid())
+  userId             String
+  lessonId           String
+  enrollmentId       String
+  completed          Boolean   @default(false)
+  progressPercentage Float     @default(0)
+  startedAt          DateTime?
+  completedAt        DateTime?
+  lastAccessedAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([enrollmentId])
+  @@map("lesson_progress")
+}
+
+// ==============================================================================
+// 7. LEARNING RESOURCES
+// ==============================================================================
+
+model Resource {
+  id             String         @id @default(uuid())
+  uploadedBy     String
+  organizationId String
+  title          String
+  description    String?
+  resourceType   ResourceType   @default(DOCUMENT)
+  storageKey     String
+  url            String?
+  fileName       String?
+  mimeType       String?
+  fileSize       BigInt?
+  thumbnailUrl   String?
+  status         ResourceStatus @default(DRAFT)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  uploader        User             @relation("ResourceUploader", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  courseResources CourseResource[]
+  lessonResources LessonResource[]
+  recommendations Recommendation[]
+
+  @@index([organizationId])
+  @@index([uploadedBy])
+  @@index([status])
+  @@index([resourceType])
+  @@map("resources")
+}
+
+model CourseResource {
+  courseId   String
+  resourceId String
+
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, resourceId])
+  @@index([courseId])
+  @@index([resourceId])
+  @@map("course_resources")
+}
+
+model LessonResource {
+  lessonId   String
+  resourceId String
+
+  lesson   Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([lessonId, resourceId])
+  @@index([lessonId])
+  @@index([resourceId])
+  @@map("lesson_resources")
+}
+
+// ==============================================================================
+// 8. ASSESSMENTS & ATTEMPTS
+// ==============================================================================
+
+model Assessment {
+  id              String           @id @default(uuid())
+  courseId        String?
+  trainerId       String
+  title           String
+  description     String?
+  subject         String
+  assessmentType  AssessmentType   @default(MCQ)
+  durationMinutes Int?
+  passingScore    Float            @default(60.0)
+  startAt         DateTime?
+  deadline        DateTime?
+  status          AssessmentStatus @default(DRAFT)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  course    Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  trainer   User                 @relation("TrainerAssessments", fields: [trainerId], references: [id], onDelete: Restrict)
+  questions AssessmentQuestion[]
+  attempts  AssessmentAttempt[]
+  feedbacks Feedback[]
+
+  @@index([courseId])
+  @@index([trainerId])
+  @@index([deadline])
+  @@index([status])
+  @@map("assessments")
+}
+
+model AssessmentQuestion {
+  id           String       @id @default(uuid())
+  assessmentId String
+  questionText String
+  questionType QuestionType @default(SINGLE_CHOICE)
+  marks        Float        @default(1.0)
+  orderIndex   Int          @default(0)
+  explanation  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  assessment Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  options    QuestionOption[]
+  answers    AssessmentAnswer[]
+
+  @@index([assessmentId, orderIndex])
+  @@map("assessment_questions")
+}
+
+model QuestionOption {
+  id         String   @id @default(uuid())
+  questionId String
+  optionText String
+  isCorrect  Boolean  @default(false)
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  question AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  AssessmentAnswer[]
+
+  @@index([questionId, orderIndex])
+  @@map("question_options")
+}
+
+model AssessmentAttempt {
+  id               String        @id @default(uuid())
+  assessmentId     String
+  userId           String
+  startedAt        DateTime      @default(now())
+  submittedAt      DateTime?
+  score            Float?
+  percentage       Float?
+  passed           Boolean?
+  timeTakenSeconds Int?
+  status           AttemptStatus @default(IN_PROGRESS)
+  createdAt        DateTime      @default(now())
+
+  assessment        Assessment                   @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  user              User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers           AssessmentAnswer[]
+  competencyResults AssessmentCompetencyResult[]
+
+  @@index([userId])
+  @@index([assessmentId])
+  @@index([status])
+  @@map("assessment_attempts")
+}
+
+model AssessmentAnswer {
+  id               String   @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String?
+  isCorrect        Boolean?
+  marksObtained    Float?
+  answeredAt       DateTime @default(now())
+
+  attempt        AssessmentAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption QuestionOption?    @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@index([attemptId])
+  @@index([questionId])
+  @@map("assessment_answers")
+}
+
+// ==============================================================================
+// 9. COMPETENCIES, LEVELS & SKILL GAPS
+// ==============================================================================
+
+model Competency {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  levels                      CompetencyLevel[]
+  courseCompetencies          CourseCompetency[]
+  userCompetencies            UserCompetency[]
+  assessmentCompetencyResults AssessmentCompetencyResult[]
+  skillGaps                   SkillGap[]
+  recommendations             Recommendation[]
+  trainerMatches              TrainerMatch[]
+
+  @@index([category])
+  @@index([code])
+  @@map("competencies")
+}
+
+model CompetencyLevel {
+  id           String  @id @default(uuid())
+  competencyId String
+  level        Int
+  name         String
+  description  String?
+
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([competencyId, level])
+  @@index([competencyId])
+  @@map("competency_levels")
+}
+
+model CourseCompetency {
+  id           String   @id @default(uuid())
+  courseId     String
+  competencyId String
+  targetLevel  Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@unique([courseId, competencyId])
+  @@index([courseId])
+  @@index([competencyId])
+  @@map("course_competencies")
+}
+
+model UserCompetency {
+  id              String           @id @default(uuid())
+  userId          String
+  competencyId    String
+  currentLevel    Int              @default(0)
+  confidenceScore Float?
+  lastAssessedAt  DateTime?
+  source          CompetencySource @default(PROFILE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, competencyId])
+  @@index([userId])
+  @@index([competencyId])
+  @@map("user_competencies")
+}
+
+model AssessmentCompetencyResult {
+  id            String   @id @default(uuid())
+  attemptId     String
+  competencyId  String
+  score         Float
+  levelAchieved Int
+  createdAt     DateTime @default(now())
+
+  attempt    AssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  competency Competency        @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@index([attemptId])
+  @@index([competencyId])
+  @@map("assessment_competency_results")
+}
+
+model SkillGap {
+  id            String      @id @default(uuid())
+  userId        String
+  competencyId  String
+  currentLevel  Int
+  requiredLevel Int
+  gapLevel      Int
+  priority      GapPriority @default(MEDIUM)
+  status        GapStatus   @default(OPEN)
+  calculatedAt  DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, competencyId])
+  @@index([userId])
+  @@index([competencyId])
+  @@index([priority])
+  @@index([status])
+  @@map("skill_gaps")
+}
+
+// ==============================================================================
+// 10. RECOMMENDATIONS & TRAINER MATCHING
+// ==============================================================================
+
+model Recommendation {
+  id                 String               @id @default(uuid())
+  userId             String
+  recommendationType RecommendationType
+  courseId           String?
+  trainerId          String?
+  resourceId         String?
+  competencyId       String?
+  score              Float?
+  reason             String?
+  source             RecommendationSource @default(RULE_ENGINE)
+  status             RecommendationStatus @default(ACTIVE)
+  metadata           Json?
+  createdAt          DateTime             @default(now())
+  expiresAt          DateTime?
+
+  user       User        @relation("UserRecommendations", fields: [userId], references: [id], onDelete: Cascade)
+  course     Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  trainer    User?       @relation("TrainerRecommendations", fields: [trainerId], references: [id], onDelete: SetNull)
+  resource   Resource?   @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  competency Competency? @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([recommendationType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("recommendations")
+}
+
+model TrainerMatch {
+  id             String      @id @default(uuid())
+  traineeId      String
+  trainerId      String
+  competencyId   String?
+  matchScore     Float
+  matchingSkills Json?
+  reason         String?
+  source         MatchSource @default(RULE_ENGINE)
+  createdAt      DateTime    @default(now())
+
+  trainee    User        @relation("TraineeMatches", fields: [traineeId], references: [id], onDelete: Cascade)
+  trainer    User        @relation("TrainerMatches", fields: [trainerId], references: [id], onDelete: Cascade)
+  competency Competency? @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+
+  @@index([traineeId])
+  @@index([trainerId])
+  @@index([matchScore])
+  @@map("trainer_matches")
+}
+
+// ==============================================================================
+// 11. FEEDBACK, ANNOUNCEMENTS, NOTIFICATIONS & ACHIEVEMENTS
+// ==============================================================================
+
+model Feedback {
+  id           String         @id @default(uuid())
+  userId       String
+  courseId     String?
+  trainerId    String?
+  assessmentId String?
+  rating       Int
+  comment      String?
+  status       FeedbackStatus @default(PUBLISHED)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user       User        @relation("FeedbackAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  course     Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  trainer    User?       @relation("TrainerFeedback", fields: [trainerId], references: [id], onDelete: SetNull)
+  assessment Assessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([trainerId])
+  @@index([assessmentId])
+  @@map("feedbacks")
+}
+
+model Announcement {
+  id             String             @id @default(uuid())
+  organizationId String
+  createdBy      String
+  title          String
+  content        String
+  type           AnnouncementType   @default(GENERAL)
+  status         AnnouncementStatus @default(DRAFT)
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User         @relation("AnnouncementAuthor", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String
+  title      String
+  message    String
+  type       NotificationType @default(SYSTEM)
+  entityType String?
+  entityId   String?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model Achievement {
+  id          String          @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  type        AchievementType @default(COURSE_COMPLETION)
+  metadata    Json?
+  awardedAt   DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("achievements")
 }

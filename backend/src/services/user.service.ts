@@ -1,8 +1,9 @@
-import { User } from '@prisma/client';
+import { User, UserStatus } from '@prisma/client';
 import { IUserRepository } from '../repositories/user.repository';
 import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
 import { PasswordUtils } from '../auth/password.utils';
 import { TokenUtils, TokenPayload } from '../auth/token.utils';
+import { permissionsMap } from '../permissions';
 import {
   BadRequestError,
   ConflictError,
@@ -50,22 +51,25 @@ export class UserService {
   public async authenticate(
     email: string,
     password: string,
+    ipAddress?: string,
+    userAgent?: string,
   ): Promise<{ accessToken: string; refreshToken: string; user: User }> {
     const user = await this.userRepository.findByEmail(email);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedError('Invalid login credentials provided');
+    if (!user || user.status !== UserStatus.APPROVED) {
+      throw new UnauthorizedError('Invalid login credentials or account not active');
     }
 
-    const passwordMatch = await PasswordUtils.compare(password, user.password);
+    const passwordMatch = await PasswordUtils.compare(password, user.passwordHash);
     if (!passwordMatch) {
       throw new UnauthorizedError('Invalid login credentials provided');
     }
 
+    const permissions = permissionsMap[user.role] || [];
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
       role: user.role,
-      permissions: user.permissions,
+      permissions,
     };
 
     const accessToken = TokenUtils.generateAccessToken(payload);
@@ -78,29 +82,32 @@ export class UserService {
     // Save refresh token to db (expiring in 7 days)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    await this.userRepository.saveRefreshToken(user.id, refreshToken, expiresAt);
+    await this.userRepository.saveRefreshToken(user.id, refreshToken, expiresAt, ipAddress, userAgent);
 
     return { accessToken, refreshToken, user };
   }
 
   public async refreshAccessToken(
     token: string,
+    ipAddress?: string,
+    userAgent?: string,
   ): Promise<{ accessToken: string; newRefreshToken: string }> {
     const storedToken = await this.userRepository.findRefreshToken(token);
-    if (!storedToken || storedToken.isRevoked || new Date() > storedToken.expiresAt) {
+    if (!storedToken || storedToken.revokedAt || new Date() > storedToken.expiresAt) {
       throw new UnauthorizedError('Refresh token has expired or been revoked');
     }
 
     const user = storedToken.user;
-    if (!user || !user.isActive) {
-      throw new UnauthorizedError('User account associated with this token is inactive');
+    if (!user || user.status !== UserStatus.APPROVED) {
+      throw new UnauthorizedError('User account associated with this token is inactive or not approved');
     }
 
+    const permissions = permissionsMap[user.role] || [];
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
       role: user.role,
-      permissions: user.permissions,
+      permissions,
     };
 
     const accessToken = TokenUtils.generateAccessToken(payload);
@@ -115,7 +122,7 @@ export class UserService {
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    await this.userRepository.saveRefreshToken(user.id, newRefreshToken, expiresAt);
+    await this.userRepository.saveRefreshToken(user.id, newRefreshToken, expiresAt, ipAddress, userAgent);
 
     return { accessToken, newRefreshToken };
   }

@@ -1,33 +1,44 @@
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 import { IUser } from '../models/user.model';
 
 export interface CreateUserDto {
+  organizationId: string;
+  departmentId?: string;
   email: string;
   password?: string;
-  firstName?: string;
+  firstName: string;
   lastName?: string;
+  phone?: string;
   role?: Role;
-  permissions?: string[];
+  status?: UserStatus;
 }
 
 export interface UpdateUserDto {
+  departmentId?: string;
   email?: string;
   password?: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  avatarUrl?: string;
   role?: Role;
-  permissions?: string[];
-  isActive?: boolean;
+  status?: UserStatus;
+  emailVerified?: boolean;
 }
 
 export interface UserResponseDto {
   id: string;
+  organizationId: string;
+  departmentId: string | null;
   email: string;
-  firstName: string | null;
+  firstName: string;
   lastName: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
   role: Role;
-  isActive: boolean;
-  permissions: string[];
+  status: UserStatus;
+  emailVerified: boolean;
+  lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,12 +50,17 @@ export class UserDtoMapper {
   public static toResponse(user: IUser): UserResponseDto {
     return {
       id: user.id,
+      organizationId: user.organizationId,
+      departmentId: user.departmentId || null,
       email: user.email,
-      firstName: user.firstName || null,
+      firstName: user.firstName,
       lastName: user.lastName || null,
+      phone: user.phone || null,
+      avatarUrl: user.avatarUrl || null,
       role: user.role,
-      isActive: user.isActive,
-      permissions: user.permissions,
+      status: user.status,
+      emailVerified: user.emailVerified,
+      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };
@@ -57,3 +73,4 @@ export class UserDtoMapper {
     return users.map((user) => this.toResponse(user));
   }
 }
+

@@ -1,7 +1,9 @@
 import { z } from 'zod';
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 export const createUserSchema = z.object({
+  organizationId: z.string().uuid('Invalid organization identifier'),
+  departmentId: z.string().uuid('Invalid department identifier').optional(),
   email: z.string({ required_error: 'Email is required' }).email('Invalid email address format'),
   password: z
     .string({ required_error: 'Password is required' })
@@ -10,13 +12,15 @@ export const createUserSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  firstName: z.string().min(1, 'First name cannot be empty').optional(),
+  firstName: z.string().min(1, 'First name cannot be empty'),
   lastName: z.string().min(1, 'Last name cannot be empty').optional(),
-  role: z.nativeEnum(Role).default(Role.USER).optional(),
-  permissions: z.array(z.string()).default([]).optional(),
+  phone: z.string().optional(),
+  role: z.nativeEnum(Role).default(Role.TRAINEE).optional(),
+  status: z.nativeEnum(UserStatus).default(UserStatus.PENDING).optional(),
 });
 
 export const updateUserSchema = z.object({
+  departmentId: z.string().uuid('Invalid department identifier').optional(),
   email: z.string().email('Invalid email address format').optional(),
   password: z
     .string()
@@ -28,9 +32,11 @@ export const updateUserSchema = z.object({
     .optional(),
   firstName: z.string().min(1, 'First name cannot be empty').optional(),
   lastName: z.string().min(1, 'Last name cannot be empty').optional(),
+  phone: z.string().optional(),
+  avatarUrl: z.string().url('Invalid avatar URL').optional(),
   role: z.nativeEnum(Role).optional(),
-  permissions: z.array(z.string()).optional(),
-  isActive: z.boolean().optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  emailVerified: z.boolean().optional(),
 });
 
 export const userIdParamSchema = z.object({

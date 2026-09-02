@@ -1,5 +1,6 @@
+import crypto from 'crypto';
 import prisma from '../database/client';
-import { User, RefreshToken, Role } from '@prisma/client';
+import { User, RefreshToken, Role, UserStatus } from '@prisma/client';
 import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
 
 export interface IUserRepository {
@@ -7,15 +8,25 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
   findAll(skip?: number, take?: number): Promise<User[]>;
   create(data: CreateUserDto & { passwordHash: string }): Promise<User>;
-  update(id: string, data: UpdateUserDto): Promise<User>;
+  update(id: string, data: UpdateUserDto & { passwordHash?: string }): Promise<User>;
   delete(id: string): Promise<User>;
-  saveRefreshToken(userId: string, token: string, expiresAt: Date): Promise<RefreshToken>;
+  saveRefreshToken(
+    userId: string,
+    token: string,
+    expiresAt: Date,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<RefreshToken>;
   findRefreshToken(token: string): Promise<(RefreshToken & { user: User }) | null>;
   revokeRefreshToken(token: string): Promise<void>;
   revokeUserRefreshTokens(userId: string): Promise<void>;
 }
 
 export class UserRepository implements IUserRepository {
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
   public async findById(id: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { id },
@@ -39,12 +50,15 @@ export class UserRepository implements IUserRepository {
   public async create(data: CreateUserDto & { passwordHash: string }): Promise<User> {
     return prisma.user.create({
       data: {
+        organizationId: data.organizationId,
+        departmentId: data.departmentId,
         email: data.email,
-        password: data.passwordHash,
+        passwordHash: data.passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
-        role: data.role || Role.USER,
-        permissions: data.permissions || ['users:read'],
+        phone: data.phone,
+        role: data.role || Role.TRAINEE,
+        status: data.status || UserStatus.PENDING,
       },
     });
   }
@@ -52,11 +66,14 @@ export class UserRepository implements IUserRepository {
   public async update(id: string, data: UpdateUserDto & { passwordHash?: string }): Promise<User> {
     const updateData: Record<string, unknown> = {};
 
+    if (data.departmentId !== undefined) {
+      updateData.departmentId = data.departmentId;
+    }
     if (data.email !== undefined) {
       updateData.email = data.email;
     }
     if (data.passwordHash !== undefined) {
-      updateData.password = data.passwordHash;
+      updateData.passwordHash = data.passwordHash;
     }
     if (data.firstName !== undefined) {
       updateData.firstName = data.firstName;
@@ -64,14 +81,20 @@ export class UserRepository implements IUserRepository {
     if (data.lastName !== undefined) {
       updateData.lastName = data.lastName;
     }
+    if (data.phone !== undefined) {
+      updateData.phone = data.phone;
+    }
+    if (data.avatarUrl !== undefined) {
+      updateData.avatarUrl = data.avatarUrl;
+    }
     if (data.role !== undefined) {
       updateData.role = data.role;
     }
-    if (data.permissions !== undefined) {
-      updateData.permissions = data.permissions;
+    if (data.status !== undefined) {
+      updateData.status = data.status;
     }
-    if (data.isActive !== undefined) {
-      updateData.isActive = data.isActive;
+    if (data.emailVerified !== undefined) {
+      updateData.emailVerified = data.emailVerified;
     }
 
     return prisma.user.update({
@@ -90,34 +113,41 @@ export class UserRepository implements IUserRepository {
     userId: string,
     token: string,
     expiresAt: Date,
+    ipAddress?: string,
+    userAgent?: string,
   ): Promise<RefreshToken> {
+    const tokenHash = this.hashToken(token);
     return prisma.refreshToken.create({
       data: {
-        token,
+        tokenHash,
         userId,
         expiresAt,
+        ipAddress,
+        userAgent,
       },
     });
   }
 
   public async findRefreshToken(token: string): Promise<(RefreshToken & { user: User }) | null> {
+    const tokenHash = this.hashToken(token);
     return prisma.refreshToken.findUnique({
-      where: { token },
+      where: { tokenHash },
       include: { user: true },
     });
   }
 
   public async revokeRefreshToken(token: string): Promise<void> {
-    await prisma.refreshToken.update({
-      where: { token },
-      data: { isRevoked: true },
+    const tokenHash = this.hashToken(token);
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash },
+      data: { revokedAt: new Date() },
     });
   }
 
   public async revokeUserRefreshTokens(userId: string): Promise<void> {
     await prisma.refreshToken.updateMany({
-      where: { userId },
-      data: { isRevoked: true },
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
     });
   }
 }

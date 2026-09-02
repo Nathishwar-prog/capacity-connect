@@ -30,7 +30,10 @@ const envSchema = z.object({
   SMTP_PORT: z.string().transform(Number).optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default('noreply@enterprise.com'),
+  SMTP_FROM: z.string().default('noreply@capacityconnect.io'),
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.string().transform(Number).default('6379'),
+  REDIS_PASSWORD: z.string().optional(),
   UPLOAD_MAX_SIZE: z.string().transform(Number).default('5242880'),
   ALLOWED_FILE_TYPES: z
     .string()

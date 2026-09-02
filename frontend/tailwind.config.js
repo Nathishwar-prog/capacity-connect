@@ -1,8 +1,11 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/features/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/routes/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
@@ -40,7 +43,7 @@ export default {
           light: '#f43f5e', // Rose secondary/accent
           DEFAULT: '#e11d48',
           dark: '#be123c',
-        }
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out forwards',
@@ -54,9 +57,9 @@ export default {
         slideUp: {
           '0%': { transform: 'translateY(12px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
-        }
-      }
+        },
+      },
     },
   },
   plugins: [],
-}
+};

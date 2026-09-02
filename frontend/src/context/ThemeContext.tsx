@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type Theme = 'dark' | 'light';
@@ -12,15 +11,20 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme') as Theme;
-    return saved || 'dark';
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme') as Theme;
+      return saved || 'dark';
+    }
+    return 'dark';
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('dark', 'light');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
+    if (typeof window !== 'undefined') {
+      const root = window.document.documentElement;
+      root.classList.remove('dark', 'light');
+      root.classList.add(theme);
+      localStorage.setItem('theme', theme);
+    }
   }, [theme]);
 
   const toggleTheme = () => {

@@ -6,7 +6,7 @@ This blueprint describes the directories of the template repository, helping dev
 
 ```
 /
-├── frontend/             # Single Page Application React-Vite UI client
+├── frontend/             # Next.js App Router React UI client
 ├── backend/              # Node.js and Express server backend
 ├── docs/                 # Architectural and setup documentation guides
 ├── examples/             # References for MongoDB setup, passport, etc.

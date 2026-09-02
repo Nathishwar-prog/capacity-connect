@@ -6,17 +6,25 @@ import { Role } from '@prisma/client';
  * Maps user roles to arrays of fine-grained action tags.
  */
 export const permissionsMap: Record<Role, string[]> = {
-  SUPER_ADMIN: ['*'], // Bypass permission evaluations
+  SUPER_ADMIN: ['*'], // Unrestricted access
   ADMIN: [
     'users:read',
-    'users:create',
-    'users:update',
-    'reports:view',
-    'settings:read',
-    'settings:write',
+    'users:write',
+    'courses:read',
+    'courses:approve',
+    'competencies:manage',
+    'analytics:view',
   ],
-  MANAGER: ['users:read', 'reports:view', 'settings:read'],
-  USER: ['users:read'],
+  TRAINER: [
+    'courses:read',
+    'courses:write',
+    'assessments:create',
+    'assessments:evaluate',
+  ],
+  TRAINEE: [
+    'courses:read',
+    'assessments:take',
+  ],
 };
 
 /**
