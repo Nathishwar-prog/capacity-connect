@@ -7,6 +7,6 @@
 | **Milestone 3** | **RBAC + Permissions** | ✅ **COMPLETED** | `42fd3b4` (Typed role guards, permissions catalog, `requireSelfOrRole`) |
 | **Milestone 4** | **Authentication Frontend** | ✅ **COMPLETED** | `e0d0052` (`LoginForm`, `RegisterForm`, React Hook Form + Zod, TanStack hooks) |
 | **Milestone 5** | **Session Management** | ✅ **COMPLETED** | `4734aa8` (`AuthInitializer`, silent refresh restoration, Axios queue concurrency protection) |
-| **Milestone 6** | **Protected Frontend Routing** | ✅ **COMPLETED** | `ProtectedRoute`, `RoleGuard`, role-filtered AppShell, returnUrl redirect |
-| **Milestone 7** | **Integration Testing** | ⏳ **Ready to Start** | 24-point end-to-end integration test suite |
-| **Milestone 8** | **Release & Tag** | ⏳ Pending | Git tag `v0.1.0-auth` |
+| **Milestone 6** | **Protected Frontend Routing** | ✅ **COMPLETED** | `dddee68` (`ProtectedRoute`, `RoleGuard`, role-filtered AppShell, returnUrl redirect) |
+| **Milestone 7** | **Integration Testing** | ✅ **COMPLETED** | 24/24 Integration & Security suite executed with 100% pass rate |
+| **Milestone 8** | **Release & Tag** | ⏳ **Ready to Start** | Git tag `v0.1.0-auth` |
