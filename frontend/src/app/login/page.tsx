@@ -1,59 +1,91 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, GraduationCap, Sparkles } from 'lucide-react';
+import { LoginForm, RegisterForm } from '@/features/auth';
 import useAuthStore from '@/store/auth';
 
 export default function LoginPage() {
-  const { setCredentials } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+  const { isAuthenticated } = useAuthStore();
   const router = useRouter();
 
-  const handleDemoLogin = (role: 'SUPER_ADMIN' | 'USER') => {
-    setCredentials(
-      {
-        id: role === 'SUPER_ADMIN' ? 'admin-uuid' : 'user-uuid',
-        email: role === 'SUPER_ADMIN' ? 'admin@enterprise.com' : 'user@enterprise.com',
-        firstName: role === 'SUPER_ADMIN' ? 'System' : 'Jane',
-        lastName: role === 'SUPER_ADMIN' ? 'Administrator' : 'Doe',
-        role,
-        permissions: role === 'SUPER_ADMIN' ? ['*'] : ['users:read'],
-      },
-      'simulated-access-token',
-    );
-    router.push('/');
-  };
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
 
   return (
-    <div className="h-full min-h-screen flex items-center justify-center px-4 bg-slate-950">
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 shadow-2xl backdrop-blur-xl w-full max-w-md p-8 text-center space-y-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <ShieldCheck className="w-8 h-8" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/40 text-slate-100 relative overflow-hidden">
+      {/* Background glow accents */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-lg rounded-2xl border border-slate-800/80 bg-slate-900/70 shadow-2xl backdrop-blur-xl p-8 relative z-10 space-y-6">
+        {/* Brand Header */}
+        <div className="flex flex-col items-center text-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
+            <GraduationCap className="w-3.5 h-3.5" />
+            <span>Enterprise Learning & Capacity Portal</span>
           </div>
-          <h2 className="text-2xl font-bold font-sans text-slate-100">Capacity Connect</h2>
-          <p className="text-xs text-slate-400">Authentication Portal</p>
+          <div className="flex items-center gap-2 mt-1">
+            <ShieldCheck className="w-7 h-7 text-indigo-400" />
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">Capacity Connect</h1>
+          </div>
+          <p className="text-xs text-slate-400 max-w-sm">
+            Continuous skill development, competency mapping, assessments, and trainer matching.
+          </p>
         </div>
 
-        <div className="space-y-3 pt-4">
+        {/* Tab Switcher */}
+        <div className="flex p-1 rounded-xl bg-slate-950/60 border border-slate-800/80">
           <button
-            onClick={() => handleDemoLogin('SUPER_ADMIN')}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
+            type="button"
+            onClick={() => setActiveTab('signin')}
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'signin'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
           >
-            Authenticate as Super Admin
+            Sign In
           </button>
           <button
-            onClick={() => handleDemoLogin('USER')}
-            className="w-full py-2.5 border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white font-medium text-sm rounded-lg transition-colors"
+            type="button"
+            onClick={() => setActiveTab('signup')}
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'signup'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
           >
-            Authenticate as Standard User
+            Create Account
           </button>
         </div>
 
-        <p className="text-[11px] text-slate-500">
-          This is a template sign-in console. Connect real backend auth at{' '}
-          <code className="text-indigo-400 font-mono">userApi.login()</code>.
-        </p>
+        {/* Form Container */}
+        <div className="pt-1">
+          {activeTab === 'signin' ? (
+            <LoginForm onSuccess={() => router.push('/')} />
+          ) : (
+            <RegisterForm onSuccess={() => router.push('/')} />
+          )}
+        </div>
+
+        {/* Footer Security Badge */}
+        <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+          <span className="flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span>End-to-End Encrypted Auth</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-indigo-400" />
+            <span>Next.js 14 App Router</span>
+          </span>
+        </div>
       </div>
     </div>
   );
