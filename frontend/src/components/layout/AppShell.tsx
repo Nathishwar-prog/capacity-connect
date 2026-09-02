@@ -2,25 +2,52 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { Users, User, LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import {
+  Users,
+  User,
+  LogOut,
+  LayoutDashboard,
+  ShieldCheck,
+  Building2,
+  Loader2,
+} from 'lucide-react';
 import useAuthStore from '@/store/auth';
+import { useLogout } from '@/features/auth';
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
-  const { user, logout, isAuthenticated } = useAuthStore();
-  const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
+  const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const pathname = usePathname();
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
+  const isActive = (path: string) => pathname === path;
+  const userRole = user?.role;
+
+  const getRoleBadge = (role?: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return {
+          label: 'Super Admin',
+          color: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+        };
+      case 'ADMIN':
+        return { label: 'Admin', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' };
+      case 'TRAINER':
+        return {
+          label: 'Trainer',
+          color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+        };
+      case 'TRAINEE':
+      default:
+        return { label: 'Trainee', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' };
+    }
   };
 
-  const isActive = (path: string) => pathname === path;
+  const badge = getRoleBadge(userRole);
 
   return (
     <div className="flex h-full min-h-screen bg-slate-950 text-slate-100">
@@ -48,17 +75,20 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <span>Dashboard Overview</span>
           </Link>
 
-          <Link
-            href="/users"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isActive('/users')
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Users Directory</span>
-          </Link>
+          {/* Directory restricted to ADMIN & SUPER_ADMIN */}
+          {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') && (
+            <Link
+              href="/users"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive('/users')
+                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Users Directory</span>
+            </Link>
+          )}
 
           <Link
             href="/profile"
@@ -81,21 +111,33 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 <div className="w-9 h-9 rounded bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm">
                   {user?.email ? user.email[0].toUpperCase() : 'U'}
                 </div>
-                <div className="truncate">
-                  <span className="block text-xs font-semibold text-slate-300 truncate">
-                    {user?.firstName
-                      ? `${user.firstName} ${user.lastName || ''}`.trim()
-                      : 'Active Member'}
-                  </span>
+                <div className="truncate flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="block text-xs font-semibold text-slate-200 truncate">
+                      {user?.firstName
+                        ? `${user.firstName} ${user.lastName || ''}`.trim()
+                        : 'Active Member'}
+                    </span>
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badge.color}`}
+                    >
+                      {badge.label}
+                    </span>
+                  </div>
                   <span className="block text-[10px] text-slate-500 truncate">{user?.email}</span>
                 </div>
               </div>
 
               <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-1.5 px-3 border border-slate-800 bg-slate-900 text-slate-400 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/5 text-xs font-semibold rounded transition-colors"
+                onClick={() => logout()}
+                disabled={isLoggingOut}
+                className="w-full flex items-center justify-center gap-2 py-1.5 px-3 border border-slate-800 bg-slate-900 text-slate-400 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/5 text-xs font-semibold rounded transition-colors disabled:opacity-50"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                {isLoggingOut ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <LogOut className="w-3.5 h-3.5" />
+                )}
                 <span>Sign Out</span>
               </button>
             </>
@@ -119,9 +161,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {isActive('/users') && 'User Management'}
             {isActive('/profile') && 'User Profile'}
           </div>
-          <div className="text-xs text-slate-500 font-mono">
-            Environment:{' '}
-            <span className="text-indigo-400">{process.env.NODE_ENV || 'development'}</span>
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            {user?.organizationId && (
+              <div className="flex items-center gap-1 text-slate-400">
+                <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Capacity Connect</span>
+              </div>
+            )}
+            <div className="font-mono">
+              <span className="text-indigo-400">{user?.role || 'GUEST'}</span>
+            </div>
           </div>
         </header>
 
