@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
 import { UserController } from '../controllers/user.controller';
 import { UserService } from '../services/user.service';
 import { UserRepository } from '../repositories/user.repository';
 import { validate } from '../validators/validate.middleware';
-import { authenticate, requireRole } from '../auth/auth.middleware';
+import { authenticate, requireRole, requireSelfOrRole } from '../auth/auth.middleware';
 import {
   createUserSchema,
   updateUserSchema,
@@ -20,24 +21,25 @@ const userController = new UserController(userService);
 // All user management routes require authentication
 router.use(authenticate);
 
-// --- Admin Endpoints ---
+// --- Admin Directory Endpoints ---
 router.get(
   '/',
-  requireRole(['ADMIN', 'SUPER_ADMIN']),
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
   asyncHandler(userController.getUserList),
 );
 
 router.post(
   '/',
-  requireRole(['ADMIN', 'SUPER_ADMIN']),
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
   validate({ body: createUserSchema }),
   asyncHandler(userController.register),
 );
 
-// --- User Profile by ID ---
+// --- User Profile by ID (Self or Admin) ---
 router.get(
   '/:id',
   validate({ params: userIdParamSchema }),
+  requireSelfOrRole([Role.ADMIN, Role.SUPER_ADMIN]),
   asyncHandler(async (req, res) => {
     const user = await userService.getUserById(req.params.id);
     const { UserDtoMapper } = await import('../dto/user.dto');
@@ -53,6 +55,7 @@ router.get(
 router.patch(
   '/:id',
   validate({ params: userIdParamSchema, body: updateUserSchema }),
+  requireSelfOrRole([Role.ADMIN, Role.SUPER_ADMIN]),
   asyncHandler(async (req, res) => {
     const user = await userService.updateUser(req.params.id, req.body);
     const { UserDtoMapper } = await import('../dto/user.dto');
@@ -67,7 +70,7 @@ router.patch(
 
 router.delete(
   '/:id',
-  requireRole(['SUPER_ADMIN']),
+  requireRole([Role.SUPER_ADMIN]),
   validate({ params: userIdParamSchema }),
   asyncHandler(userController.deleteUser),
 );

@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import { Role } from '@prisma/client';
 import { UnauthorizedError, ForbiddenError } from '../errors/app-error';
 import { TokenUtils } from './token.utils';
+import { PermissionKey, hasPermission } from '../permissions';
 
 /**
- * Authentication Middleware: Protects endpoints by verifying the incoming JWT Bearer token
+ * Authentication Middleware: Validates incoming Bearer JWT Access Token
  */
 export const authenticate = (req: Request, _res: Response, next: NextFunction): void => {
   try {
@@ -24,23 +26,27 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
 };
 
 /**
- * Authorization Middleware: Standard Role Based Access Control (RBAC) check
+ * Role-Based Authorization Middleware: Checks if user's role is in the allowed roles list
  */
-export const requireRole = (allowedRoles: string[]) => {
+export const requireRole = (allowedRoles: Role[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      throw new UnauthorizedError('Authentication credentials required');
+      return next(new UnauthorizedError('Authentication credentials required'));
     }
 
-    const { role } = req.user;
+    const userRole = req.user.role as Role;
 
-    // Super Admin has unrestricted permissions
-    if (role === 'SUPER_ADMIN') {
+    // Super Admin has unrestricted permissions across all roles
+    if (userRole === Role.SUPER_ADMIN) {
       return next();
     }
 
-    if (!allowedRoles.includes(role)) {
-      throw new ForbiddenError('You do not have the required role to access this resource');
+    if (!allowedRoles.includes(userRole)) {
+      return next(
+        new ForbiddenError(
+          `Access denied. Role '${userRole}' is not authorized to perform this action.`,
+        ),
+      );
     }
 
     next();
@@ -48,28 +54,84 @@ export const requireRole = (allowedRoles: string[]) => {
 };
 
 /**
- * Authorization Middleware: Fine-grained Permission System check
+ * Fine-Grained Permission Authorization Middleware: Checks specific permissions
  */
-export const requirePermission = (requiredPermissions: string[]) => {
+export const requirePermission = (
+  required: PermissionKey | PermissionKey[],
+  matchMode: 'all' | 'any' = 'all',
+) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      throw new UnauthorizedError('Authentication credentials required');
+      return next(new UnauthorizedError('Authentication credentials required'));
     }
 
-    const { role, permissions } = req.user;
+    const userRole = req.user.role as Role;
+    const userPermissions = req.user.permissions || [];
 
-    // Super Admin has unrestricted permissions
-    if (role === 'SUPER_ADMIN' || permissions.includes('*')) {
+    // Super Admin or wildcard bypasses all permission requirements
+    if (userRole === Role.SUPER_ADMIN || userPermissions.includes('*')) {
       return next();
     }
 
-    // Check if user has ALL required permissions (or at least one, depending on design; checking for all is safer)
-    const hasAllPermissions = requiredPermissions.every((perm) => permissions.includes(perm));
+    const requiredList = Array.isArray(required) ? required : [required];
 
-    if (!hasAllPermissions) {
-      throw new ForbiddenError('You do not have the required permissions to perform this action');
+    const isAuthorized =
+      matchMode === 'all'
+        ? requiredList.every((perm) => hasPermission(userRole, userPermissions, perm))
+        : requiredList.some((perm) => hasPermission(userRole, userPermissions, perm));
+
+    if (!isAuthorized) {
+      return next(
+        new ForbiddenError(
+          `Access denied. Missing required permission(s): ${requiredList.join(', ')}`,
+        ),
+      );
     }
 
     next();
   };
+};
+
+/**
+ * Self or Role Guard: Grants access if the user is operating on their own resource ID,
+ * OR if the user belongs to one of the authorized administrative roles.
+ */
+export const requireSelfOrRole = (
+  allowedRoles: Role[] = [Role.ADMIN, Role.SUPER_ADMIN],
+  getTargetUserId?: (req: Request) => string,
+) => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      return next(new UnauthorizedError('Authentication credentials required'));
+    }
+
+    const userRole = req.user.role as Role;
+    const authenticatedUserId = req.user.userId;
+
+    // Super Admin bypass
+    if (userRole === Role.SUPER_ADMIN) {
+      return next();
+    }
+
+    const targetUserId = getTargetUserId ? getTargetUserId(req) : req.params.id || req.params.userId;
+
+    // Allow if operating on own identity
+    if (targetUserId && targetUserId === authenticatedUserId) {
+      return next();
+    }
+
+    // Allow if role is in privileged list
+    if (allowedRoles.includes(userRole)) {
+      return next();
+    }
+
+    return next(new ForbiddenError('You can only access or modify your own profile and resources.'));
+  };
+};
+
+export default {
+  authenticate,
+  requireRole,
+  requirePermission,
+  requireSelfOrRole,
 };
