@@ -173,9 +173,10 @@ async function main() {
   // 4. Users (1 Super Admin, 1 Admin, 2 Trainers, 3 Trainees)
   console.log('👥 Creating Users & User Profiles...');
   const salt = await bcrypt.genSalt(10);
-  const adminPasswordHash = await bcrypt.hash('AdminPassword123!', salt);
-  const trainerPasswordHash = await bcrypt.hash('TrainerPassword123!', salt);
-  const traineePasswordHash = await bcrypt.hash('TraineePassword123!', salt);
+  const commonPasswordHash = await bcrypt.hash('Password123!', salt);
+  const adminPasswordHash = commonPasswordHash;
+  const trainerPasswordHash = commonPasswordHash;
+  const traineePasswordHash = commonPasswordHash;
 
   // Super Admin
   const superAdmin = await prisma.user.create({
