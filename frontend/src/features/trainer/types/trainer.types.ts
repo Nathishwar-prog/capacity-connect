@@ -81,14 +81,61 @@ export interface TrainerDashboardKPIs {
   competenciesCovered: number;
 }
 
+export interface TraineeHealthMetric {
+  count: number;
+  percentage: number;
+}
+
+export interface TraineeHealthDistribution {
+  total: number;
+  onTrack: TraineeHealthMetric;
+  needsAttention: TraineeHealthMetric;
+  atRisk: TraineeHealthMetric;
+  completed: TraineeHealthMetric;
+}
+
+export interface PerformanceTrendPoint {
+  label: string;
+  activeLearners: number;
+  avgProgress: number;
+}
+
+export interface TraineeAttentionItem {
+  traineeId: string;
+  name: string;
+  email: string;
+  designation: string;
+  department: string;
+  courseTitle: string;
+  progress: number;
+  status: string;
+}
+
+export interface CompetencySnapshotData {
+  coveredCount: number;
+  competencies: Array<{
+    id: string;
+    name: string;
+    targetAverage: number;
+    attainmentRate: number;
+  }>;
+  gapsCount: number;
+}
+
 export interface TrainerDashboardData {
   kpis: TrainerDashboardKPIs;
+  traineeHealth: TraineeHealthDistribution;
+  performanceTrend: PerformanceTrendPoint[];
+  traineesNeedingAttention: TraineeAttentionItem[];
+  competencySnapshot: CompetencySnapshotData;
+  profileCompletion: number;
   recentCourses: Array<{
     id: string;
     title: string;
     slug: string;
     status: CourseStatus;
     difficulty: CourseDifficulty;
+    category?: string;
     moduleCount: number;
     enrolledCount: number;
     completionRate: number;
@@ -110,6 +157,8 @@ export interface TrainerDashboardData {
     courseTitle: string;
     questionsCount: number;
     attemptsCount: number;
+    passedCount?: number;
+    passingScore?: number;
     status: string;
   }>;
   recentFeedback: Array<{
@@ -120,12 +169,19 @@ export interface TrainerDashboardData {
     traineeName: string;
     createdAt: string;
   }>;
+  recentActivity?: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    timestamp: string;
+  }>;
   actionRequired: Array<{
     id: string;
-    type: string;
+    priority?: 'CRITICAL' | 'WARNING' | 'INFO';
     title: string;
     message: string;
     link: string;
+    actionLabel?: string;
   }>;
 }
 

@@ -741,4 +741,15 @@ export class TrainerRepository {
   }) {
     return prisma.auditLog.create({ data });
   }
+
+  /**
+   * Fetch recent activity log for trainer
+   */
+  public async getRecentActivity(userId: string) {
+    return prisma.auditLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+    });
+  }
 }
