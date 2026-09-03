@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck, CloudSun, Lock } from 'lucide-react';
+import { ShieldCheck, CloudSun, Lock, Loader2 } from 'lucide-react';
 import { LoginForm, RegisterForm } from '@/features/auth';
 import useAuthStore from '@/store/auth';
 import { getRoleDashboardRoute } from '@/constants/roles';
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'signup' ? 'signup' : 'signin';
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(initialTab);
@@ -109,5 +109,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

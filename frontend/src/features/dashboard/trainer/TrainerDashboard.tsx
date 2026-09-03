@@ -1,192 +1,156 @@
 'use client';
 
 import React from 'react';
-import {
-  BookOpenCheck,
-  Users,
-  ClipboardList,
-  MessageSquareQuote,
-  PlusCircle,
-  Star,
-} from 'lucide-react';
+import { useTrainerDashboard } from '@/features/trainer';
 import useAuthStore from '@/store/auth';
-import { useTrainerDashboard } from '../hooks/useDashboard';
-import { DashboardHeader } from '../components/DashboardHeader';
-import { MetricCard } from '../components/MetricCard';
-import { EmptyState } from '../components/EmptyState';
-import { DashboardSkeleton } from '../components/DashboardSkeleton';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  TrainerDashboardHeader,
+  TrainerKpiGrid,
+  ActionRequiredPanel,
+  LearningPerformanceChart,
+  TraineeHealthCard,
+  CoursePerformanceTable,
+  TraineeAttentionList,
+  CompetencySnapshotCard,
+  AssessmentOverviewCard,
+  RecentActivityCard,
+  FeedbackSnapshotCard,
+  AIInsightsPlaceholder,
+  QuickActionsCard,
+} from './components';
 
 export const TrainerDashboard: React.FC = () => {
   const { user } = useAuthStore();
-  const { data, isLoading } = useTrainerDashboard();
+  const { data: dashboard, isLoading, isError, refetch } = useTrainerDashboard();
+
+  const trainerFullName = user?.firstName
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : 'Senior Scientist';
 
   if (isLoading) {
-    return <DashboardSkeleton />;
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32 rounded-full" />
+            <Skeleton className="h-8 w-64 rounded-xl" />
+            <Skeleton className="h-4 w-96 rounded-lg" />
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-9 w-28 rounded-xl" />
+            <Skeleton className="h-9 w-32 rounded-xl" />
+          </div>
+        </div>
+
+        {/* KPI Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-5">
+              <Skeleton className="h-4 w-24 mb-4" />
+              <Skeleton className="h-8 w-16 mb-2" />
+              <Skeleton className="h-3 w-36" />
+            </Card>
+          ))}
+        </div>
+
+        {/* Action Required Skeleton */}
+        <Skeleton className="h-24 w-full rounded-2xl" />
+
+        {/* Performance & Health Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="lg:col-span-2 h-64 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      </div>
+    );
   }
 
-  const metrics = data?.metrics || {
-    activeCourses: 0,
-    totalTrainees: 0,
-    pendingEvaluations: 0,
-    feedbackCount: 0,
-  };
-
-  const courses = data?.courses || [];
-  const recentFeedback = data?.recentFeedback || [];
+  if (isError || !dashboard) {
+    return (
+      <div className="max-w-2xl mx-auto my-12 p-8 bg-white border border-rose-200 rounded-3xl text-center space-y-4 shadow-sm">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-900">
+            Unable to Load Training Command Center
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Could not retrieve aggregated metrics from the MoES learning portal. Please check your network connection and retry.
+          </p>
+        </div>
+        <Button
+          onClick={() => refetch()}
+          size="sm"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+        >
+          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+          <span>Retry Connection</span>
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Institutional Header */}
-      <DashboardHeader
-        userName={
-          user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Instructor'
-        }
-        role="TRAINER"
-        departmentName={user?.departmentName || 'Capacity Training & Research Wing'}
-        portalSubtitle="Manage curriculum delivery, supervise trainee cohorts, and evaluate meteorological competency benchmarks."
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* 1. Header & Primary CTAs */}
+      <TrainerDashboardHeader
+        trainerName={trainerFullName}
+        departmentName="National Weather Forecasting Centre (NWFC)"
       />
 
-      {/* Metric Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Published Courses"
-          value={metrics.activeCourses}
-          subtitle="Delivered instructional modules"
-          icon={BookOpenCheck}
-          variant="indigo"
-        />
-        <MetricCard
-          title="Enrolled Trainees"
-          value={metrics.totalTrainees}
-          subtitle="Total trainees across courses"
-          icon={Users}
-          variant="emerald"
-        />
-        <MetricCard
-          title="Pending Evaluations"
-          value={metrics.pendingEvaluations}
-          subtitle="Submitted trainee assessments"
-          icon={ClipboardList}
-          variant="amber"
-        />
-        <MetricCard
-          title="Course Feedback"
-          value={metrics.feedbackCount}
-          subtitle="Ratings & review submissions"
-          icon={MessageSquareQuote}
-          variant="purple"
-        />
-      </div>
+      {/* 2. Hierarchical KPI Overview */}
+      <TrainerKpiGrid kpis={dashboard.kpis} />
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column (2 Cols): Courses Instructed */}
-        <div className="lg:col-span-2 space-y-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-base">Courses Instructed</CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Earth sciences & meteorological training modules under your instruction
-                </p>
-              </div>
-              <Button size="sm" variant="default" className="text-xs font-bold">
-                <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-                <span>New Course</span>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {courses.length === 0 ? (
-                <EmptyState
-                  icon={BookOpenCheck}
-                  title="No Assigned Courses"
-                  description="You have not created or been assigned any courses yet. Begin by drafting a training curriculum."
-                  actionLabel="Create Course"
-                  onAction={() => {}}
-                />
-              ) : (
-                <div className="space-y-3">
-                  {courses.map((course) => (
-                    <div
-                      key={course.id}
-                      className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-slate-900">{course.title}</h4>
-                          <Badge variant="outline">{course.difficulty}</Badge>
-                        </div>
-                        <p className="text-[11px] text-slate-500">
-                          Slug: <span className="font-mono text-slate-600">{course.slug}</span>
-                        </p>
-                      </div>
+      {/* 3. Action Required Panel (Dynamic alerts) */}
+      <ActionRequiredPanel items={dashboard.actionRequired || []} />
 
-                      <div className="flex items-center gap-3">
-                        <Badge variant={course.status === 'PUBLISHED' ? 'success' : 'secondary'}>
-                          {course.status}
-                        </Badge>
-                        <Button size="sm" variant="outline" className="text-xs">
-                          Manage
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* 4. Main Analytics: Learning Performance + Trainee Health */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <LearningPerformanceChart trendData={dashboard.performanceTrend} />
         </div>
-
-        {/* Right Column (1 Col): Trainee Feedback & Cohorts */}
-        <div className="space-y-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquareQuote className="w-4 h-4 text-indigo-600" />
-                <span>Recent Trainee Feedback</span>
-              </CardTitle>
-              <p className="text-xs text-slate-500">Evaluation ratings from course participants</p>
-            </CardHeader>
-            <CardContent>
-              {recentFeedback.length === 0 ? (
-                <EmptyState
-                  icon={MessageSquareQuote}
-                  title="No Feedback Submitted"
-                  description="Trainee ratings and commentary on course instruction will appear here."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {recentFeedback.map((fb) => (
-                    <div
-                      key={fb.id}
-                      className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900">{fb.traineeName}</span>
-                        <div className="flex items-center text-amber-500 text-xs font-bold gap-1">
-                          <Star className="w-3.5 h-3.5 fill-amber-500" />
-                          <span>{fb.rating}/5</span>
-                        </div>
-                      </div>
-                      {fb.courseTitle && (
-                        <span className="text-[10px] text-indigo-700 font-semibold block">
-                          {fb.courseTitle}
-                        </span>
-                      )}
-                      {fb.comment && (
-                        <p className="text-xs text-slate-600 italic">&ldquo;{fb.comment}&rdquo;</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <div>
+          <TraineeHealthCard distribution={dashboard.traineeHealth} />
         </div>
       </div>
+
+      {/* 5. Course Performance Table + Competency Snapshot */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <CoursePerformanceTable courses={dashboard.recentCourses} />
+        </div>
+        <div>
+          <CompetencySnapshotCard snapshot={dashboard.competencySnapshot} />
+        </div>
+      </div>
+
+      {/* 6. Trainees Needing Attention + Assessment Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <TraineeAttentionList trainees={dashboard.traineesNeedingAttention || []} />
+        </div>
+        <div>
+          <AssessmentOverviewCard assessments={dashboard.assessments} />
+        </div>
+      </div>
+
+      {/* 7. Recent Activity & Trainee Feedback */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RecentActivityCard activities={dashboard.recentActivity} />
+        <FeedbackSnapshotCard feedback={dashboard.recentFeedback} />
+      </div>
+
+      {/* 8. AI Training Insights (Future Ready Placeholder) */}
+      <AIInsightsPlaceholder />
+
+      {/* 9. Operational Quick Actions */}
+      <QuickActionsCard />
     </div>
   );
 };

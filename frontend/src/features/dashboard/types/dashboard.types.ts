@@ -1,9 +1,33 @@
 export interface TraineeDashboardData {
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    department: string;
+    designation: string;
+    profileCompletion: number;
+  };
+  continueLearning: {
+    enrollmentId: string;
+    courseId: string;
+    courseTitle: string;
+    slug: string;
+    category: string;
+    difficulty: string;
+    progressPercentage: number;
+    currentModuleTitle: string;
+    currentLessonTitle: string;
+    currentLessonType: string;
+    lastActivityDate: string;
+  } | null;
   metrics: {
+    enrolledCourses: number;
     inProgressCourses: number;
     completedCourses: number;
+    overallProgress: number;
     pendingAssessments: number;
     competenciesTracked: number;
+    skillGapsCount: number;
   };
   activeCourses: Array<{
     id: string;
@@ -14,6 +38,36 @@ export interface TraineeDashboardData {
     difficulty: string;
     progressPercentage: number;
     enrolledAt: string;
+    trainerName: string;
+    moduleCount: number;
+    completedLessonsCount: number;
+    totalLessonsCount: number;
+  }>;
+  upNext: Array<{
+    id: string;
+    title: string;
+    type: string;
+    durationMinutes: number;
+    courseTitle: string;
+    courseId: string;
+  }>;
+  competencies: Array<{
+    id: string;
+    name: string;
+    code: string;
+    category: string | null;
+    currentLevel: number;
+    requiredLevel: number;
+    progressPercentage: number;
+  }>;
+  skillGaps: Array<{
+    id: string;
+    competencyName: string;
+    category: string | null;
+    currentLevel: number;
+    requiredLevel: number;
+    gapLevel: number;
+    priority: 'HIGH' | 'MEDIUM' | 'LOW';
   }>;
   assessments: Array<{
     id: string;
@@ -26,19 +80,34 @@ export interface TraineeDashboardData {
     durationMinutes: number | null;
     startedAt: string;
   }>;
-  competencies: Array<{
+  resources: Array<{
     id: string;
-    name: string;
-    code: string;
-    category: string | null;
-    currentLevel: number;
+    title: string;
+    description: string | null;
+    type: string;
+    url: string;
   }>;
   recommendations: Array<{
     id: string;
     type: string;
     reason: string | null;
-    courseTitle: string | null;
-    resourceTitle: string | null;
+    courseTitle: string;
+    slug: string;
+    difficulty: string;
+    category: string;
+  }>;
+  trainer: {
+    id: string;
+    name: string;
+    designation: string;
+    bio: string;
+  } | null;
+  achievements: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    type: string;
+    awardedAt: string;
   }>;
   recentActivity: Array<{
     id: string;

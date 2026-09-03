@@ -6,33 +6,123 @@ export class DashboardService {
    * Aggregate domain dashboard data for authenticated Trainee
    */
   public async getTraineeDashboard(userId: string) {
-    // 1. Fetch user enrollments (Active & Completed)
-    const enrollments = await prisma.enrollment.findMany({
+    // 0. User Profile & Cadre details
+    const user: any = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        department: { select: { id: true, name: true, code: true } },
+        traineeProfile: true,
+      },
+    });
+
+    // 1. Fetch user enrollments (Active & Completed) with curriculum tree
+    const enrollments: any[] = await prisma.enrollment.findMany({
       where: { userId },
       include: {
         course: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            category: true,
-            difficulty: true,
-            durationMinutes: true,
+          include: {
+            trainer: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                trainerProfile: {
+                  select: { designation: true, bio: true },
+                },
+              },
+            },
+            modules: {
+              include: {
+                lessons: {
+                  select: { id: true, title: true, contentType: true, durationMinutes: true, orderIndex: true },
+                  orderBy: { orderIndex: 'asc' },
+                },
+              },
+              orderBy: { orderIndex: 'asc' },
+            },
           },
         },
       },
       orderBy: { enrolledAt: 'desc' },
-      take: 6,
     });
 
     const activeEnrollments = enrollments.filter(
-      (e) => e.status === EnrollmentStatus.ENROLLED || e.status === EnrollmentStatus.IN_PROGRESS,
+      (e: any) => e.status === EnrollmentStatus.ENROLLED || e.status === EnrollmentStatus.IN_PROGRESS,
     );
-    const completedCount = await prisma.enrollment.count({
-      where: { userId, status: EnrollmentStatus.COMPLETED },
-    });
+    const completedCount = enrollments.filter(
+      (e: any) => e.status === EnrollmentStatus.COMPLETED,
+    ).length;
 
-    // 2. Fetch upcoming or recent assessment attempts
+    // User's lesson progress
+    const lessonProgress = await prisma.lessonProgress.findMany({
+      where: { userId },
+      select: { lessonId: true, completed: true, lastAccessedAt: true },
+    });
+    const completedLessonIdSet = new Set(
+      lessonProgress.filter((lp: any) => lp.completed).map((lp: any) => lp.lessonId),
+    );
+
+    // 2. Primary Hero Course: Continue Learning
+    let continueLearning: any = null;
+    if (activeEnrollments.length > 0) {
+      const primaryEnrollment = activeEnrollments[0];
+      const allLessons = primaryEnrollment.course.modules.flatMap((m: any) =>
+        m.lessons.map((l: any) => ({ ...l, moduleTitle: m.title })),
+      );
+      const nextIncompleteLesson = allLessons.find((l: any) => !completedLessonIdSet.has(l.id)) || allLessons[0];
+
+      continueLearning = {
+        enrollmentId: primaryEnrollment.id,
+        courseId: primaryEnrollment.courseId,
+        courseTitle: primaryEnrollment.course.title,
+        slug: primaryEnrollment.course.slug,
+        category: primaryEnrollment.course.category,
+        difficulty: primaryEnrollment.course.difficulty,
+        progressPercentage: primaryEnrollment.progressPercentage,
+        currentModuleTitle: nextIncompleteLesson?.moduleTitle || primaryEnrollment.course.modules[0]?.title || 'Core Foundations',
+        currentLessonTitle: nextIncompleteLesson?.title || 'Introduction to Subject',
+        currentLessonType: nextIncompleteLesson?.contentType || 'ARTICLE',
+        lastActivityDate: primaryEnrollment.lastAccessedAt ? primaryEnrollment.lastAccessedAt.toISOString() : primaryEnrollment.enrolledAt.toISOString(),
+      };
+    }
+
+    // 3. Up Next sequential activities (next 3 incomplete lessons/quizzes)
+    const upNext: Array<{
+      id: string;
+      title: string;
+      type: string;
+      durationMinutes: number;
+      courseTitle: string;
+      courseId: string;
+    }> = [];
+
+    for (const e of activeEnrollments) {
+      for (const m of e.course.modules) {
+        for (const l of m.lessons) {
+          if (!completedLessonIdSet.has(l.id) && upNext.length < 3) {
+            upNext.push({
+              id: l.id,
+              title: l.title,
+              type: l.contentType === 'QUIZ' ? 'Quiz' : 'Lesson',
+              durationMinutes: l.durationMinutes || 15,
+              courseTitle: e.course.title,
+              courseId: e.courseId,
+            });
+          }
+        }
+      }
+    }
+
+    // 4. Calculate overall progress %
+    const totalProgress = activeEnrollments.reduce((sum: number, e: any) => sum + e.progressPercentage, 0);
+    const avgProgress = activeEnrollments.length > 0 ? Math.round(totalProgress / activeEnrollments.length) : 0;
+
+    // 5. Fetch assessments
     const attempts = await prisma.assessmentAttempt.findMany({
       where: { userId },
       include: {
@@ -47,15 +137,15 @@ export class DashboardService {
         },
       },
       orderBy: { startedAt: 'desc' },
-      take: 5,
+      take: 6,
     });
 
     const pendingAssessmentsCount = attempts.filter(
-      (a) => a.status === AttemptStatus.IN_PROGRESS,
+      (a: any) => a.status === AttemptStatus.IN_PROGRESS,
     ).length;
 
-    // 3. Fetch user competencies
-    const competencies = await prisma.userCompetency.findMany({
+    // 6. User Competencies & Gaps
+    const userCompetencies = await prisma.userCompetency.findMany({
       where: { userId },
       include: {
         competency: {
@@ -70,7 +160,39 @@ export class DashboardService {
       take: 6,
     });
 
-    // 4. Fetch recommendations for user
+    const skillGaps = await prisma.skillGap.findMany({
+      where: { userId, status: 'OPEN' },
+      include: {
+        competency: {
+          select: { id: true, name: true, code: true, category: true },
+        },
+      },
+      orderBy: { priority: 'desc' },
+      take: 4,
+    });
+
+    // 7. Learning Resources (Video, PDF, MCQ)
+    const resources = await prisma.resource.findMany({
+      take: 4,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        resourceType: true,
+        url: true,
+        fileSize: true,
+      },
+    });
+
+    // 8. Achievements
+    const achievements = await prisma.achievement.findMany({
+      where: { userId },
+      orderBy: { awardedAt: 'desc' },
+      take: 4,
+    });
+
+    // 9. Recommendations
     const recommendations = await prisma.recommendation.findMany({
       where: { userId, status: 'ACTIVE' },
       include: {
@@ -80,21 +202,18 @@ export class DashboardService {
             title: true,
             slug: true,
             difficulty: true,
-          },
-        },
-        resource: {
-          select: {
-            id: true,
-            title: true,
-            resourceType: true,
+            category: true,
+            durationMinutes: true,
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
-      take: 4,
+      take: 3,
     });
 
-    // 5. Recent Activity from AuditLog
+    // 10. Assigned Primary Trainer Connection
+    const primaryTrainer = activeEnrollments[0]?.course?.trainer || null;
+
+    // 11. Recent Activity from AuditLog
     const recentActivity = await prisma.auditLog.findMany({
       where: { userId },
       select: {
@@ -104,25 +223,71 @@ export class DashboardService {
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
-      take: 5,
+      take: 6,
     });
 
+    // Profile completion calculation
+    let profileScore = 40;
+    if (user?.traineeProfile?.designation) profileScore += 30;
+    if (user?.department) profileScore += 30;
+
     return {
+      user: {
+        id: user?.id,
+        name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+        email: user?.email,
+        department: user?.department?.name || 'Observational Meteorology',
+        designation: user?.traineeProfile?.designation || 'Scientific Officer',
+        profileCompletion: Math.min(100, profileScore),
+      },
+      continueLearning,
       metrics: {
+        enrolledCourses: enrollments.length,
         inProgressCourses: activeEnrollments.length,
         completedCourses: completedCount,
+        overallProgress: avgProgress,
         pendingAssessments: pendingAssessmentsCount,
-        competenciesTracked: competencies.length,
+        competenciesTracked: userCompetencies.length,
+        skillGapsCount: skillGaps.length,
       },
-      activeCourses: activeEnrollments.map((e) => ({
-        id: e.id,
-        courseId: e.courseId,
-        title: e.course.title,
-        slug: e.course.slug,
-        category: e.course.category,
-        difficulty: e.course.difficulty,
-        progressPercentage: e.progressPercentage,
-        enrolledAt: e.enrolledAt.toISOString(),
+      activeCourses: activeEnrollments.map((e: any) => {
+        const allLessons = e.course.modules.flatMap((m: any) => m.lessons);
+        const completedLessons = allLessons.filter((l: any) => completedLessonIdSet.has(l.id)).length;
+        return {
+          id: e.id,
+          courseId: e.courseId,
+          title: e.course.title,
+          slug: e.course.slug,
+          category: e.course.category,
+          difficulty: e.course.difficulty,
+          progressPercentage: e.progressPercentage,
+          enrolledAt: e.enrolledAt.toISOString(),
+          trainerName: e.course.instructor
+            ? `${e.course.instructor.firstName} ${e.course.instructor.lastName || ''}`.trim()
+            : 'Senior MoES Scientist',
+          moduleCount: e.course.modules.length,
+          completedLessonsCount: completedLessons,
+          totalLessonsCount: allLessons.length,
+        };
+      }),
+      upNext,
+      competencies: userCompetencies.map((c: any) => ({
+        id: c.id,
+        name: c.competency.name,
+        code: c.competency.code,
+        category: c.competency.category,
+        currentLevel: c.currentLevel,
+        requiredLevel: 4,
+        progressPercentage: Math.min(100, Math.round((c.currentLevel / 5) * 100)),
+      })),
+      skillGaps: skillGaps.map((g: any) => ({
+        id: g.id,
+        competencyName: g.competency.name,
+        category: g.competency.category,
+        currentLevel: g.currentLevel,
+        requiredLevel: g.requiredLevel,
+        gapLevel: g.gapLevel,
+        priority: g.priority,
       })),
       assessments: attempts.map((a) => ({
         id: a.id,
@@ -135,19 +300,36 @@ export class DashboardService {
         durationMinutes: a.assessment.durationMinutes,
         startedAt: a.startedAt.toISOString(),
       })),
-      competencies: competencies.map((c) => ({
-        id: c.id,
-        name: c.competency.name,
-        code: c.competency.code,
-        category: c.competency.category,
-        currentLevel: c.currentLevel,
+      resources: resources.map((r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        type: r.resourceType,
+        url: r.url,
       })),
       recommendations: recommendations.map((r) => ({
         id: r.id,
         type: r.recommendationType,
-        reason: r.reason,
-        courseTitle: r.course?.title || null,
-        resourceTitle: r.resource?.title || null,
+        reason: r.reason || 'Matched to your current capacity development curriculum',
+        courseTitle: r.course?.title || 'Atmospheric Sciences Workshop',
+        slug: r.course?.slug || 'atmospheric-sciences',
+        difficulty: r.course?.difficulty || 'INTERMEDIATE',
+        category: r.course?.category || 'Synoptic Meteorology',
+      })),
+      trainer: primaryTrainer
+        ? {
+            id: primaryTrainer.id,
+            name: `${primaryTrainer.firstName} ${primaryTrainer.lastName || ''}`.trim(),
+            designation: primaryTrainer.trainerProfile?.designation || 'Lead Scientist',
+            bio: primaryTrainer.trainerProfile?.bio || 'Senior expert in observational and synoptic meteorology.',
+          }
+        : null,
+      achievements: achievements.map((ach) => ({
+        id: ach.id,
+        title: ach.title,
+        description: ach.description,
+        type: ach.type,
+        awardedAt: ach.awardedAt.toISOString(),
       })),
       recentActivity: recentActivity.map((a) => ({
         id: a.id,

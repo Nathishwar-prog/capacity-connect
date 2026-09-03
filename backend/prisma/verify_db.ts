@@ -4,10 +4,39 @@ const prisma = new PrismaClient();
 
 async function runVerification() {
   console.log('================================================================');
-  console.log('🔍 RUNNING DATABASE VERIFICATION & RELATIONAL INTEGRITY TESTS');
+  console.log('🔍 RUNNING MoES / IMD DATABASE VERIFICATION & INTEGRITY TESTS');
   console.log('================================================================\n');
 
-  // Test 1: User -> TraineeProfile
+  // Test 0: Aggregate Counts
+  const totalUsers = await prisma.user.count();
+  const totalTrainees = await prisma.traineeProfile.count();
+  const totalTrainers = await prisma.trainerProfile.count();
+  const totalCourses = await prisma.course.count();
+  const totalModules = await prisma.courseModule.count();
+  const totalLessons = await prisma.lesson.count();
+  const totalEnrollments = await prisma.enrollment.count();
+  const totalCompetencies = await prisma.competency.count();
+  const totalSkills = await prisma.skill.count();
+
+  console.log('📊 Aggregate System Metrics:');
+  console.log(`   - Total Users: ${totalUsers}`);
+  console.log(`   - Trainee Profiles: ${totalTrainees} (Target: 30+)`);
+  console.log(`   - Trainer Profiles: ${totalTrainers}`);
+  console.log(`   - Courses: ${totalCourses}`);
+  console.log(`   - Course Modules: ${totalModules}`);
+  console.log(`   - Lessons: ${totalLessons}`);
+  console.log(`   - Enrollments: ${totalEnrollments}`);
+  console.log(`   - Competencies: ${totalCompetencies}`);
+  console.log(`   - Domain Skills: ${totalSkills}\n`);
+
+  if (totalTrainees < 30) {
+    throw new Error(`Expected at least 30 trainees, found ${totalTrainees}`);
+  }
+  if (totalCourses !== 8) {
+    throw new Error(`Expected 8 domain courses, found ${totalCourses}`);
+  }
+
+  // Test 1: User -> TraineeProfile & Department
   const traineeUser = await prisma.user.findFirst({
     where: { email: 'user@enterprise.com' },
     include: { traineeProfile: true, department: true, organization: true },
@@ -30,7 +59,7 @@ async function runVerification() {
 
   // Test 3: Trainer -> Courses
   const trainer = await prisma.user.findFirst({
-    where: { email: 'alex.trainer@enterprise.com' },
+    where: { email: 'dr.rathore.trainer@imd.gov.in' },
     include: { trainerProfile: true, taughtCourses: true },
   });
   console.log('✅ Test 3: Trainer -> Courses');
@@ -42,7 +71,7 @@ async function runVerification() {
 
   // Test 4: Course -> Modules -> Lessons
   const courseWithModules = await prisma.course.findFirst({
-    where: { slug: 'python-fundamentals-oop' },
+    where: { slug: 'synoptic-weather-forecasting-analysis' },
     include: {
       modules: {
         include: { lessons: true },

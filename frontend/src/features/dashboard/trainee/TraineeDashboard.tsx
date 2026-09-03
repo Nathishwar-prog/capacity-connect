@@ -1,326 +1,157 @@
 'use client';
 
 import React from 'react';
-import {
-  BookOpen,
-  CheckCircle2,
-  FileCheck2,
-  Award,
-  Clock,
-  Compass,
-  ArrowRight,
-  TrendingUp,
-} from 'lucide-react';
 import useAuthStore from '@/store/auth';
 import { useTraineeDashboard } from '../hooks/useDashboard';
-import { DashboardHeader } from '../components/DashboardHeader';
-import { MetricCard } from '../components/MetricCard';
-import { EmptyState } from '../components/EmptyState';
-import { DashboardSkeleton } from '../components/DashboardSkeleton';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  TraineeDashboardHeader,
+  ContinueLearningCard,
+  LearningOverviewGrid,
+  ActiveCoursesList,
+  UpNextList,
+  LearningJourneyCard,
+  CompetencySnapshotCard,
+  SkillGapPanel,
+  AssessmentSnapshotCard,
+  LearningResourcesList,
+  RecommendedCoursesList,
+  TrainerConnectionCard,
+  AchievementsCard,
+  RecentActivityTimeline,
+  FuturePlaceholders,
+} from './components';
 
 export const TraineeDashboard: React.FC = () => {
-  const { user } = useAuthStore();
-  const { data, isLoading } = useTraineeDashboard();
+  const { user: authUser } = useAuthStore();
+  const { data, isLoading, isError, refetch } = useTraineeDashboard();
 
   if (isLoading) {
-    return <DashboardSkeleton />;
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-36 rounded-full" />
+            <Skeleton className="h-8 w-64 rounded-xl" />
+            <Skeleton className="h-4 w-96 rounded-lg" />
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-9 w-28 rounded-xl" />
+            <Skeleton className="h-9 w-32 rounded-xl" />
+          </div>
+        </div>
+
+        {/* Continue Learning Hero Skeleton */}
+        <Skeleton className="h-48 w-full rounded-3xl" />
+
+        {/* Metrics Overview Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-5">
+              <Skeleton className="h-4 w-24 mb-4" />
+              <Skeleton className="h-8 w-16 mb-2" />
+              <Skeleton className="h-3 w-36" />
+            </Card>
+          ))}
+        </div>
+
+        {/* Courses & Up Next Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="lg:col-span-2 h-64 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      </div>
+    );
   }
 
-  const metrics = data?.metrics || {
-    inProgressCourses: 0,
-    completedCourses: 0,
-    pendingAssessments: 0,
-    competenciesTracked: 0,
-  };
+  if (isError || !data) {
+    return (
+      <div className="max-w-2xl mx-auto my-12 p-8 bg-white border border-rose-200 rounded-3xl text-center space-y-4 shadow-sm">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-900">
+            Unable to Load Your Learning Cockpit
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Could not retrieve your personalized curriculum progress from the MoES portal. Please check your connection and retry.
+          </p>
+        </div>
+        <Button
+          onClick={() => refetch()}
+          size="sm"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+        >
+          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+          <span>Retry Connection</span>
+        </Button>
+      </div>
+    );
+  }
 
-  const activeCourses = data?.activeCourses || [];
-  const assessments = data?.assessments || [];
-  const competencies = data?.competencies || [];
-  const recommendations = data?.recommendations || [];
-  const recentActivity = data?.recentActivity || [];
+  const traineeName = data.user?.name || authUser?.firstName || 'Scientific Trainee';
+  const departmentName = data.user?.department || 'Observational Meteorology';
+  const designation = data.user?.designation || 'Scientific Officer';
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Institutional Header */}
-      <DashboardHeader
-        userName={user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Trainee'}
-        role="TRAINEE"
-        departmentName={user?.departmentName || 'Meteorological Operations'}
-        portalSubtitle="Track your atmospheric sciences training modules, competency progression, and certified learning pathways."
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* 1. Header & Primary CTAs */}
+      <TraineeDashboardHeader
+        traineeName={traineeName}
+        departmentName={departmentName}
+        designation={designation}
       />
 
-      {/* Metric Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Courses in Progress"
-          value={metrics.inProgressCourses}
-          subtitle="Active learning modules"
-          icon={BookOpen}
-          variant="indigo"
-        />
-        <MetricCard
-          title="Completed Pathways"
-          value={metrics.completedCourses}
-          subtitle="Certified curriculum"
-          icon={CheckCircle2}
-          variant="emerald"
-        />
-        <MetricCard
-          title="Pending Assessments"
-          value={metrics.pendingAssessments}
-          subtitle="Evaluations awaiting attempt"
-          icon={FileCheck2}
-          variant="amber"
-        />
-        <MetricCard
-          title="Competencies Tracked"
-          value={metrics.competenciesTracked}
-          subtitle="WMO / IMD aligned skills"
-          icon={Award}
-          variant="sky"
-        />
-      </div>
+      {/* 2. Primary Hero Card: Continue Learning */}
+      <ContinueLearningCard course={data.continueLearning} />
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column (2 Cols): Active Courses & Assessments */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Active Courses */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-base">Continue Learning</CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Pick up where you left off in your enrolled meteorological modules
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs font-bold text-indigo-600">
-                <span>View All Courses</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {activeCourses.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title="No Active Enrollments"
-                  description="You are not currently enrolled in any courses. Browse the MoES & IMD capacity curriculum to start learning."
-                  actionLabel="Explore Course Catalog"
-                  onAction={() => {}}
-                />
-              ) : (
-                <div className="space-y-4">
-                  {activeCourses.map((course) => (
-                    <div
-                      key={course.id}
-                      className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900">{course.title}</span>
-                          <Badge variant="outline">{course.difficulty}</Badge>
-                        </div>
-                        <p className="text-[11px] text-slate-500 font-medium">
-                          Category: {course.category}
-                        </p>
-                      </div>
+      {/* 3. Learning Progress Overview */}
+      <LearningOverviewGrid metrics={data.metrics} />
 
-                      <div className="flex items-center gap-4 min-w-[180px]">
-                        <div className="flex-1 space-y-1">
-                          <div className="flex justify-between text-[11px] font-bold text-slate-600">
-                            <span>Progress</span>
-                            <span>{Math.round(course.progressPercentage)}%</span>
-                          </div>
-                          <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-                            <div
-                              className="h-full bg-indigo-600 rounded-full transition-all"
-                              style={{ width: `${course.progressPercentage}%` }}
-                            />
-                          </div>
-                        </div>
-                        <Button size="sm" variant="default" className="text-[11px] shrink-0">
-                          Resume
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Assessments */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-base">Upcoming & Recent Assessments</CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Scheduled evaluations and practical scenario testing
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {assessments.length === 0 ? (
-                <EmptyState
-                  icon={FileCheck2}
-                  title="No Pending Assessments"
-                  description="You have no assessments scheduled at this time. Upcoming evaluations will appear here once assigned."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {assessments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="p-4 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4"
-                    >
-                      <div className="space-y-0.5">
-                        <h5 className="text-xs font-bold text-slate-900">{a.title}</h5>
-                        <p className="text-[11px] text-slate-500">
-                          Passing score: {a.passingScore}% •{' '}
-                          {a.durationMinutes ? `${a.durationMinutes} min` : 'Untimed'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={
-                            a.status === 'COMPLETED'
-                              ? 'success'
-                              : a.status === 'IN_PROGRESS'
-                                ? 'warning'
-                                : 'secondary'
-                          }
-                        >
-                          {a.status}
-                        </Badge>
-                        <Button size="sm" variant="outline" className="text-xs">
-                          {a.status === 'IN_PROGRESS' ? 'Continue' : 'Details'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* 4. Active Courses (2 Cols) + Up Next (1 Col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ActiveCoursesList courses={data.activeCourses} />
         </div>
-
-        {/* Right Column (1 Col): Competency Development & Activity */}
-        <div className="space-y-8">
-          {/* Competency Development */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-indigo-600" />
-                <span>Competency Matrix</span>
-              </CardTitle>
-              <p className="text-xs text-slate-500">WMO & IMD verified operational proficiencies</p>
-            </CardHeader>
-            <CardContent>
-              {competencies.length === 0 ? (
-                <EmptyState
-                  icon={Award}
-                  title="No Competencies Mapped"
-                  description="Complete course assessments or request trainer evaluation to map operational competencies."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {competencies.map((c) => (
-                    <div
-                      key={c.id}
-                      className="p-3 rounded-xl border border-slate-200 bg-white space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-900">{c.name}</span>
-                        <span className="text-[11px] font-extrabold text-indigo-600">
-                          Level {c.currentLevel}/5
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-600 rounded-full"
-                          style={{ width: `${(c.currentLevel / 5) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recommended Resources */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Compass className="w-4 h-4 text-indigo-600" />
-                <span>Recommended Pathways</span>
-              </CardTitle>
-              <p className="text-xs text-slate-500">Curated based on your department role</p>
-            </CardHeader>
-            <CardContent>
-              {recommendations.length === 0 ? (
-                <EmptyState
-                  icon={Compass}
-                  title="No Recommendations"
-                  description="Recommendations will be generated as you engage with learning pathways."
-                />
-              ) : (
-                <div className="space-y-2.5">
-                  {recommendations.map((r) => (
-                    <div
-                      key={r.id}
-                      className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-1"
-                    >
-                      <span className="text-xs font-bold text-slate-900 block">
-                        {r.courseTitle || r.resourceTitle}
-                      </span>
-                      {r.reason && (
-                        <p className="text-[11px] text-slate-500 leading-snug">{r.reason}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="w-4 h-4 text-slate-500" />
-                <span>Recent Activity</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentActivity.length === 0 ? (
-                <EmptyState
-                  icon={Clock}
-                  title="No Recent Activity"
-                  description="Your recent learning progress and assessment milestones will be logged here."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {recentActivity.map((act) => (
-                    <div key={act.id} className="flex items-start gap-2.5 text-xs text-slate-600">
-                      <div className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
-                      <div>
-                        <span className="font-semibold text-slate-800">{act.action}</span>
-                        <p className="text-[11px] text-slate-400">
-                          {new Date(act.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <div>
+          <UpNextList items={data.upNext} />
         </div>
       </div>
+
+      {/* 5. Learning Journey Milestone Progression */}
+      <LearningJourneyCard />
+
+      {/* 6. Competencies Snapshot (1 Col) + Skill Gaps (1 Col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CompetencySnapshotCard competencies={data.competencies} />
+        <SkillGapPanel gaps={data.skillGaps} />
+      </div>
+
+      {/* 7. Assessments (1 Col) + Learning Resources (1 Col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AssessmentSnapshotCard assessments={data.assessments} />
+        <LearningResourcesList resources={data.resources} />
+      </div>
+
+      {/* 8. Recommended Courses */}
+      <RecommendedCoursesList recommendations={data.recommendations} />
+
+      {/* 9. Assigned Instructor (1 Col) + Achievements (1 Col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TrainerConnectionCard trainer={data.trainer} />
+        <AchievementsCard achievements={data.achievements} />
+      </div>
+
+      {/* 10. Recent Activity Timeline */}
+      <RecentActivityTimeline activities={data.recentActivity} />
+
+      {/* 11. Future AI Capabilities (Coming Soon) */}
+      <FuturePlaceholders />
     </div>
   );
 };
