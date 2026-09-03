@@ -2,9 +2,9 @@ import { z } from 'zod';
 
 export const loginValidationSchema = z.object({
   email: z
-    .string({ required_error: 'Email is required' })
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address')
+    .string({ required_error: 'Official email is required' })
+    .min(1, 'Official email is required')
+    .email('Please enter a valid government / organization email address')
     .toLowerCase()
     .trim(),
   password: z.string({ required_error: 'Password is required' }).min(1, 'Password is required'),
@@ -20,15 +20,12 @@ export const registerValidationSchema = z
       .trim(),
     lastName: z.string().trim().optional(),
     email: z
-      .string({ required_error: 'Email is required' })
-      .min(1, 'Email is required')
-      .email('Please enter a valid email address')
+      .string({ required_error: 'Official email is required' })
+      .min(1, 'Official email is required')
+      .email('Please enter a valid official email address')
       .toLowerCase()
       .trim(),
     phone: z.string().trim().optional(),
-    role: z.enum(['TRAINEE', 'TRAINER'], {
-      required_error: 'Please select whether you are joining as a Trainee or Trainer',
-    }),
     password: z
       .string({ required_error: 'Password is required' })
       .min(8, 'Password must be at least 8 characters long')

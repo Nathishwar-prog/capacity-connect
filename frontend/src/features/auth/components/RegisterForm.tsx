@@ -4,22 +4,14 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AxiosError } from 'axios';
-import {
-  Mail,
-  Lock,
-  User,
-  Phone,
-  Eye,
-  EyeOff,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-  GraduationCap,
-  Award,
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, User, Phone, Eye, EyeOff, UserPlus, ShieldCheck } from 'lucide-react';
 import { registerValidationSchema, RegisterFormData } from '../validation/auth.validation';
 import { useRegister } from '../hooks/useRegister';
 import { ApiErrorResponse } from '../types/auth.types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -28,11 +20,11 @@ interface RegisterFormProps {
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerValidationSchema),
@@ -41,18 +33,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       lastName: '',
       email: '',
       phone: '',
-      role: 'TRAINEE',
       password: '',
       confirmPassword: '',
     },
   });
 
-  const selectedRole = watch('role');
-
   const { mutate: registerUser, isPending } = useRegister({
     onSuccess: () => {
       setErrorMessage(null);
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push('/dashboard/trainee');
+      }
     },
     onError: (error: AxiosError<ApiErrorResponse> | Error) => {
       let message = 'Registration failed. Please check your inputs.';
@@ -67,192 +60,139 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
   const onSubmit = (data: RegisterFormData) => {
     setErrorMessage(null);
-    registerUser(data);
+    registerUser({
+      ...data,
+      role: 'TRAINEE',
+    });
   };
 
   return (
     <div className="space-y-4">
+      {/* Informative institutional role notice */}
+      <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-start gap-2.5 text-xs text-indigo-900">
+        <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-600" />
+        <p className="leading-relaxed">
+          Public registration provisions a <strong>Capacity Building Trainee</strong> account.
+          Trainer and Administrative credentials are provisioned by MoES / IMD departmental
+          administrators.
+        </p>
+      </div>
+
       {errorMessage && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-          <span className="font-medium">{errorMessage}</span>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-        {/* Role Selector: Trainee & Trainer Only */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-            Select Your Role
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              {
-                value: 'TRAINEE',
-                label: 'Trainee',
-                desc: 'Access courses, map skills & take assessments',
-                icon: GraduationCap,
-              },
-              {
-                value: 'TRAINER',
-                label: 'Trainer',
-                desc: 'Build courses, deliver training & evaluate trainees',
-                icon: Award,
-              },
-            ].map((roleOption) => {
-              const Icon = roleOption.icon;
-              const isSelected = selectedRole === roleOption.value;
-              return (
-                <label
-                  key={roleOption.value}
-                  className={`relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20 shadow-sm'
-                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    value={roleOption.value}
-                    {...register('role')}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className={`p-1 rounded-lg ${
-                          isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                      <span
-                        className={`text-xs font-bold ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}
-                      >
-                        {roleOption.label}
-                      </span>
-                    </div>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />}
-                  </div>
-                  <span className="text-[11px] text-slate-500 leading-snug">{roleOption.desc}</span>
-                </label>
-              );
-            })}
-          </div>
-          {errors.role && (
-            <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.role.message}</p>
-          )}
-        </div>
-
         {/* First & Last Name */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              First Name <span className="text-indigo-600">*</span>
+          <div className="space-y-1">
+            <label htmlFor="firstName" className="block text-xs font-bold text-slate-700">
+              First Name <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <User className="w-3.5 h-3.5" />
               </div>
-              <input
+              <Input
+                id="firstName"
                 type="text"
                 {...register('firstName')}
-                placeholder="Jane"
+                placeholder="First name"
                 disabled={isPending}
-                className={`w-full pl-8 pr-3 py-2 bg-white border rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
-                  errors.firstName
-                    ? 'border-rose-400 focus:border-rose-500'
-                    : 'border-slate-300 focus:border-indigo-600'
-                }`}
+                error={!!errors.firstName}
+                className="pl-9 h-9 text-xs"
               />
             </div>
             {errors.firstName && (
-              <p className="text-[10px] text-rose-600 mt-0.5 font-medium">
-                {errors.firstName.message}
-              </p>
+              <p className="text-[10px] text-rose-600 font-medium">{errors.firstName.message}</p>
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name</label>
-            <input
+          <div className="space-y-1">
+            <label htmlFor="lastName" className="block text-xs font-bold text-slate-700">
+              Last Name
+            </label>
+            <Input
+              id="lastName"
               type="text"
               {...register('lastName')}
-              placeholder="Doe"
+              placeholder="Last name"
               disabled={isPending}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+              className="h-9 text-xs"
             />
           </div>
         </div>
 
         {/* Email Address */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Work Email Address <span className="text-indigo-600">*</span>
+        <div className="space-y-1">
+          <label htmlFor="reg-email" className="block text-xs font-bold text-slate-700">
+            Official Email Address <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <Mail className="w-3.5 h-3.5" />
             </div>
-            <input
+            <Input
+              id="reg-email"
               type="email"
               {...register('email')}
-              placeholder="jane.doe@enterprise.com"
+              placeholder="official@moes.gov.in / imd.gov.in"
               disabled={isPending}
-              className={`w-full pl-8 pr-3 py-2 bg-white border rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
-                errors.email
-                  ? 'border-rose-400 focus:border-rose-500'
-                  : 'border-slate-300 focus:border-indigo-600'
-              }`}
+              error={!!errors.email}
+              className="pl-9 h-9 text-xs"
             />
           </div>
           {errors.email && (
-            <p className="text-[10px] text-rose-600 mt-0.5 font-medium">{errors.email.message}</p>
+            <p className="text-[10px] text-rose-600 font-medium">{errors.email.message}</p>
           )}
         </div>
 
         {/* Phone Number */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+        <div className="space-y-1">
+          <label htmlFor="phone" className="block text-xs font-bold text-slate-700">
+            Phone / Contact Number
+          </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <Phone className="w-3.5 h-3.5" />
             </div>
-            <input
+            <Input
+              id="phone"
               type="tel"
               {...register('phone')}
-              placeholder="+1 (555) 019-2834"
+              placeholder="+91-XXXXXXXXXX"
               disabled={isPending}
-              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+              className="pl-9 h-9 text-xs"
             />
           </div>
         </div>
 
         {/* Password & Confirm Password */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Password <span className="text-indigo-600">*</span>
+          <div className="space-y-1">
+            <label htmlFor="reg-password" className="block text-xs font-bold text-slate-700">
+              Password <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <Lock className="w-3.5 h-3.5" />
               </div>
-              <input
+              <Input
+                id="reg-password"
                 type={showPassword ? 'text' : 'password'}
                 {...register('password')}
                 placeholder="••••••••••••"
                 disabled={isPending}
-                className={`w-full pl-8 pr-8 py-2 bg-white border rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
-                  errors.password
-                    ? 'border-rose-400 focus:border-rose-500'
-                    : 'border-slate-300 focus:border-indigo-600'
-                }`}
+                error={!!errors.password}
+                className="pl-9 pr-8 h-9 text-xs"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
                   <EyeOff className="w-3.5 h-3.5" />
@@ -262,55 +202,41 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
               </button>
             </div>
             {errors.password && (
-              <p className="text-[10px] text-rose-600 mt-0.5 font-medium">
-                {errors.password.message}
-              </p>
+              <p className="text-[10px] text-rose-600 font-medium">{errors.password.message}</p>
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Confirm Password <span className="text-indigo-600">*</span>
+          <div className="space-y-1">
+            <label htmlFor="confirmPassword" className="block text-xs font-bold text-slate-700">
+              Confirm <span className="text-rose-500">*</span>
             </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                {...register('confirmPassword')}
-                placeholder="••••••••••••"
-                disabled={isPending}
-                className={`w-full pl-8 pr-3 py-2 bg-white border rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
-                  errors.confirmPassword
-                    ? 'border-rose-400 focus:border-rose-500'
-                    : 'border-slate-300 focus:border-indigo-600'
-                }`}
-              />
-            </div>
+            <Input
+              id="confirmPassword"
+              type={showPassword ? 'text' : 'password'}
+              {...register('confirmPassword')}
+              placeholder="••••••••••••"
+              disabled={isPending}
+              error={!!errors.confirmPassword}
+              className="h-9 text-xs"
+            />
             {errors.confirmPassword && (
-              <p className="text-[10px] text-rose-600 mt-0.5 font-medium">
+              <p className="text-[10px] text-rose-600 font-medium">
                 {errors.confirmPassword.message}
               </p>
             )}
           </div>
         </div>
 
-        {/* Submit Button */}
-        <button
+        {/* Submit */}
+        <Button
           type="submit"
           disabled={isPending}
-          className="w-full mt-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold text-xs rounded-xl transition-all shadow-sm shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+          isLoading={isPending}
+          className="w-full h-10 mt-2 text-xs font-extrabold"
         >
-          {isPending ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Creating Account...</span>
-            </>
-          ) : (
-            <span>Create Account & Join</span>
-          )}
-        </button>
+          {!isPending && <UserPlus className="w-4 h-4 mr-2" />}
+          <span>Create Trainee Account</span>
+        </Button>
       </form>
     </div>
   );

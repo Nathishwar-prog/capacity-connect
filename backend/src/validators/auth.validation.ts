@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { Role } from '@prisma/client';
 
 export const registerSchema = z.object({
   email: z
@@ -22,12 +21,8 @@ export const registerSchema = z.object({
   phone: z.string().trim().optional(),
   organizationId: z.string().uuid('Invalid organization identifier').optional(),
   departmentId: z.string().uuid('Invalid department identifier').optional(),
-  role: z
-    .enum([Role.TRAINEE, Role.TRAINER], {
-      errorMap: () => ({ message: 'Registration is only permitted for TRAINEE and TRAINER roles' }),
-    })
-    .default(Role.TRAINEE)
-    .optional(),
+  // Any client-supplied role is ignored by AuthService and strictly forced to Role.TRAINEE
+  role: z.string().optional(),
 });
 
 export const loginSchema = z.object({

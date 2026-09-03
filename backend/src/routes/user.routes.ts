@@ -35,6 +35,14 @@ router.post(
   asyncHandler(userController.register),
 );
 
+// --- Current Authenticated User Profile Endpoints ---
+router.get('/me', asyncHandler(userController.getProfile));
+router.patch(
+  '/me',
+  validate({ body: updateUserSchema }),
+  asyncHandler(userController.updateProfile),
+);
+
 // --- User Profile by ID (Self or Admin) ---
 router.get(
   '/:id',
@@ -70,7 +78,7 @@ router.patch(
 
 router.delete(
   '/:id',
-  requireRole([Role.SUPER_ADMIN]),
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
   validate({ params: userIdParamSchema }),
   asyncHandler(userController.deleteUser),
 );

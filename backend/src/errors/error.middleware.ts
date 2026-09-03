@@ -15,13 +15,21 @@ export const globalErrorHandler = (
   let message = err.message || 'An unexpected error occurred';
   const errors = err.errors || undefined;
 
-  // Log the error
-  logger.error(`${req.method} ${req.originalUrl} - Error: ${err.message}`, {
-    stack: err.stack,
-    statusCode,
-    url: req.originalUrl,
-    method: req.method,
-  });
+  // Differentiate operational client errors from unhandled server exceptions
+  if (statusCode >= 500) {
+    logger.error(`${req.method} ${req.originalUrl} - Error: ${err.message}`, {
+      stack: err.stack,
+      statusCode,
+      url: req.originalUrl,
+      method: req.method,
+    });
+  } else {
+    logger.warn(`${req.method} ${req.originalUrl} - ${statusCode}: ${err.message}`, {
+      statusCode,
+      url: req.originalUrl,
+      method: req.method,
+    });
+  }
 
   // Handle specific database errors (like Prisma constraint violations)
   if (err.name === 'PrismaClientKnownRequestError') {

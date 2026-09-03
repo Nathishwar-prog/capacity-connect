@@ -118,7 +118,9 @@ export class AuthService {
     }
 
     const passwordHash = await PasswordUtils.hash(dto.password);
-    const assignedRole = dto.role || Role.TRAINEE;
+    // Public self-registration is strictly restricted to TRAINEE accounts to prevent privilege escalation.
+    // Administrative roles (ADMIN, SUPER_ADMIN, TRAINER) must be provisioned through internal governance workflows.
+    const assignedRole = Role.TRAINEE;
 
     // Create user and auto-create corresponding profile in a transaction
     const user = await prisma.$transaction(async (tx) => {
@@ -237,7 +239,16 @@ export class AuthService {
     }
 
     if (user.status !== UserStatus.APPROVED) {
-      throw new UnauthorizedError('Your account is pending approval or suspended');
+      if (user.status === UserStatus.PENDING) {
+        throw new UnauthorizedError('Your account is awaiting administrative approval');
+      }
+      if (user.status === UserStatus.SUSPENDED || user.status === UserStatus.DEACTIVATED) {
+        throw new UnauthorizedError('Your account is currently unavailable. Please contact your administrator');
+      }
+      if (user.status === UserStatus.REJECTED) {
+        throw new UnauthorizedError('Your registration request could not be approved');
+      }
+      throw new UnauthorizedError('Account is not authorized to sign in');
     }
 
     const passwordMatch = await PasswordUtils.compare(password, user.passwordHash);

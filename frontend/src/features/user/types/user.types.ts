@@ -1,4 +1,4 @@
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'USER';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'TRAINER' | 'TRAINEE';
 
 export interface User {
   id: string;
@@ -6,8 +6,9 @@ export interface User {
   firstName: string | null;
   lastName: string | null;
   role: UserRole;
-  isActive: boolean;
-  permissions: string[];
+  status?: string;
+  isActive?: boolean;
+  permissions?: string[];
   createdAt: string;
   updatedAt: string;
 }

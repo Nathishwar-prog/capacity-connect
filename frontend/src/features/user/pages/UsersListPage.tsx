@@ -61,27 +61,35 @@ export const UsersListPage: React.FC = () => {
       </div>
 
       {/* Directory Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="glass-panel rounded-xl p-4.5">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
           <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
             Total Accounts
           </span>
-          <div className="text-2xl font-bold text-slate-200 mt-1">{users?.length || 0}</div>
+          <div className="text-2xl font-bold text-slate-900 mt-1">{users?.length || 0}</div>
         </div>
-        <div className="glass-panel rounded-xl p-4.5">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
           <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
-            Administrator Roles
+            Administrators
           </span>
-          <div className="text-2xl font-bold text-amber-400 mt-1">
+          <div className="text-2xl font-bold text-indigo-600 mt-1">
             {users?.filter((u) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length || 0}
           </div>
         </div>
-        <div className="glass-panel rounded-xl p-4.5">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
           <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
-            Standard Users
+            Trainers & Instructors
           </span>
-          <div className="text-2xl font-bold text-sky-400 mt-1">
-            {users?.filter((u) => u.role === 'USER').length || 0}
+          <div className="text-2xl font-bold text-emerald-600 mt-1">
+            {users?.filter((u) => u.role === 'TRAINER').length || 0}
+          </div>
+        </div>
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+          <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+            Trainees & Learners
+          </span>
+          <div className="text-2xl font-bold text-sky-600 mt-1">
+            {users?.filter((u) => u.role === 'TRAINEE').length || 0}
           </div>
         </div>
       </div>

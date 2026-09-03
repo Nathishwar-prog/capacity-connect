@@ -4,23 +4,28 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AxiosError } from 'axios';
-import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { loginValidationSchema, LoginFormData } from '../validation/auth.validation';
 import { useLogin } from '../hooks/useLogin';
 import { ApiErrorResponse } from '../types/auth.types';
+import { getRoleDashboardRoute } from '@/constants/roles';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface LoginFormProps {
-  onSuccess?: () => void;
+  onSuccess?: (role: string) => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginValidationSchema),
@@ -31,12 +36,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   });
 
   const { mutate: login, isPending } = useLogin({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setErrorMessage(null);
-      if (onSuccess) onSuccess();
+      const targetRoute = getRoleDashboardRoute(data.user.role);
+      if (onSuccess) {
+        onSuccess(data.user.role);
+      } else {
+        router.push(targetRoute);
+      }
     },
     onError: (error: AxiosError<ApiErrorResponse> | Error) => {
-      let message = 'Authentication failed. Please check your credentials.';
+      let message = 'Invalid email or password. Please verify your credentials.';
       if ('response' in error && error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.message) {
@@ -51,129 +61,86 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     login(data);
   };
 
-  const handleQuickFill = (email: string, password: string) => {
-    setValue('email', email, { shouldValidate: true });
-    setValue('password', password, { shouldValidate: true });
-    setErrorMessage(null);
-  };
-
   return (
     <div className="space-y-5">
       {errorMessage && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-          <span className="font-medium">{errorMessage}</span>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Email Field */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-            Work Email Address
+        {/* Official Email */}
+        <div className="space-y-1.5">
+          <label htmlFor="email" className="block text-xs font-bold text-slate-700">
+            Official Email Address
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <Mail className="w-4 h-4" />
             </div>
-            <input
+            <Input
+              id="email"
               type="email"
+              autoComplete="email"
               {...register('email')}
-              placeholder="name@organization.com"
+              placeholder="official@moes.gov.in / imd.gov.in"
               disabled={isPending}
-              className={`w-full pl-9 pr-3.5 py-2.5 bg-white border rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all ${
-                errors.email
-                  ? 'border-rose-400 focus:border-rose-500'
-                  : 'border-slate-300 focus:border-indigo-600'
-              }`}
+              error={!!errors.email}
+              className="pl-10"
             />
           </div>
           {errors.email && (
-            <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.email.message}</p>
+            <p className="text-[11px] text-rose-600 font-medium">{errors.email.message}</p>
           )}
         </div>
 
-        {/* Password Field */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
+        {/* Password */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className="block text-xs font-bold text-slate-700">
+              Password
+            </label>
+          </div>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <Lock className="w-4 h-4" />
             </div>
-            <input
+            <Input
+              id="password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               {...register('password')}
               placeholder="••••••••••••"
               disabled={isPending}
-              className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all ${
-                errors.password
-                  ? 'border-rose-400 focus:border-rose-500'
-                  : 'border-slate-300 focus:border-indigo-600'
-              }`}
+              error={!!errors.password}
+              className="pl-10 pr-10"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.password.message}</p>
+            <p className="text-[11px] text-rose-600 font-medium">{errors.password.message}</p>
           )}
         </div>
 
-        {/* Submit Button */}
-        <button
+        {/* Submit */}
+        <Button
           type="submit"
           disabled={isPending}
-          className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed active:scale-[0.99]"
+          isLoading={isPending}
+          className="w-full h-11 text-xs font-extrabold tracking-wide"
         >
-          {isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Authenticating...</span>
-            </>
-          ) : (
-            <>
-              <span>Sign In to Capacity Connect</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
+          {!isPending && <LogIn className="w-4 h-4 mr-2" />}
+          <span>Sign In to Capacity Connect</span>
+        </Button>
       </form>
-
-      {/* Quick Fill Demo Section */}
-      <div className="pt-4 border-t border-slate-100">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-2.5">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Quick Demo Access (Password: Password123!)</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => handleQuickFill('user@enterprise.com', 'Password123!')}
-            className="py-2 px-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-xs text-slate-700 font-semibold transition-all text-center"
-          >
-            Trainee
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('alex.trainer@enterprise.com', 'Password123!')}
-            className="py-2 px-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-xs text-slate-700 font-semibold transition-all text-center"
-          >
-            Trainer
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('superadmin@capacityconnect.io', 'Password123!')}
-            className="py-2 px-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-xs text-slate-700 font-semibold transition-all text-center"
-          >
-            Super Admin
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

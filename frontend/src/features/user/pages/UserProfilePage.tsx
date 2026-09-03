@@ -79,14 +79,18 @@ export const UserProfilePage: React.FC = () => {
                 Granted Permissions
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {profile.permissions.map((perm) => (
-                  <span
-                    key={perm}
-                    className="text-[10px] bg-slate-900 border border-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded"
-                  >
-                    {perm}
-                  </span>
-                ))}
+                {(profile.permissions || []).length > 0 ? (
+                  profile.permissions!.map((perm) => (
+                    <span
+                      key={perm}
+                      className="text-[10px] bg-slate-900 border border-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded"
+                    >
+                      {perm}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-slate-500 italic">No custom permissions</span>
+                )}
               </div>
             </div>
           </div>

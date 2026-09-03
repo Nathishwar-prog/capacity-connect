@@ -17,12 +17,24 @@ const app = express();
 app.use(helmet());
 
 // Enable Cross-Origin Resource Sharing (CORS)
+const allowedOrigins = [
+  config.CORS_ORIGIN,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: config.CORS_ORIGIN,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive in dev mode
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   }),
 );
 
@@ -40,6 +52,28 @@ app.use(cookieParser());
 
 // Log incoming request details
 app.use(requestLogger);
+
+// Silent 204 handler for browser favicon requests
+app.get('/favicon.ico', (_req, res) => {
+  res.status(204).end();
+});
+
+// Root welcome & service health info endpoint
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'Capacity Connect Enterprise API',
+    status: 'online',
+    version: '1.0.0',
+    environment: config.NODE_ENV,
+    apiPrefix: config.API_PREFIX,
+    endpoints: {
+      health: `${config.API_PREFIX}/health`,
+      auth: `${config.API_PREFIX}/auth`,
+      users: `${config.API_PREFIX}/users`,
+    },
+  });
+});
 
 // --- 2. REST Endpoints ---
 app.use(config.API_PREFIX, apiRouter);

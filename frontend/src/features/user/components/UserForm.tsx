@@ -22,7 +22,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       email: initialValues?.email || '',
       firstName: initialValues?.firstName || '',
       lastName: initialValues?.lastName || '',
-      role: initialValues?.role || 'USER',
+      role: initialValues?.role || 'TRAINEE',
       password: '',
     },
   });
@@ -133,8 +133,8 @@ export const UserForm: React.FC<UserFormProps> = ({
           {...register('role')}
           className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
         >
-          <option value="USER">User (Standard Access)</option>
-          <option value="MANAGER">Manager (Team Management)</option>
+          <option value="TRAINEE">Trainee (Learner)</option>
+          <option value="TRAINER">Trainer (Instructor)</option>
           <option value="ADMIN">Admin (Directory Control)</option>
           <option value="SUPER_ADMIN">Super Admin (System Root)</option>
         </select>

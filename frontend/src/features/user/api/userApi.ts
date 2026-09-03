@@ -22,16 +22,16 @@ export const userApi = {
    * Registers/Creates a new user account
    */
   async createUser(payload: CreateUserPayload): Promise<User> {
-    const response = await apiClient.post('/users/register', payload);
+    const response = await apiClient.post('/users', payload);
     return response.data.data;
   },
 
   /**
    * Updates an existing user's details
    */
-  async updateUser(_id: string, payload: UpdateUserPayload): Promise<User> {
-    // If updating self, could also use PATCH /users/me depending on API design
-    const response = await apiClient.patch(`/users/me`, payload);
+  async updateUser(id: string, payload: UpdateUserPayload): Promise<User> {
+    const endpoint = !id || id === 'me' ? '/users/me' : `/users/${id}`;
+    const response = await apiClient.patch(endpoint, payload);
     return response.data.data;
   },
 

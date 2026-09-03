@@ -10,26 +10,31 @@ import {
 } from '../validators/auth.validation';
 import { asyncHandler } from '../errors/async.handler';
 
+import { authRateLimiter } from '../middlewares/rate-limit.middleware';
+
 const router = Router();
 
 const authService = new AuthService();
 const authController = new AuthController(authService);
 
-// Public Authentication Endpoints
+// Public Authentication Endpoints (Rate Limited)
 router.post(
   '/register',
+  authRateLimiter,
   validate({ body: registerSchema }),
   asyncHandler(authController.register),
 );
 
 router.post(
   '/login',
+  authRateLimiter,
   validate({ body: loginSchema }),
   asyncHandler(authController.login),
 );
 
 router.post(
   '/refresh',
+  authRateLimiter,
   validate({ body: refreshTokenSchema }),
   asyncHandler(authController.refresh),
 );

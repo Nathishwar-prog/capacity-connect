@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { ResponseHelper } from '../errors/response.helper';
 import { TokenUtils } from '../auth/token.utils';
-import { BadRequestError } from '../errors/app-error';
 
 export class AuthController {
   private authService: AuthService;
@@ -59,7 +58,8 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] as string | undefined;
 
     if (!refreshToken) {
-      throw new BadRequestError('Refresh token is required');
+      const { UnauthorizedError } = await import('../errors/app-error');
+      throw new UnauthorizedError('No refresh token provided');
     }
 
     const { accessToken, newRefreshToken } = await this.authService.refreshAccessToken(

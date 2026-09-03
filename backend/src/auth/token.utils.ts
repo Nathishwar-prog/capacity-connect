@@ -56,7 +56,7 @@ export class TokenUtils {
       secure: config.COOKIE_SECURE,
       sameSite: config.COOKIE_SAME_SITE,
       maxAge,
-      path: '/api/v1/auth/refresh', // Scope cookie only to refresh route
+      path: `${config.API_PREFIX}/auth`, // Scope cookie to auth routes (/refresh and /logout)
     });
   }
 
@@ -68,7 +68,7 @@ export class TokenUtils {
       httpOnly: true,
       secure: config.COOKIE_SECURE,
       sameSite: config.COOKIE_SAME_SITE,
-      path: '/api/v1/auth/refresh',
+      path: `${config.API_PREFIX}/auth`,
     });
   }
 

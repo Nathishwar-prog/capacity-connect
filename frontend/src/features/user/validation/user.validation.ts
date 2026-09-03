@@ -14,7 +14,7 @@ export const userFormSchema = z.object({
     .max(50, 'Last name cannot exceed 50 characters')
     .optional()
     .or(z.literal('')),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'USER']).default('USER'),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'TRAINER', 'TRAINEE']).default('TRAINEE'),
   password: z
     .string()
     .min(8, 'Password must be at least 8 digits')

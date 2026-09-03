@@ -41,13 +41,17 @@ export interface UserResponseDto {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+  permissions?: string[];
 }
+
+import { permissionsMap } from '../permissions';
 
 export class UserDtoMapper {
   /**
    * Sanitizes database/domain user objects by stripping password and formatting fields
    */
-  public static toResponse(user: IUser): UserResponseDto {
+  public static toResponse(user: IUser, permissions?: string[]): UserResponseDto {
+    const perms = permissions || permissionsMap[user.role] || [];
     return {
       id: user.id,
       organizationId: user.organizationId,
@@ -63,6 +67,7 @@ export class UserDtoMapper {
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
+      permissions: perms,
     };
   }
 
