@@ -3,6 +3,7 @@ import { healthRouter } from './health.routes';
 import { authRouter } from './auth.routes';
 import { userRouter } from './user.routes';
 import { dashboardRouter } from './dashboard.routes';
+import { trainerRouter } from './trainer.routes';
 
 const router = Router();
 
@@ -49,5 +50,6 @@ router.use('/health', healthRouter);
 router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/trainer', trainerRouter);
 
 export default router;

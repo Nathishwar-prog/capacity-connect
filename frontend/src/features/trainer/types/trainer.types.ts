@@ -1,0 +1,336 @@
+export type CourseDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+export type CourseStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'REJECTED' | 'ARCHIVED';
+export type LessonContentType = 'VIDEO' | 'PDF' | 'ARTICLE' | 'QUIZ' | 'LINK' | 'DOCUMENT';
+
+export interface TrainerSkillExpertise {
+  id: string;
+  skillId: string;
+  proficiencyLevel: number;
+  yearsExperience: number | null;
+  skill: {
+    id: string;
+    name: string;
+    code: string;
+    category: string | null;
+  };
+}
+
+export interface TrainerQualification {
+  id: string;
+  degree: string;
+  fieldOfStudy: string;
+  institution: string;
+  startDate: string | null;
+  endDate: string | null;
+  description: string | null;
+}
+
+export interface TrainerWorkExperience {
+  id: string;
+  companyName: string;
+  jobTitle: string;
+  description: string | null;
+  startDate: string;
+  endDate: string | null;
+  isCurrent: boolean;
+}
+
+export interface TrainerProfileData {
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string | null;
+    phone: string | null;
+    avatarUrl: string | null;
+    role: string;
+    status: string;
+    organization: { id: string; name: string; code: string };
+    department: { id: string; name: string; code: string } | null;
+    trainerProfile: {
+      id: string;
+      designation: string;
+      organizationName: string | null;
+      bio: string;
+      yearsExperience: number;
+      expertise: TrainerSkillExpertise[];
+    } | null;
+    qualifications: TrainerQualification[];
+    workExperiences: TrainerWorkExperience[];
+  };
+  stats: {
+    totalCourses: number;
+    publishedCourses: number;
+    learnersTrained: number;
+    avgCompletionRate: number;
+    avgAssessmentScore: number;
+    competenciesCovered: number;
+  };
+}
+
+export interface TrainerDashboardKPIs {
+  totalCourses: number;
+  publishedCourses: number;
+  draftCourses: number;
+  pendingCourses: number;
+  totalEnrollments: number;
+  activeLearners: number;
+  completedLearners: number;
+  avgProgress: number;
+  avgScore: number;
+  competenciesCovered: number;
+}
+
+export interface TrainerDashboardData {
+  kpis: TrainerDashboardKPIs;
+  recentCourses: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    status: CourseStatus;
+    difficulty: CourseDifficulty;
+    moduleCount: number;
+    enrolledCount: number;
+    completionRate: number;
+  }>;
+  recentTrainees: Array<{
+    enrollmentId: string;
+    traineeId: string;
+    name: string;
+    email: string;
+    designation: string;
+    department: string;
+    courseTitle: string;
+    progress: number;
+    status: string;
+  }>;
+  assessments: Array<{
+    id: string;
+    title: string;
+    courseTitle: string;
+    questionsCount: number;
+    attemptsCount: number;
+    status: string;
+  }>;
+  recentFeedback: Array<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    courseTitle: string | null;
+    traineeName: string;
+    createdAt: string;
+  }>;
+  actionRequired: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    link: string;
+  }>;
+}
+
+export interface LessonItem {
+  id: string;
+  moduleId: string;
+  title: string;
+  description: string | null;
+  contentType: LessonContentType;
+  content: string | null;
+  resourceUrl: string | null;
+  durationMinutes: number | null;
+  orderIndex: number;
+  isPreview: boolean;
+}
+
+export interface CourseModuleItem {
+  id: string;
+  courseId: string;
+  title: string;
+  description: string | null;
+  orderIndex: number;
+  lessons: LessonItem[];
+}
+
+export interface CourseCompetencyItem {
+  id: string;
+  competencyId: string;
+  targetLevel: number;
+  competency: {
+    id: string;
+    name: string;
+    code: string;
+    category: string | null;
+  };
+}
+
+export interface TrainerCourseDetail {
+  id: string;
+  organizationId: string;
+  trainerId: string;
+  title: string;
+  slug: string;
+  description: string;
+  thumbnailUrl: string | null;
+  category: string;
+  difficulty: CourseDifficulty;
+  durationMinutes: number;
+  status: CourseStatus;
+  publishedAt: string | null;
+  modules: CourseModuleItem[];
+  courseCompetencies: CourseCompetencyItem[];
+  prerequisites: Array<{
+    prerequisiteCourse: {
+      id: string;
+      title: string;
+      slug: string;
+      difficulty: CourseDifficulty;
+    };
+  }>;
+  assessments: Array<{
+    id: string;
+    title: string;
+    subject: string;
+    status: string;
+    durationMinutes: number | null;
+    passingScore: number;
+  }>;
+}
+
+export interface TrainerCourseListItem {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  difficulty: CourseDifficulty;
+  durationMinutes: number;
+  status: CourseStatus;
+  publishedAt: string | null;
+  moduleCount: number;
+  lessonCount: number;
+  enrolledCount: number;
+  competencies: string[];
+  completionRate: number;
+}
+
+export interface TrainerTraineeListItem {
+  enrollmentId: string;
+  traineeId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  designation: string;
+  department: string;
+  courseId: string;
+  courseTitle: string;
+  progress: number;
+  status: string;
+  enrolledAt: string;
+  skills: Array<{ name: string; level: number }>;
+  competencies: Array<{ name: string; level: number }>;
+  skillGapsCount: number;
+}
+
+export interface TraineeDetailData {
+  profile: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    designation: string;
+    bio: string;
+    department: string;
+    organization: string;
+    profileCompletion: number;
+    interests: string[];
+  };
+  enrolledCourses: Array<{
+    courseId: string;
+    title: string;
+    slug: string;
+    progressPercentage: number;
+    status: string;
+    enrolledAt: string;
+    completedAt: string | null;
+    modules: Array<{
+      id: string;
+      title: string;
+      lessons: Array<{
+        id: string;
+        title: string;
+        completed: boolean;
+      }>;
+    }>;
+  }>;
+  competencies: Array<{
+    id: string;
+    name: string;
+    category: string | null;
+    currentLevel: number;
+    confidenceScore: number;
+    source: string;
+  }>;
+  skillGaps: Array<{
+    id: string;
+    competencyName: string;
+    currentLevel: number;
+    requiredLevel: number;
+    gapLevel: number;
+    priority: string;
+    status: string;
+  }>;
+  assessments: Array<{
+    id: string;
+    assessmentTitle: string;
+    subject: string;
+    score: number | null;
+    percentage: number | null;
+    passed: boolean | null;
+    status: string;
+    submittedAt: string | null;
+  }>;
+}
+
+export interface TrainerAssessmentItem {
+  id: string;
+  title: string;
+  subject: string;
+  courseId: string | null;
+  courseTitle: string;
+  durationMinutes: number | null;
+  passingScore: number;
+  status: string;
+  questionCount: number;
+  attemptCount: number;
+  passedCount: number;
+  createdAt: string;
+}
+
+export interface TrainerAnalyticsData {
+  kpis: TrainerDashboardKPIs;
+  coursePerformance: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    status: CourseStatus;
+    difficulty: CourseDifficulty;
+    enrolledCount: number;
+    completionRate: number;
+    averageProgress: number;
+  }>;
+  competenciesCovered: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
+export interface TrainerFeedbackItem {
+  id: string;
+  rating: number;
+  comment: string | null;
+  status: string;
+  courseTitle: string;
+  traineeName: string;
+  traineeEmail: string;
+  createdAt: string;
+}

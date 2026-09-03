@@ -12,6 +12,11 @@ import {
   Loader2,
   CloudSun,
   Sparkles,
+  BookOpenCheck,
+  GraduationCap,
+  ClipboardList,
+  BarChart3,
+  MessageSquareQuote,
 } from 'lucide-react';
 import useAuthStore from '@/store/auth';
 import { useLogout } from '@/features/auth';
@@ -79,12 +84,37 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         return [
           {
             href: '/dashboard/trainer',
-            label: 'Instruction Dashboard',
+            label: 'Dashboard',
             icon: LayoutDashboard,
           },
           {
-            href: '/profile',
-            label: 'Trainer Profile',
+            href: '/trainer/courses',
+            label: 'My Courses',
+            icon: BookOpenCheck,
+          },
+          {
+            href: '/trainer/trainees',
+            label: 'Trainees Monitoring',
+            icon: GraduationCap,
+          },
+          {
+            href: '/trainer/assessments',
+            label: 'Assessments',
+            icon: ClipboardList,
+          },
+          {
+            href: '/trainer/analytics',
+            label: 'Analytics',
+            icon: BarChart3,
+          },
+          {
+            href: '/trainer/feedback',
+            label: 'Trainee Feedback',
+            icon: MessageSquareQuote,
+          },
+          {
+            href: '/trainer/profile',
+            label: 'My Profile',
             icon: User,
           },
         ];
