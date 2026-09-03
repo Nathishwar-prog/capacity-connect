@@ -1,0 +1,2161 @@
+You are a Senior Product Designer, UX Architect, Design-System Engineer,
+Frontend Architect, and UI Engineer.
+
+You are designing the production-grade TRAINER DASHBOARD for:
+
+CAPACITY CONNECT
+Digital Capacity Building and Learning Management Portal
+
+Target ecosystem:
+Ministry of Earth Sciences (MoES)
+India Meteorological Department (IMD)
+
+Technology/UI requirements:
+- Next.js / React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- 21st.dev components/patterns where appropriate
+- Lucide React icons
+- Existing project design system must be preserved where one already exists
+
+============================================================
+CORE PRODUCT PRINCIPLE
+============================================================
+
+DO NOT DESIGN A GENERIC ADMIN DASHBOARD.
+
+The Trainer Dashboard is a professional operational workspace.
+
+A trainer should be able to open the dashboard and immediately understand:
+
+1. What training activities are happening?
+2. How are my trainees progressing?
+3. Which trainees need attention?
+4. How are my courses performing?
+5. Are there assessments requiring action?
+6. Are there competency gaps?
+7. Do I have courses waiting for approval?
+8. What actions should I take next?
+
+The dashboard should feel like:
+
+"Training Command Center"
+
+rather than:
+
+"Analytics page with random cards."
+
+============================================================
+1. DESIGN DIRECTION
+============================================================
+
+Create a modern, trustworthy, institutional learning-management interface.
+
+Visual character:
+
+- professional
+- calm
+- data-focused
+- clean
+- modern
+- trustworthy
+- government-grade
+- accessible
+- information-dense without feeling crowded
+- minimal visual noise
+
+Avoid:
+
+- excessive gradients
+- excessive glassmorphism
+- neon colors
+- giant hero sections
+- oversized decorative illustrations
+- excessive animations
+- fake AI futuristic effects
+- dashboard clutter
+- random colorful cards
+- generic startup/SaaS aesthetic
+- fake statistics
+- fake user activity
+
+This should look appropriate for a serious MoES/IMD capacity-building platform.
+
+============================================================
+2. DESIGN SYSTEM
+============================================================
+
+Use:
+
+shadcn/ui as the primary UI foundation.
+
+Use 21st.dev selectively for:
+- polished dashboard compositions
+- sidebar variants
+- advanced cards
+- activity patterns
+- command/search patterns
+- data visualization compositions
+- empty states
+- notification patterns
+
+Do not blindly import entire 21st.dev dashboards.
+
+Adapt all components into ONE coherent Capacity Connect design system.
+
+Use Lucide React for icons.
+
+Do NOT use:
+- emoji as UI icons
+- random icon libraries
+- mixed icon styles
+- custom SVG icons unless genuinely necessary
+
+Icons should generally use:
+16px / 18px / 20px sizes.
+
+Use stroke-based Lucide icons consistently.
+
+============================================================
+3. COLOR STRATEGY
+============================================================
+
+Create a restrained institutional palette.
+
+Primary:
+deep blue / navy family
+
+Secondary:
+cool slate / neutral
+
+Success:
+subtle green
+
+Warning:
+amber
+
+Critical:
+red
+
+Information:
+blue
+
+The primary color should communicate:
+- trust
+- science
+- institutional reliability
+- learning
+
+Do NOT turn every card into a different color.
+
+Use color primarily for:
+- status
+- actions
+- important indicators
+- charts
+- focus states
+
+Prefer neutral surfaces.
+
+Example visual hierarchy:
+
+Background
+→ subtle neutral
+
+Sidebar
+→ slightly darker / contrasting neutral
+
+Cards
+→ clean surface
+
+Borders
+→ subtle
+
+Primary actions
+→ institutional blue
+
+Success
+→ restrained green
+
+Warnings
+→ restrained amber
+
+Errors
+→ restrained red
+
+============================================================
+4. TYPOGRAPHY
+============================================================
+
+Use the project's existing font if already established.
+
+Otherwise use a clean modern sans-serif.
+
+Typography hierarchy:
+
+Dashboard title
+large but not oversized
+
+Section title
+medium / semibold
+
+Card title
+medium
+
+Metric
+large / bold
+
+Supporting metric
+small / muted
+
+Metadata
+small / muted
+
+Avoid:
+- huge numbers everywhere
+- excessive bold text
+- long paragraphs
+
+The dashboard should be scannable.
+
+============================================================
+5. GLOBAL APPLICATION SHELL
+============================================================
+
+Create:
+
+┌─────────────────────────────────────────────────────────────┐
+│ Sidebar │ Top Header                                        │
+│         ├───────────────────────────────────────────────────┤
+│         │                                                   │
+│         │ Trainer Dashboard                                 │
+│         │                                                   │
+│         │ Dashboard content                                 │
+│         │                                                   │
+│         │                                                   │
+│         └───────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+
+SIDEBAR:
+
+Brand:
+Capacity Connect
+
+Role indicator:
+TRAINER
+
+Navigation:
+
+Overview
+  Dashboard
+
+Learning
+  My Courses
+  Course Builder
+  Resources
+  Assessments
+
+People
+  My Trainees
+  Progress
+  Skill Gaps
+
+Insights
+  Analytics
+  Feedback
+
+Account
+  My Profile
+  Notifications
+
+Keep navigation logically grouped.
+
+Do not put every route in one flat list.
+
+Sidebar behavior:
+
+Desktop:
+- expanded
+- collapsible
+
+Collapsed:
+- icon-only
+- tooltips
+
+Mobile:
+- drawer
+
+Use shadcn Sidebar.
+
+============================================================
+6. SIDEBAR DETAILS
+============================================================
+
+Sidebar header:
+
+Capacity Connect logo/mark
++
+"Trainer Workspace"
+
+Role badge:
+
+TRAINER
+
+Navigation item structure:
+
+Icon
+Label
+optional badge
+
+Examples:
+
+LayoutDashboard
+"Dashboard"
+
+BookOpen
+"My Courses"
+
+Users
+"Trainees"
+
+ClipboardCheck
+"Assessments"
+
+Brain
+"Competencies"
+
+BarChart3
+"Analytics"
+
+MessageSquare
+"Feedback"
+
+Bell
+"Notifications"
+
+UserCircle
+"Profile"
+
+Use appropriate Lucide icons.
+
+Do not overuse icons.
+
+============================================================
+7. TOP HEADER
+============================================================
+
+Header should contain:
+
+LEFT:
+sidebar toggle
+breadcrumb
+
+Example:
+
+Trainer / Dashboard
+
+CENTER/OPTIONAL:
+global search
+
+RIGHT:
+- notifications
+- help
+- language selector if i18n exists
+- trainer avatar
+- trainer name
+- dropdown
+
+Profile dropdown:
+
+My Profile
+Settings
+Help
+Sign out
+
+Do NOT expose:
+role modification
+admin controls
+security administration
+
+============================================================
+8. DASHBOARD HEADER
+============================================================
+
+Main content begins with:
+
+Good morning, [Trainer Name]
+
+Trainer workspace
+
+"Here's what's happening across your courses and trainees."
+
+Do NOT use overly casual SaaS copy.
+
+Right side:
+
+Primary CTA:
+
++ Create Course
+
+Secondary:
+
+View Trainees
+
+The CTA should navigate to real routes.
+
+============================================================
+9. PRIMARY KPI AREA
+============================================================
+
+DO NOT create 10 equal KPI cards.
+
+Use hierarchy.
+
+First row:
+
+┌────────────────────┐
+│ Active Trainees    │
+│ 128                │
+│ +8 this month      │
+└────────────────────┘
+
+┌────────────────────┐
+│ Active Courses     │
+│ 12                 │
+│ 8 published        │
+└────────────────────┘
+
+┌────────────────────┐
+│ Avg Completion     │
+│ 78%                │
+│ +4.2%              │
+└────────────────────┘
+
+┌────────────────────┐
+│ Avg Assessment     │
+│ 82%                │
+│ +2.8%              │
+└────────────────────┘
+
+BUT:
+
+These are UI examples only.
+
+DO NOT hardcode these numbers in production.
+
+Connect to backend data.
+
+Each KPI should contain:
+
+- icon
+- title
+- primary value
+- supporting context
+- trend if actual trend data exists
+
+Example:
+
+Active Trainees
+128
++8 vs previous period
+
+If no comparison data exists:
+
+128
+Currently enrolled
+
+Do NOT fabricate percentage trends.
+
+============================================================
+10. KPI CARD DESIGN
+============================================================
+
+Use shadcn Card.
+
+Visual hierarchy:
+
+Icon badge
+↓
+Metric title
+↓
+Large metric
+↓
+small contextual information
+
+Example:
+
+[Users icon]
+
+Active Trainees
+
+128
+
+12 requiring attention
+
+Use subtle icon containers.
+
+Do not use giant colored backgrounds.
+
+Use hover interaction only if the card is clickable.
+
+============================================================
+11. "ACTION REQUIRED" SECTION
+============================================================
+
+This is one of the most important sections.
+
+Create a prominent but compact panel:
+
+ACTION REQUIRED
+
+Examples:
+
+● 3 trainees have fallen behind
+● 2 assessment submissions need review
+● 1 course was returned for revision
+● 2 draft courses are incomplete
+● 4 trainee competency gaps need attention
+
+Each item:
+
+Icon
+Title
+Description
+Priority
+Action
+
+Example:
+
+⚠
+3 trainees are falling behind
+
+Progress below expected threshold.
+
+[Review trainees]
+
+This section should dynamically disappear or become:
+
+"You're all caught up"
+
+when there are no actions.
+
+Do not create fake warnings.
+
+============================================================
+12. MAIN ANALYTICS AREA
+============================================================
+
+Use a two-column layout.
+
+LEFT:
+Learning Performance
+
+RIGHT:
+Trainee Health
+
+------------------------------------------------------------
+
+LEARNING PERFORMANCE
+
+Title:
+Learning Performance
+
+Description:
+Course engagement and completion over time.
+
+Chart:
+Line / area chart
+
+Possible metrics:
+- active learners
+- course completion
+- lesson completion
+
+Provide time filter:
+
+7 days
+30 days
+90 days
+6 months
+1 year
+
+Use shadcn chart patterns.
+
+Avoid excessive chart decoration.
+
+============================================================
+13. TRAINEE HEALTH PANEL
+============================================================
+
+Title:
+
+Trainee Health
+
+Show distribution:
+
+On Track
+At Risk
+Completed
+Inactive
+
+Example:
+
+On Track        72%
+At Risk         14%
+Inactive         8%
+Completed        6%
+
+Visual:
+
+horizontal progress/distribution bars
+
+OR
+
+small donut chart if appropriate.
+
+Include:
+
+[View all trainees]
+
+Do not make the chart decorative.
+
+It must communicate an actionable status.
+
+============================================================
+14. COURSE PERFORMANCE SECTION
+============================================================
+
+Create:
+
+Course Performance
+
+Table/list.
+
+Columns:
+
+Course
+Status
+Trainees
+Progress
+Completion
+Assessment
+Updated
+
+Example:
+
+Weather Forecasting Fundamentals
+Published
+42 learners
+76%
+82%
+2 days ago
+
+Use:
+
+shadcn DataTable / Table.
+
+Add:
+
+View all courses
+
+Filters:
+
+All
+Published
+Draft
+Pending Approval
+Rejected
+
+Use badges for status.
+
+============================================================
+15. COURSE STATUS DESIGN
+============================================================
+
+Use semantic status badges.
+
+Draft
+neutral
+
+Pending Approval
+amber
+
+Published
+green
+
+Rejected
+red
+
+Archived
+muted
+
+Do NOT use random colors.
+
+Status must also have icons where useful.
+
+Example:
+
+Clock3
+Pending Approval
+
+CheckCircle2
+Published
+
+FileEdit
+Draft
+
+CircleX
+Rejected
+
+============================================================
+16. TRAINEE ATTENTION SECTION
+============================================================
+
+Create a section:
+
+Trainees Needing Attention
+
+Show the top 5–8 trainees.
+
+Each row:
+
+Avatar
+Name
+Department
+Course
+Progress
+Last activity
+Risk/status
+Action
+
+Example:
+
+[avatar]
+
+Trainee Name
+Forecast Operations
+
+Weather Forecasting
+42%
+
+3 days inactive
+
+[Review]
+
+Risk levels:
+
+On Track
+Needs Attention
+At Risk
+
+Do not expose unnecessary personal information.
+
+Respect authorization.
+
+============================================================
+17. TRAINEE PROGRESS VISUALIZATION
+============================================================
+
+Progress should be easy to scan.
+
+Use:
+
+Progress bar
+percentage
+status
+
+Example:
+
+Weather Forecasting
+████████████░░ 78%
+
+Avoid:
+- huge radial charts
+- unnecessary animations
+
+Progress should be accessible.
+
+Do not communicate meaning using color alone.
+
+============================================================
+18. COMPETENCY SNAPSHOT
+============================================================
+
+Create a dedicated:
+
+Competency Snapshot
+
+This connects the Trainer Dashboard with the platform's
+Competency Mapping system.
+
+Show:
+
+Top competency areas being trained
+
+Example:
+
+Forecast Analysis
+████████████ 82%
+
+Observation Techniques
+██████████░░ 68%
+
+Climate Data Interpretation
+████████░░░░ 54%
+
+Also show:
+
+3 competency areas need attention
+
+[View competency gaps]
+
+IMPORTANT:
+
+Do not invent competency names as official IMD curriculum.
+
+Use backend data when available.
+
+If no data exists:
+
+"No competency data available yet."
+
+============================================================
+19. RECENT ACTIVITY
+============================================================
+
+Create:
+
+Recent Activity
+
+Timeline/list:
+
+Course completed
+Assessment submitted
+New trainee enrolled
+Feedback received
+Course approval updated
+Resource uploaded
+
+Each item:
+
+icon
+event
+entity
+timestamp
+
+Example:
+
+Assessment submitted
+Trainee Name submitted
+"Forecasting Assessment"
+
+2 hours ago
+
+Use relative timestamps only when appropriate.
+
+============================================================
+20. UPCOMING / TRAINING SCHEDULE
+============================================================
+
+If the backend supports scheduling:
+
+Create:
+
+Upcoming Training
+
+Show:
+
+Date
+Time
+Course/session
+Trainees
+Status
+
+Example:
+
+12 Sep
+10:00 AM
+
+Advanced Forecast Interpretation
+
+24 trainees
+
+[View]
+
+If scheduling is not currently implemented:
+
+DO NOT create fake events.
+
+Instead create a future-ready empty state:
+
+"Training schedule will appear here when sessions are scheduled."
+
+============================================================
+21. ASSESSMENT SNAPSHOT
+============================================================
+
+Create:
+
+Assessment Overview
+
+Metrics:
+
+Pending Review
+Upcoming
+Average Score
+Completion Rate
+
+Then show recent assessments.
+
+Example:
+
+Forecasting Fundamentals Assessment
+18 attempts
+82% average
+4 pending
+
+[View results]
+
+Use ClipboardCheck / CheckCircle2 icons.
+
+============================================================
+22. FEEDBACK SNAPSHOT
+============================================================
+
+Create:
+
+Learner Feedback
+
+Show:
+
+Average trainer/course rating
+recent feedback
+feedback trend
+
+Example:
+
+4.6 / 5
+
+Based on 84 responses
+
+Recent:
+
+"Very useful explanation of forecasting workflow."
+
+Do not fabricate feedback.
+
+If no feedback:
+
+"No learner feedback yet."
+
+CTA:
+
+View feedback
+
+============================================================
+23. AI INSIGHTS — FUTURE READY
+============================================================
+
+Create a visually distinct but restrained section:
+
+AI TRAINING INSIGHTS
+
+IMPORTANT:
+
+This is a FUTURE implementation placeholder.
+
+DO NOT pretend AI is currently analyzing data.
+
+The card should explicitly communicate:
+
+"AI-powered training insights"
+
+"Coming soon"
+
+Potential future capabilities:
+
+- skill-gap analysis
+- trainee risk detection
+- personalized learning recommendations
+- feedback analysis
+- course improvement suggestions
+
+Example UI:
+
+┌─────────────────────────────────────────────┐
+│ ✦ AI Training Insights          Coming Soon │
+│                                             │
+│ Future insights will help trainers identify │
+│ competency gaps and improve learning        │
+│ outcomes.                                   │
+│                                             │
+│ [Preview capabilities]                      │
+└─────────────────────────────────────────────┘
+
+Do NOT display fake:
+"AI detected 7 skill gaps"
+
+unless an actual AI endpoint exists.
+
+============================================================
+24. QUICK ACTIONS
+============================================================
+
+Create a compact:
+
+Quick Actions
+
++ Create Course
+Upload Resource
+View Trainees
+Create Assessment
+View Analytics
+
+Use icon + label.
+
+Avoid large button grids.
+
+============================================================
+25. PROFILE COMPLETION
+============================================================
+
+If TrainerProfile supports completion:
+
+Show:
+
+Complete your trainer profile
+
+82%
+
+Add:
+- expertise
+- qualifications
+- experience
+- bio
+
+[Complete Profile]
+
+If profile is already complete:
+
+"Your trainer profile is complete."
+
+Do not show an arbitrary percentage.
+
+Calculate it from actual fields.
+
+============================================================
+26. COURSE APPROVAL STATUS
+============================================================
+
+Create a small operational panel:
+
+Course Approval
+
+Draft
+2
+
+Pending Review
+1
+
+Published
+8
+
+Needs Revision
+1
+
+Each status is clickable.
+
+This gives trainers immediate awareness of the publishing workflow.
+
+============================================================
+27. DASHBOARD INFORMATION HIERARCHY
+============================================================
+
+The final page hierarchy should be approximately:
+
+1. Header / greeting
+2. Primary actions
+3. KPI overview
+4. Action Required
+5. Learning Performance + Trainee Health
+6. Course Performance
+7. Trainees Needing Attention
+8. Competency Snapshot
+9. Assessment Overview
+10. Recent Activity
+11. Feedback
+12. AI Future Insights
+13. Quick Actions
+
+Do not show everything at equal visual weight.
+
+The user should immediately see:
+
+WHAT NEEDS MY ATTENTION?
+
+then:
+
+HOW IS TRAINING PERFORMING?
+
+then:
+
+WHY?
+
+============================================================
+28. RESPONSIVE DESIGN
+============================================================
+
+Desktop:
+
+12-column grid.
+
+Example:
+
+KPI:
+4 columns
+
+Analytics:
+8 + 4
+
+Course table:
+12
+
+Trainee:
+7 + Competency:
+5
+
+Tablet:
+2-column layout
+
+Mobile:
+single column
+
+On mobile:
+
+- sidebar becomes drawer
+- tables become responsive cards or horizontally scrollable
+- charts resize
+- KPI cards stack
+- action buttons remain accessible
+- no horizontal page overflow
+
+Do not simply shrink desktop.
+
+Actually redesign information density for mobile.
+
+============================================================
+29. MOBILE DASHBOARD
+============================================================
+
+Mobile order:
+
+Header
+↓
+Greeting
+↓
+Primary CTA
+↓
+Action Required
+↓
+KPI cards
+↓
+Trainee Health
+↓
+Learning Performance
+↓
+Trainees Needing Attention
+↓
+Course Performance
+↓
+Competencies
+↓
+Assessments
+↓
+Activity
+
+Make the first screen useful without scrolling excessively.
+
+============================================================
+30. LOADING STATES
+============================================================
+
+Every dashboard section needs skeleton loading.
+
+Use shadcn Skeleton.
+
+Example:
+
+KPI skeleton
+Chart skeleton
+Table skeleton
+Activity skeleton
+
+Do NOT show a blank white page.
+
+Do NOT show spinners everywhere.
+
+Prefer skeletons for page-level data.
+
+============================================================
+31. EMPTY STATES
+============================================================
+
+Every widget must have a meaningful empty state.
+
+Examples:
+
+No courses:
+
+"No courses yet"
+
+"Create your first course to start building learning content."
+
+[Create Course]
+
+No trainees:
+
+"No trainees assigned yet"
+
+No assessments:
+
+"No assessments available"
+
+No feedback:
+
+"No learner feedback yet"
+
+No competency data:
+
+"No competency data available"
+
+No activity:
+
+"No recent activity"
+
+Avoid:
+
+"No data."
+
+when more helpful context is possible.
+
+============================================================
+32. ERROR STATES
+============================================================
+
+Every data section should support failure.
+
+Example:
+
+Unable to load trainee data.
+
+[Retry]
+
+Do not expose raw API errors.
+
+Do not display stack traces.
+
+============================================================
+33. ACCESS DENIED STATES
+============================================================
+
+If a trainer attempts to access something outside their authorization:
+
+Show:
+
+Access restricted
+
+"You don't have permission to view this information."
+
+[Return to Dashboard]
+
+Do not expose hidden resource information.
+
+============================================================
+34. NOTIFICATION SYSTEM
+============================================================
+
+Top-right notification bell.
+
+Notification panel:
+
+Course approval
+Assessment submission
+New enrollment
+Feedback
+System announcement
+
+Unread badge.
+
+Use:
+
+Bell
+CheckCircle2
+ClipboardCheck
+MessageSquare
+Info
+
+Do not use excessive red notification dots.
+
+============================================================
+35. SEARCH
+============================================================
+
+If global search is implemented:
+
+Search:
+
+Courses
+Trainees
+Assessments
+Resources
+
+Use shadcn Command pattern.
+
+Search result groups:
+
+Courses
+Trainees
+Assessments
+
+Keyboard accessible.
+
+Example:
+
+Search...
+⌘ K
+
+If global search backend does not exist:
+
+Design the UI but clearly keep it future-ready.
+
+Do not pretend search is functional.
+
+============================================================
+36. FILTERS
+============================================================
+
+Dashboard time filter:
+
+7D
+30D
+90D
+6M
+1Y
+
+Course filters:
+
+All
+Published
+Draft
+Pending
+Rejected
+
+Trainee filters:
+
+All
+On Track
+Needs Attention
+At Risk
+
+Use shadcn:
+- Select
+- Tabs
+- DropdownMenu
+- Popover
+- Command
+
+Avoid excessive filter controls.
+
+============================================================
+37. MICROINTERACTIONS
+============================================================
+
+Use subtle interactions only.
+
+Examples:
+
+Card hover:
+small elevation/border transition
+
+Button:
+subtle hover
+
+Sidebar:
+smooth collapse
+
+Progress:
+minimal transition
+
+Toast:
+success/error feedback
+
+Do NOT use:
+- bouncing cards
+- floating particles
+- cursor-following effects
+- excessive motion
+- animated numbers everywhere
+
+Accessibility:
+respect prefers-reduced-motion.
+
+============================================================
+38. ICON SYSTEM
+============================================================
+
+Use Lucide React exclusively.
+
+Suggested icon mapping:
+
+Dashboard:
+LayoutDashboard
+
+Courses:
+BookOpen
+
+Create Course:
+Plus
+
+Trainees:
+Users
+
+Progress:
+ChartNoAxesCombined / TrendingUp
+
+Assessments:
+ClipboardCheck
+
+Competencies:
+Brain / Target
+
+Analytics:
+BarChart3
+
+Feedback:
+MessageSquare
+
+Notifications:
+Bell
+
+Profile:
+UserCircle
+
+Settings:
+Settings
+
+Search:
+Search
+
+Add:
+Plus
+
+Edit:
+Pencil
+
+Delete:
+Trash2
+
+View:
+Eye
+
+Download:
+Download
+
+Upload:
+Upload
+
+Calendar:
+CalendarDays
+
+Warning:
+TriangleAlert
+
+Success:
+CircleCheck
+
+Error:
+CircleX
+
+Pending:
+Clock3
+
+AI future:
+Sparkles
+
+Use icons semantically.
+
+============================================================
+39. COMPONENT ARCHITECTURE
+============================================================
+
+Do NOT put the entire dashboard into:
+
+TrainerDashboard.tsx
+
+Break it into components.
+
+Recommended:
+
+TrainerDashboardPage
+│
+├── TrainerDashboardHeader
+│
+├── TrainerDashboardActions
+│
+├── TrainerKpiGrid
+│   ├── ActiveTraineesCard
+│   ├── ActiveCoursesCard
+│   ├── CompletionRateCard
+│   └── AssessmentScoreCard
+│
+├── ActionRequiredPanel
+│
+├── LearningPerformanceChart
+│
+├── TraineeHealthCard
+│
+├── CoursePerformanceTable
+│
+├── TraineeAttentionList
+│
+├── CompetencySnapshot
+│
+├── AssessmentOverview
+│
+├── RecentActivity
+│
+├── FeedbackSnapshot
+│
+├── AIInsightsPlaceholder
+│
+└── QuickActions
+
+Each component should have a focused responsibility.
+
+============================================================
+40. DATA ARCHITECTURE
+============================================================
+
+Dashboard UI must be designed around real API contracts.
+
+Prefer a dashboard aggregation endpoint:
+
+GET /api/trainer/dashboard
+
+Possible response:
+
+{
+  "overview": {},
+  "courses": {},
+  "trainees": {},
+  "assessments": {},
+  "competencies": {},
+  "activity": {},
+  "feedback": {},
+  "actions": {}
+}
+
+Do not make 15 unnecessary API calls when a well-designed aggregation
+endpoint can provide the dashboard data efficiently.
+
+However:
+
+Do not create an enormous unmaintainable endpoint.
+
+Separate APIs may be used where independent loading or pagination is needed.
+
+============================================================
+41. DATA FRESHNESS
+============================================================
+
+Dashboard should communicate data freshness where useful.
+
+Example:
+
+Updated just now
+
+or
+
+Updated 5 minutes ago
+
+Do not constantly poll.
+
+Use appropriate caching/revalidation.
+
+If data is stale:
+
+"Last updated 15 minutes ago"
+
+============================================================
+42. REAL DATA ONLY
+============================================================
+
+ABSOLUTE RULE:
+
+Do not use fake production numbers.
+
+Do not write:
+
+const trainees = 128;
+
+inside the dashboard.
+
+Do not create fake activity arrays.
+
+Do not create fake chart data.
+
+If backend is not ready:
+
+Create typed mock adapters ONLY in development.
+
+Keep mock data behind a clear development-only boundary.
+
+Production must consume APIs.
+
+============================================================
+43. FUTURE FEATURES
+============================================================
+
+Design placeholders for future features WITHOUT pretending they are active.
+
+Future capabilities:
+
+AI Skill Analyzer
+AI Feedback Analysis
+Personalized Recommendations
+Trainer Matching
+Smart Revision
+Trainer Tech Radar
+AI Chatbot
+Advanced Competency Analytics
+Training Scheduling
+Multilingual Learning Resources
+
+Each future capability should have one of:
+
+"Coming soon"
+
+"Planned"
+
+"Not available yet"
+
+Do not put 10 "Coming Soon" cards across the dashboard.
+
+Only surface future features where they naturally fit.
+
+============================================================
+44. TRAINER TECH RADAR
+============================================================
+
+Future-ready placeholder:
+
+Trainer Tech Radar
+
+Purpose:
+
+Trending technology/domain developments
+↓
+Admin approval
+↓
+Trainer updates learning content
+
+Current UI:
+
+"Trainer Tech Radar"
+
+"Discover approved emerging topics and training updates."
+
+Status:
+
+Coming soon
+
+Do not fabricate technology trends.
+
+============================================================
+45. AI CHATBOT
+============================================================
+
+Do not create a fake chatbot window occupying dashboard space.
+
+Instead:
+
+Add a small assistant entry point if the product design supports it:
+
+"Training Assistant"
+
+"Ask about your courses, trainees, and training insights."
+
+Current status:
+
+Coming soon
+
+When implemented later, it should support trainer-specific queries and
+analytics according to the product requirements.
+
+============================================================
+46. ACCESSIBILITY
+============================================================
+
+Must support:
+
+- keyboard navigation
+- focus states
+- semantic headings
+- aria labels
+- screen readers
+- accessible tables
+- accessible charts
+- accessible dialogs
+- sufficient contrast
+- reduced motion
+
+Never use color as the only indicator.
+
+Example:
+
+Do not show only:
+
+red = at risk
+
+Instead:
+
+TriangleAlert
+At Risk
+
+============================================================
+47. DARK MODE
+============================================================
+
+If the existing application supports dark mode:
+
+Design both themes.
+
+Do not simply invert colors.
+
+Charts, borders, muted text, status badges, and sidebar must remain readable.
+
+If dark mode is not currently implemented:
+
+Keep the design tokens compatible with future dark mode.
+
+============================================================
+48. DESIGN TOKENS
+============================================================
+
+Create reusable design tokens for:
+
+background
+foreground
+muted
+border
+card
+primary
+secondary
+success
+warning
+danger
+info
+
+Do not hardcode dozens of unrelated colors.
+
+Use semantic tokens.
+
+============================================================
+49. SHADCN COMPONENTS
+============================================================
+
+Prefer existing shadcn components:
+
+Card
+Button
+Badge
+Avatar
+Progress
+Tabs
+Table
+DataTable
+DropdownMenu
+Dialog
+Sheet
+Tooltip
+Popover
+Command
+Skeleton
+Separator
+Breadcrumb
+Sidebar
+Chart
+ScrollArea
+Empty
+Item
+Spinner
+
+Use composition instead of building duplicate primitives.
+
+If an existing project component already exists:
+
+REUSE IT.
+
+Do not install another component library just for one widget.
+
+============================================================
+50. 21ST.DEV USAGE
+============================================================
+
+21st.dev may be used for inspiration and selected reusable patterns.
+
+Before adding a 21st.dev component:
+
+1. Inspect its implementation.
+2. Check dependencies.
+3. Check whether it fits the current shadcn version.
+4. Check accessibility.
+5. Check bundle impact.
+6. Adapt it to Capacity Connect tokens.
+7. Do not introduce a second visual language.
+
+The final dashboard must look like ONE product.
+
+============================================================
+51. PERFORMANCE
+============================================================
+
+Do not render heavy components unnecessarily.
+
+Charts should:
+- render efficiently
+- not continuously animate
+- resize correctly
+
+Large trainee/course tables:
+- use pagination
+- use virtualization only when actually necessary
+
+Images:
+- use optimized Next.js image handling where appropriate.
+
+Icons:
+- import only required Lucide icons.
+
+============================================================
+52. DESKTOP VISUAL LAYOUT
+============================================================
+
+Target desktop layout:
+
+┌──────────────┬───────────────────────────────────────────────┐
+│              │ Header                                        │
+│              ├───────────────────────────────────────────────┤
+│   SIDEBAR    │ Trainer Dashboard                             │
+│              │ Greeting + Actions                            │
+│              │                                               │
+│              │ KPI   KPI   KPI   KPI                         │
+│              │                                               │
+│              │ ┌─────────────────────┐ ┌──────────────────┐ │
+│              │ │ Learning Performance│ │ Trainee Health   │ │
+│              │ │                     │ │                  │ │
+│              │ │      CHART          │ │ distribution     │ │
+│              │ │                     │ │                  │ │
+│              │ └─────────────────────┘ └──────────────────┘ │
+│              │                                               │
+│              │ ┌───────────────────────────────────────────┐ │
+│              │ │ Action Required                            │ │
+│              │ └───────────────────────────────────────────┘ │
+│              │                                               │
+│              │ ┌────────────────────────┐ ┌───────────────┐ │
+│              │ │ Course Performance     │ │ Competencies  │ │
+│              │ │                        │ │               │ │
+│              │ │ table                  │ │ snapshot      │ │
+│              │ └────────────────────────┘ └───────────────┘ │
+│              │                                               │
+│              │ ┌────────────────────────┐ ┌───────────────┐ │
+│              │ │ Trainees Attention     │ │ Assessments   │ │
+│              │ └────────────────────────┘ └───────────────┘ │
+│              │                                               │
+│              │ Recent Activity / Feedback / AI Insights      │
+└──────────────┴───────────────────────────────────────────────┘
+
+The exact layout may be adjusted after implementation to maximize hierarchy.
+
+============================================================
+53. IMPORTANT: ACTION-FIRST DESIGN
+============================================================
+
+Every major dashboard widget should answer one of:
+
+WHAT?
+WHY?
+WHO?
+WHAT NEXT?
+
+Examples:
+
+Metric:
+"What is happening?"
+
+Trend chart:
+"Is it improving?"
+
+Trainee list:
+"Who needs attention?"
+
+Competency:
+"Where are the gaps?"
+
+Action panel:
+"What should I do next?"
+
+This principle must guide the final composition.
+
+============================================================
+54. DO NOT OVERLOAD THE DASHBOARD
+============================================================
+
+Not every Trainer feature belongs on the dashboard.
+
+Do NOT place full:
+- course builder
+- assessment builder
+- trainee management table
+- resource manager
+
+inside the dashboard.
+
+The dashboard provides overview and entry points.
+
+Dedicated pages handle deep workflows.
+
+============================================================
+55. ROUTING
+============================================================
+
+Dashboard route:
+
+/trainer/dashboard
+
+CTA routes:
+
+Create Course
+/trainer/courses/new
+
+My Courses
+/trainer/courses
+
+Course Builder
+/trainer/courses/:courseId/builder
+
+Trainees
+/trainer/trainees
+
+Trainee Detail
+/trainer/trainees/:traineeId
+
+Assessments
+/trainer/assessments
+
+Analytics
+/trainer/analytics
+
+Competencies
+/trainer/competencies
+
+Feedback
+/trainer/feedback
+
+Profile
+/trainer/profile
+
+Use the project's existing routing conventions if different.
+
+============================================================
+56. SECURITY UI
+============================================================
+
+Never expose Admin actions in Trainer UI.
+
+Do not show:
+
+Manage Users
+Manage Roles
+Approve Trainers
+Organization Administration
+System Settings
+
+unless explicitly authorized.
+
+The frontend must hide unavailable actions,
+BUT backend authorization remains the source of truth.
+
+============================================================
+57. DEMO / PLACEHOLDER RULE
+============================================================
+
+The dashboard may visually demonstrate future features,
+but distinguish:
+
+LIVE
+from
+COMING SOON
+
+Example:
+
+[Live]
+
+My Courses
+
+[Coming Soon]
+
+AI Training Insights
+
+Never blur the distinction.
+
+============================================================
+58. FINAL UI QUALITY CHECK
+============================================================
+
+Before completing the dashboard ask:
+
+Can a trainer understand their situation within 10 seconds?
+
+Can they identify:
+- important metrics?
+- trainees needing attention?
+- course issues?
+- pending assessments?
+- competency gaps?
+- next actions?
+
+If not, redesign the hierarchy.
+
+============================================================
+59. IMPLEMENTATION PROCESS
+============================================================
+
+PHASE 1:
+Inspect existing project.
+
+Do NOT code immediately.
+
+Inspect:
+- existing trainer routes
+- existing dashboard
+- auth/RBAC
+- theme
+- Tailwind config
+- shadcn setup
+- component structure
+- API client
+- existing design tokens
+
+PHASE 2:
+Create dashboard information architecture.
+
+PHASE 3:
+Create reusable dashboard components.
+
+PHASE 4:
+Implement visual UI with real shadcn components.
+
+PHASE 5:
+Integrate Lucide icons.
+
+PHASE 6:
+Connect real APIs where available.
+
+PHASE 7:
+Add loading/empty/error states.
+
+PHASE 8:
+Add responsive behavior.
+
+PHASE 9:
+Run accessibility review.
+
+PHASE 10:
+Run visual consistency review.
+
+============================================================
+60. FINAL ACCEPTANCE CRITERIA
+============================================================
+
+The Trainer Dashboard is complete only if:
+
+[ ] Looks professional and production-ready
+[ ] Does not resemble a generic admin template
+[ ] Has clear Trainer-specific information architecture
+[ ] Uses shadcn/ui consistently
+[ ] Uses Lucide React consistently
+[ ] Uses 21st.dev only where it improves the UI
+[ ] No mixed visual language
+[ ] No excessive gradients
+[ ] No excessive animations
+[ ] No fake production metrics
+[ ] No fake AI results
+[ ] Has KPI hierarchy
+[ ] Has Action Required section
+[ ] Has learning performance
+[ ] Has trainee health
+[ ] Has course performance
+[ ] Has trainee attention
+[ ] Has competency snapshot
+[ ] Has assessment snapshot
+[ ] Has recent activity
+[ ] Has feedback
+[ ] Has future AI placeholder
+[ ] Has responsive layout
+[ ] Has loading states
+[ ] Has empty states
+[ ] Has error states
+[ ] Has accessible interactions
+[ ] Has mobile layout
+[ ] Has proper navigation
+[ ] Has correct Trainer-only actions
+[ ] Does not expose Admin controls
+[ ] Uses semantic status indicators
+[ ] Integrates with real backend data
+[ ] Future features are clearly marked
+[ ] No unnecessary dependencies
+[ ] No duplicate UI primitives
+[ ] No unrelated code changes
+
+============================================================
+FINAL DESIGN PHILOSOPHY
+============================================================
+
+Capacity Connect Trainer Dashboard should communicate:
+
+"Your training operation, at a glance."
+
+Not:
+
+"Here are many charts."
+
+The dashboard should guide the trainer through:
+
+SEE
+↓
+UNDERSTAND
+↓
+IDENTIFY
+↓
+ACT
+↓
+IMPROVE
+
+SEE:
+training and learner status
+
+UNDERSTAND:
+performance and trends
+
+IDENTIFY:
+at-risk trainees and competency gaps
+
+ACT:
+review, create, assess, improve
+
+IMPROVE:
+use feedback, analytics, and future AI capabilities
+
+Build the UI as a scalable product system, not a one-off page.
