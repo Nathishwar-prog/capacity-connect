@@ -94,7 +94,18 @@ export class UserController {
 
   public updateProfile = async (req: Request, res: Response): Promise<Response> => {
     const userId = req.user!.userId;
-    const user = await this.userService.updateUser(userId, req.body);
+    const userRole = req.user!.role;
+    const { Role } = await import('@prisma/client');
+    const isCallerAdmin = userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN;
+
+    // Security Guard: Non-admins cannot alter their own role or account status
+    const updateData = { ...req.body };
+    if (!isCallerAdmin) {
+      delete updateData.role;
+      delete updateData.status;
+    }
+
+    const user = await this.userService.updateUser(userId, updateData);
     const sanitizedUser = UserDtoMapper.toResponse(user);
 
     return ResponseHelper.success({

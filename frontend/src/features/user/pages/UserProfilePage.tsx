@@ -1,112 +1,156 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useUser from '../hooks/useUser';
 import UserForm from '../components/UserForm';
 import { UserFormValues } from '../validation/user.validation';
-import { Shield, Key, User as UserIcon } from 'lucide-react';
+import { Shield, Key, User as UserIcon, Building2, CheckCircle2 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const UserProfilePage: React.FC = () => {
   const { profile, isLoadingProfile, profileError, updateProfile, isUpdatingProfile } = useUser();
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'SUPER_ADMIN';
 
   const handleUpdate = async (values: UserFormValues) => {
+    setSuccessMessage(null);
     await updateProfile({
       email: values.email,
       firstName: values.firstName || undefined,
       lastName: values.lastName || undefined,
-      role: values.role,
+      ...(isAdmin ? { role: values.role } : {}),
       password: values.password || undefined,
     });
-    alert('Profile updated successfully!');
+    setSuccessMessage('Profile details updated successfully.');
   };
 
   if (isLoadingProfile) {
     return (
-      <div className="flex items-center justify-center py-12 text-slate-400">
-        <span>Loading profile settings...</span>
+      <div className="flex items-center justify-center py-24 text-slate-500 text-xs font-semibold">
+        <span>Loading institutional profile settings...</span>
       </div>
     );
   }
 
   if (profileError || !profile) {
     return (
-      <div className="glass-panel border-rose-500/20 bg-rose-500/5 text-rose-300 rounded-xl p-6 text-center max-w-lg mx-auto">
-        <h4 className="font-semibold text-lg">Error Loading Profile</h4>
-        <p className="text-sm mt-1">
-          {profileError?.message || 'Could not fetch your profile details.'}
-        </p>
+      <div className="max-w-md mx-auto my-12">
+        <Alert variant="destructive">
+          <AlertDescription>
+            {profileError?.message || 'Could not fetch your profile details.'}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Settings Form */}
-      <div className="lg:col-span-2 space-y-6">
-        <div className="glass-panel rounded-2xl p-6 md:p-8">
-          <div className="flex items-center gap-2 text-indigo-400 text-sm font-semibold tracking-wider uppercase mb-1">
-            <UserIcon className="w-4 h-4" />
-            <span>Personal Settings</span>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-100">Account Profile</h2>
-          <p className="text-slate-400 text-sm mt-0.5 mb-6">
-            Modify details, update login credentials, or adjust your workspace role.
-          </p>
-
-          <UserForm initialValues={profile} onSubmit={handleUpdate} isLoading={isUpdatingProfile} />
+    <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-300">
+      {/* Top Banner */}
+      <div className="border-b border-slate-200 pb-5">
+        <div className="flex items-center gap-2 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-1">
+          <Building2 className="w-4 h-4" />
+          <span>Ministry of Earth Sciences / IMD</span>
         </div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          User Account & Security Settings
+        </h1>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Manage your official profile, contact details, and institutional credentials.
+        </p>
       </div>
 
-      {/* Permissions / Info Sidebar */}
-      <div className="space-y-6">
-        {/* Access Privileges */}
-        <div className="glass-panel rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 font-semibold text-slate-200">
-            <Shield className="w-5 h-5 text-indigo-400" />
-            <h3>Access Control</h3>
-          </div>
+      {successMessage && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
 
-          <div className="space-y-3">
-            <div>
-              <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                Active Role
-              </span>
-              <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded font-bold uppercase">
-                {profile.role}
-              </span>
-            </div>
-
-            <div>
-              <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">
-                Granted Permissions
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {(profile.permissions || []).length > 0 ? (
-                  profile.permissions!.map((perm) => (
-                    <span
-                      key={perm}
-                      className="text-[10px] bg-slate-900 border border-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded"
-                    >
-                      {perm}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-[11px] text-slate-500 italic">No custom permissions</span>
-                )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Settings Form */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader className="pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider">
+                <UserIcon className="w-4 h-4" />
+                <span>Personal & Authentication Details</span>
               </div>
-            </div>
-          </div>
+              <CardTitle className="text-lg font-extrabold text-slate-900">
+                Institutional Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-5">
+              <UserForm
+                initialValues={profile}
+                onSubmit={handleUpdate}
+                isLoading={isUpdatingProfile}
+                isAdmin={isAdmin}
+              />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Security / JWT Information */}
-        <div className="glass-panel rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 font-semibold text-slate-200">
-            <Key className="w-5 h-5 text-indigo-400" />
-            <h3>Token Information</h3>
-          </div>
+        {/* Permissions & Security Sidebar */}
+        <div className="space-y-6">
+          {/* Access Control Card */}
+          <Card>
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <Shield className="w-4 h-4 text-indigo-600" />
+                <span>Access Privileges</span>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div>
+                <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                  Assigned Authority Role
+                </span>
+                <div className="mt-1">
+                  <Badge variant="purple">{profile.role}</Badge>
+                </div>
+              </div>
 
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Your login session is secured using standard JSON Web Tokens. Access tokens rotate
-            automatically, and refresh cookies are stored securely via HTTPOnly configurations.
-          </p>
+              <div>
+                <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1.5">
+                  Granted System Permissions
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(profile.permissions || []).length > 0 ? (
+                    profile.permissions!.map((perm) => (
+                      <span
+                        key={perm}
+                        className="text-[10px] bg-slate-100 border border-slate-200 text-slate-700 font-mono px-2 py-0.5 rounded-md font-semibold"
+                      >
+                        {perm}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-slate-400 italic">
+                      Default role permissions
+                    </span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Session Security Card */}
+          <Card>
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <Key className="w-4 h-4 text-indigo-600" />
+                <span>Authentication Integrity</span>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Your portal session is safeguarded with short-lived JWT access tokens and
+                cryptographically hashed refresh cookies conforming to Ministry security guidelines.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

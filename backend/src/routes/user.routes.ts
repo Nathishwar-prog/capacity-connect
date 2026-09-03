@@ -65,7 +65,13 @@ router.patch(
   validate({ params: userIdParamSchema, body: updateUserSchema }),
   requireSelfOrRole([Role.ADMIN, Role.SUPER_ADMIN]),
   asyncHandler(async (req, res) => {
-    const user = await userService.updateUser(req.params.id, req.body);
+    const isCallerAdmin = req.user!.role === Role.ADMIN || req.user!.role === Role.SUPER_ADMIN;
+    const updateData = { ...req.body };
+    if (!isCallerAdmin) {
+      delete updateData.role;
+      delete updateData.status;
+    }
+    const user = await userService.updateUser(req.params.id, updateData);
     const { UserDtoMapper } = await import('../dto/user.dto');
     const { ResponseHelper } = await import('../errors/response.helper');
     return ResponseHelper.success({

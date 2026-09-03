@@ -423,11 +423,20 @@ export class AuthService {
     departments: Array<{ id: string; name: string; code: string; description: string | null }>;
     skills: Array<{ id: string; name: string; code: string; category: string | null }>;
   }> {
+    const excludedGenericDepts = ['Technology & Engineering', 'Human Resources', 'Training & Development'];
     const departments = await prisma.department.findMany({
+      where: {
+        name: { notIn: excludedGenericDepts },
+      },
       select: { id: true, name: true, code: true, description: true },
       orderBy: { name: 'asc' },
     });
+
+    const excludedGenericSkills = ['Java', 'Python', 'Machine Learning', 'Cloud Computing', 'SQL & PostgreSQL'];
     const skills = await prisma.skill.findMany({
+      where: {
+        name: { notIn: excludedGenericSkills },
+      },
       select: { id: true, name: true, code: true, category: true },
       orderBy: { name: 'asc' },
     });

@@ -12,6 +12,7 @@ import {
   Loader2,
   X,
   Plus,
+  CloudSun,
 } from 'lucide-react';
 import useAuthStore from '@/store/auth';
 import { useOnboardingMeta, useSubmitOnboarding } from '../hooks/useOnboarding';
@@ -21,6 +22,35 @@ interface TraineeOnboardingModalProps {
   onClose: () => void;
 }
 
+// Domain-Specific MoES / IMD Fallback Taxonomy
+const DOMAIN_DEFAULT_SKILLS = [
+  'Doppler Weather Radar (DWR) Echo Analysis',
+  'INSAT-3D/3DR Satellite Image Interpretation',
+  'WRF / GFS Numerical Model Diagnostics',
+  'Tropical Cyclone Track & Intensity Forecasting',
+  'Quantitative Precipitation Estimation (QPE)',
+  'Agro-Meteorological Advisory Bulletin Preparation',
+  'Aviation Weather METAR / TAF Code Compilation',
+  'Severe Convective Thunderstorm Nowcasting',
+  'Atmospheric Sounding (RS/RW) & Tephigram Diagnostics',
+  'Climate Data Quality Control & Trend Homogenization',
+  'Automated Weather Station (AWS) Calibration',
+  'Storm Surge & Coastal Inundation Modeling',
+];
+
+const DOMAIN_STANDARD_INTERESTS = [
+  'Monsoon Dynamics & Extended Range Forecasting',
+  'Numerical Weather Prediction & High-Res Modeling',
+  'Doppler Radar & Severe Storm Nowcasting',
+  'Satellite Meteorology & Remote Sensing',
+  'Tropical Cyclone Early Warning Systems',
+  'Hydrometeorology & Urban Flood Forecasting',
+  'Agrometeorological Advisory Services',
+  'Aviation Meteorological Hazards & Turbulence',
+  'Climate Change Scenarios & Regional Projections',
+  'Ocean State Forecasting & Coastal Hazard Warning',
+];
+
 export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
   isOpen,
   onClose,
@@ -29,6 +59,11 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
   const { data: meta, isLoading: isMetaLoading } = useOnboardingMeta();
   const { mutate: submitOnboarding, isPending: isSubmitting } = useSubmitOnboarding({
     onSuccess: () => {
+      try {
+        sessionStorage.removeItem('trainee_onboarding_dismissed');
+      } catch {
+        // ignore
+      }
       onClose();
     },
   });
@@ -36,14 +71,17 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [departmentId, setDepartmentId] = useState(user?.departmentId || '');
-  const [designation, setDesignation] = useState('');
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(['Python', 'SQL & PostgreSQL']);
+  const [designation, setDesignation] = useState(user?.traineeProfile?.designation || '');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([
+    'Doppler Weather Radar (DWR) Echo Analysis',
+    'INSAT-3D/3DR Satellite Image Interpretation',
+  ]);
   const [customSkill, setCustomSkill] = useState('');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([
-    'Backend Development',
-    'Cloud Architecture',
+    'Monsoon Dynamics & Extended Range Forecasting',
+    'Numerical Weather Prediction & High-Res Modeling',
   ]);
-  const [bio, setBio] = useState('');
+  const [bio, setBio] = useState(user?.traineeProfile?.bio || '');
   const [error, setError] = useState<string | null>(null);
 
   // Sync initial user details when modal opens
@@ -52,6 +90,11 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
       if (user.firstName) setFirstName(user.firstName);
       if (user.lastName) setLastName(user.lastName);
       if (user.departmentId) setDepartmentId(user.departmentId);
+      if (user.traineeProfile?.designation) setDesignation(user.traineeProfile.designation);
+      if (user.traineeProfile?.bio) setBio(user.traineeProfile.bio);
+      if (user.traineeProfile?.interests && user.traineeProfile.interests.length > 0) {
+        setSelectedInterests(user.traineeProfile.interests);
+      }
     }
   }, [user]);
 
@@ -96,18 +139,27 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
     }
   };
 
+  const handleDismiss = () => {
+    try {
+      sessionStorage.setItem('trainee_onboarding_dismissed', 'true');
+    } catch {
+      // ignore
+    }
+    onClose();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!departmentId) {
-      setError('Please select your organizational department.');
+      setError('Please select your MoES / IMD operational division.');
       return;
     }
     if (!designation.trim()) {
-      setError('Please enter your current designation or job title.');
+      setError('Please enter your meteorological designation or scientific title.');
       return;
     }
     if (selectedSkills.length === 0) {
-      setError('Please select at least one skill to kickstart your competency mapping.');
+      setError('Please select at least one meteorological skill to initialize competency mapping.');
       return;
     }
 
@@ -123,39 +175,34 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
     });
   };
 
-  const standardInterests = [
-    'Backend Development',
-    'Cloud Architecture',
-    'Machine Learning & AI',
-    'Data Engineering',
-    'DevOps & Automation',
-    'System Design',
-    'Security Engineering',
-  ];
+  const availableSkills =
+    meta?.skills && meta.skills.length > 0 ? meta.skills.map((s) => s.name) : DOMAIN_DEFAULT_SKILLS;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-indigo-50/50 via-white to-slate-50">
+        <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-indigo-50/70 via-white to-slate-50">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase tracking-wider">
-                Step 2 of 2
+                MoES / IMD Portal
               </span>
-              <span className="text-xs font-semibold text-slate-500">Trainee Onboarding</span>
+              <span className="text-xs font-semibold text-slate-500">
+                Trainee Competency Initialization
+              </span>
             </div>
-            <h2 className="text-xl font-extrabold text-slate-900">
-              Personalize Your Learning Journey
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              Personalize Your Meteorological Learning Profile
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Complete your profile details to unlock skill-gap analysis and trainer
-              recommendations.
+              Complete your division assignment, scientific designation, and operational
+              competencies for targeted training recommendations.
             </p>
           </div>
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            onClick={handleDismiss}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -165,7 +212,7 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
         <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span className="font-semibold text-slate-700">Profile Readiness</span>
+            <span className="font-bold text-slate-700">Competency Profile Readiness</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-32 bg-slate-200 rounded-full h-2 overflow-hidden">
@@ -174,7 +221,7 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
                 style={{ width: `${completedPoints}%` }}
               />
             </div>
-            <span className="font-bold text-indigo-700">{completedPoints}%</span>
+            <span className="font-extrabold text-indigo-700">{completedPoints}%</span>
           </div>
         </div>
 
@@ -189,19 +236,20 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
           {/* Mapped Identity Details */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Verified Account Identity
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <CloudSun className="w-4 h-4 text-indigo-600" />
+                <span>Verified Personnel Identity</span>
               </span>
               <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Active Member</span>
+                <span>Active Trainee Account</span>
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Email Address
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  Official Email
                 </label>
                 <input
                   type="email"
@@ -211,45 +259,43 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
                   First Name <span className="text-indigo-600">*</span>
                 </label>
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Jane"
+                  placeholder="e.g. Ramesh"
                   required
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Last Name
-                </label>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">Last Name</label>
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Doe"
+                  placeholder="e.g. Sharma"
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
             </div>
           </div>
 
-          {/* Department & Designation */}
+          {/* Division & Designation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-indigo-600" />
                 <span>
-                  Department <span className="text-indigo-600">*</span>
+                  MoES / IMD Operational Division <span className="text-indigo-600">*</span>
                 </span>
               </label>
               {isMetaLoading ? (
-                <div className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-400">
-                  Loading departments...
+                <div className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-400">
+                  Loading operational divisions...
                 </div>
               ) : (
                 <select
@@ -258,7 +304,7 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
                   required
                   className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 >
-                  <option value="">Select your department...</option>
+                  <option value="">Select your division...</option>
                   {meta?.departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
                       {dept.name} ({dept.code})
@@ -272,14 +318,14 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                 <Briefcase className="w-4 h-4 text-indigo-600" />
                 <span>
-                  Designation / Role Title <span className="text-indigo-600">*</span>
+                  Scientific Designation / Role Title <span className="text-indigo-600">*</span>
                 </span>
               </label>
               <input
                 type="text"
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
-                placeholder="e.g. Junior Software Engineer, Data Analyst"
+                placeholder="e.g. Scientific Assistant (Met), Meteorologist-A, Scientist-B"
                 required
                 className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
               />
@@ -292,36 +338,29 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-indigo-600" />
                 <span>
-                  Current Skills & Strengths <span className="text-indigo-600">*</span>
+                  Current Operational Skills & Strengths <span className="text-indigo-600">*</span>
                 </span>
               </label>
-              <span className="text-[11px] text-slate-500">{selectedSkills.length} selected</span>
+              <span className="text-[11px] text-slate-500 font-bold">
+                {selectedSkills.length} selected
+              </span>
             </div>
             <p className="text-[11px] text-slate-500 mb-2">
-              Select the technologies and skills you currently work with or are learning:
+              Select the meteorological instruments, modeling frameworks, and observational skills
+              you currently utilize:
             </p>
 
             <div className="flex flex-wrap gap-2 mb-3">
-              {(meta?.skills && meta.skills.length > 0
-                ? meta.skills.map((s) => s.name)
-                : [
-                    'Python',
-                    'SQL & PostgreSQL',
-                    'Java',
-                    'Machine Learning',
-                    'Cloud Computing',
-                    'Communication',
-                  ]
-              ).map((skillName) => {
+              {availableSkills.map((skillName) => {
                 const isSelected = selectedSkills.includes(skillName);
                 return (
                   <button
                     key={skillName}
                     type="button"
                     onClick={() => toggleSkill(skillName)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
                         : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
@@ -338,7 +377,7 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
                 type="text"
                 value={customSkill}
                 onChange={(e) => setCustomSkill(e.target.value)}
-                placeholder="Add other skill (e.g. React, Docker, TypeScript)..."
+                placeholder="Add other operational skill (e.g. AWS Network Calibration, WRF-ARW Diagnostics)..."
                 className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -350,7 +389,7 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddCustomSkill}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1 transition-colors"
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add</span>
@@ -362,25 +401,27 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
               <Heart className="w-4 h-4 text-indigo-600" />
-              <span>Target Learning Interests</span>
+              <span>Target Meteorological Competencies & Focus Areas</span>
             </label>
             <p className="text-[11px] text-slate-500 mb-2">
-              Topics you would like Capacity Connect to recommend courses and trainers for:
+              Domain fields you would like Capacity Connect to prioritize for training modules and
+              instructor recommendations:
             </p>
             <div className="flex flex-wrap gap-2">
-              {standardInterests.map((interest) => {
+              {DOMAIN_STANDARD_INTERESTS.map((interest) => {
                 const isSelected = selectedInterests.includes(interest);
                 return (
                   <button
                     key={interest}
                     type="button"
                     onClick={() => toggleInterest(interest)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
                         : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                     }`}
                   >
+                    {isSelected && '✓ '}
                     {interest}
                   </button>
                 );
@@ -392,13 +433,13 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-indigo-600" />
-              <span>Short Bio / Career Goals</span>
+              <span>Operational Focus / Career Objectives</span>
             </label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={2}
-              placeholder="Tell us briefly about your current focus and learning goals..."
+              placeholder="Brief description of your operational division, forecasting focus, and capacity-building targets..."
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 resize-none"
             />
           </div>
@@ -407,8 +448,8 @@ export const TraineeOnboardingModal: React.FC<TraineeOnboardingModalProps> = ({
           <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+              onClick={handleDismiss}
+              className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             >
               Skip for Now
             </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -27,6 +27,27 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const pathname = usePathname();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  // Automatically trigger onboarding modal for Trainees who have not completed profile details
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'TRAINEE') {
+      const isProfileIncomplete =
+        !user.departmentId ||
+        !user.traineeProfile?.designation ||
+        (user.traineeProfile?.profileCompletion ?? 0) < 80;
+
+      let isDismissed = false;
+      try {
+        isDismissed = sessionStorage.getItem('trainee_onboarding_dismissed') === 'true';
+      } catch {
+        // ignore
+      }
+
+      if (isProfileIncomplete && !isDismissed) {
+        setIsOnboardingOpen(true);
+      }
+    }
+  }, [isAuthenticated, user]);
 
   const isActive = (path: string) => pathname === path;
   const userRole = user?.role as CanonicalRole | undefined;
