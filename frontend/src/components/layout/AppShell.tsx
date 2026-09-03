@@ -23,6 +23,13 @@ import {
   X,
   ChevronRight,
   Sparkle,
+  BookOpen,
+  Library,
+  Target,
+  TrendingUp,
+  Trophy,
+  MessageSquare,
+  Compass,
 } from 'lucide-react';
 import useAuthStore from '@/store/auth';
 import { useLogout } from '@/features/auth';
@@ -156,16 +163,86 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     if (userRole === 'TRAINEE') {
       return [
         {
+          title: 'Overview',
+          items: [
+            {
+              href: '/dashboard/trainee',
+              label: 'Dashboard',
+              icon: LayoutDashboard,
+            },
+          ],
+        },
+        {
           title: 'Learning',
           items: [
             {
               href: '/dashboard/trainee',
-              label: 'Learning Dashboard',
-              icon: LayoutDashboard,
+              label: 'My Learning',
+              icon: BookOpen,
             },
             {
+              href: '/trainee/courses',
+              label: 'Course Catalog',
+              icon: Compass,
+            },
+            {
+              href: '/trainee/resources',
+              label: 'Learning Resources',
+              icon: Library,
+            },
+            {
+              href: '/trainee/assessments',
+              label: 'Assessments',
+              icon: ClipboardList,
+            },
+          ],
+        },
+        {
+          title: 'Development',
+          items: [
+            {
+              href: '/trainee/competencies',
+              label: 'My Competencies',
+              icon: Target,
+            },
+            {
+              href: '/trainee/skill-gaps',
+              label: 'Skill Gaps',
+              icon: TrendingUp,
+            },
+            {
+              href: '/trainee/achievements',
+              label: 'Achievements',
+              icon: Trophy,
+            },
+          ],
+        },
+        {
+          title: 'Support',
+          items: [
+            {
+              href: '/trainee/trainers',
+              label: 'My Trainers',
+              icon: Users,
+            },
+            {
+              href: '/trainee/feedback',
+              label: 'Feedback',
+              icon: MessageSquare,
+            },
+            {
+              href: '/trainee/assistant',
+              label: 'Learning Assistant',
+              icon: Sparkles,
+            },
+          ],
+        },
+        {
+          title: 'Account',
+          items: [
+            {
               href: '/profile',
-              label: 'My Competencies & Profile',
+              label: 'My Profile',
               icon: User,
             },
           ],

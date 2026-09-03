@@ -4,6 +4,7 @@ import { authRouter } from './auth.routes';
 import { userRouter } from './user.routes';
 import { dashboardRouter } from './dashboard.routes';
 import { trainerRouter } from './trainer.routes';
+import { traineeRouter } from './trainee.routes';
 
 const router = Router();
 
@@ -51,5 +52,6 @@ router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/dashboard', dashboardRouter);
 router.use('/trainer', trainerRouter);
+router.use('/trainee', traineeRouter);
 
 export default router;
