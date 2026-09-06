@@ -20,8 +20,11 @@ router.get('/', (_req, res) => {
       auth: {
         login: 'POST /api/v1/auth/login',
         register: 'POST /api/v1/auth/register',
+        signup: 'POST /api/v1/auth/signup',
         refresh: 'POST /api/v1/auth/refresh',
         logout: 'POST /api/v1/auth/logout',
+        verifyEmail: 'POST /api/v1/auth/verify-email',
+        resendVerification: 'POST /api/v1/auth/resend-verification',
         me: 'GET /api/v1/auth/me',
         onboardingMeta: 'GET /api/v1/auth/onboarding-meta',
         onboarding: 'POST /api/v1/auth/onboarding',

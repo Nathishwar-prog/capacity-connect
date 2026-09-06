@@ -629,33 +629,50 @@ export class TrainerRepository {
     });
 
     const totalCourses = courses.length;
-    const publishedCourses = courses.filter((c: { status: CourseStatus }) => c.status === CourseStatus.PUBLISHED).length;
-    const draftCourses = courses.filter((c: { status: CourseStatus }) => c.status === CourseStatus.DRAFT).length;
-    const pendingCourses = courses.filter((c: { status: CourseStatus }) => c.status === CourseStatus.PENDING_APPROVAL).length;
+    const publishedCourses = courses.filter(
+      (c: { status: CourseStatus }) => c.status === CourseStatus.PUBLISHED,
+    ).length;
+    const draftCourses = courses.filter(
+      (c: { status: CourseStatus }) => c.status === CourseStatus.DRAFT,
+    ).length;
+    const pendingCourses = courses.filter(
+      (c: { status: CourseStatus }) => c.status === CourseStatus.PENDING_APPROVAL,
+    ).length;
 
     const allEnrollments = courses.flatMap((c: { enrollments: any[] }) => c.enrollments);
     const totalEnrollments = allEnrollments.length;
-    const completedLearners = allEnrollments.filter((e: { status: string }) => e.status === 'COMPLETED').length;
-    const inProgressLearners = allEnrollments.filter((e: { status: string }) => e.status === 'IN_PROGRESS').length;
+    const completedLearners = allEnrollments.filter(
+      (e: { status: string }) => e.status === 'COMPLETED',
+    ).length;
+    const inProgressLearners = allEnrollments.filter(
+      (e: { status: string }) => e.status === 'IN_PROGRESS',
+    ).length;
 
     const avgProgress =
       totalEnrollments > 0
         ? Math.round(
-            allEnrollments.reduce((acc: number, curr: { progressPercentage: number }) => acc + curr.progressPercentage, 0) /
-              totalEnrollments,
+            allEnrollments.reduce(
+              (acc: number, curr: { progressPercentage: number }) => acc + curr.progressPercentage,
+              0,
+            ) / totalEnrollments,
           )
         : 0;
 
     const allAttempts = courses
       .flatMap((c: { assessments: any[] }) => c.assessments)
       .flatMap((a: { attempts: any[] }) => a.attempts)
-      .filter((att: { status: AttemptStatus; percentage: number | null }) => att.status === AttemptStatus.SUBMITTED && att.percentage !== null);
+      .filter(
+        (att: { status: AttemptStatus; percentage: number | null }) =>
+          att.status === AttemptStatus.SUBMITTED && att.percentage !== null,
+      );
 
     const avgScore =
       allAttempts.length > 0
         ? Math.round(
-            allAttempts.reduce((acc: number, curr: { percentage: number | null }) => acc + (curr.percentage || 0), 0) /
-              allAttempts.length,
+            allAttempts.reduce(
+              (acc: number, curr: { percentage: number | null }) => acc + (curr.percentage || 0),
+              0,
+            ) / allAttempts.length,
           )
         : 0;
 

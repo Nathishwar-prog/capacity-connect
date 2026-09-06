@@ -3,6 +3,7 @@ import {
   LoginInput,
   RegisterInput,
   AuthResponse,
+  RegisterResponse,
   AuthUser,
   ApiResponse,
   OnboardingMeta,
@@ -19,12 +20,12 @@ export const authApi = {
   },
 
   /**
-   * Register a new user account
+   * Register a new user account (creates PENDING account awaiting admin approval)
    */
-  register: async (userData: RegisterInput): Promise<AuthResponse> => {
+  register: async (userData: RegisterInput): Promise<RegisterResponse> => {
     const { confirmPassword, ...payload } = userData;
     void confirmPassword;
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/register', payload);
+    const response = await apiClient.post<ApiResponse<RegisterResponse>>('/auth/register', payload);
     return response.data.data;
   },
 

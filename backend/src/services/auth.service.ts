@@ -1,57 +1,34 @@
 import crypto from 'crypto';
-import { prisma } from '../database/client';
 import { Role, UserStatus, SkillSource } from '@prisma/client';
-import { RegisterDto, AuthUserDto, AuthResponseDto } from '../dto/auth.dto';
+import { RegisterDto, AuthUserDto, AuthResponseDto, RegisterResponseDto } from '../dto/auth.dto';
 import { PasswordUtils } from '../auth/password.utils';
 import { TokenUtils, TokenPayload } from '../auth/token.utils';
 import { permissionsMap } from '../permissions';
+import { mailService } from '../mails';
 import {
   BadRequestError,
   ConflictError,
   NotFoundError,
   UnauthorizedError,
 } from '../errors/app-error';
+import {
+  IAuthRepository,
+  AuthRepository,
+  UserWithRelations,
+} from '../repositories/auth.repository';
 
 export class AuthService {
+  private authRepository: IAuthRepository;
+
+  constructor(authRepository: IAuthRepository = new AuthRepository()) {
+    this.authRepository = authRepository;
+  }
+
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private mapToAuthUser(
-    user: {
-      id: string;
-      organizationId: string;
-      departmentId: string | null;
-      email: string;
-      firstName: string;
-      lastName: string | null;
-      phone: string | null;
-      avatarUrl: string | null;
-      role: Role;
-      status: UserStatus;
-      emailVerified: boolean;
-      lastLoginAt: Date | null;
-      createdAt: Date;
-      updatedAt: Date;
-      organization?: { name: string } | null;
-      department?: { name: string } | null;
-      traineeProfile?: {
-        id: string;
-        designation: string | null;
-        bio: string | null;
-        interests: string[];
-        profileCompletion: number;
-      } | null;
-      trainerProfile?: {
-        id: string;
-        designation: string;
-        organizationName: string | null;
-        bio: string;
-        yearsExperience: number;
-      } | null;
-    },
-    permissions: string[],
-  ): AuthUserDto {
+  private mapToAuthUser(user: UserWithRelations, permissions: string[]): AuthUserDto {
     return {
       id: user.id,
       organizationId: user.organizationId,
@@ -91,14 +68,21 @@ export class AuthService {
     };
   }
 
+  /**
+   * Public Self-Registration (Signup)
+   *
+   * Required Flow:
+   * Signup -> PENDING -> Admin Approval -> Login -> Access Token -> Refresh Token
+   *
+   * A newly registered account is strictly placed into PENDING state.
+   * NO access or refresh tokens are issued upon registration.
+   */
   public async register(
     dto: RegisterDto,
     ipAddress?: string,
     userAgent?: string,
-  ): Promise<AuthResponseDto & { refreshToken: string }> {
-    const existing = await prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
-    });
+  ): Promise<RegisterResponseDto> {
+    const existing = await this.authRepository.findByEmail(dto.email);
 
     if (existing) {
       throw new ConflictError('An account with this email address already exists');
@@ -107,10 +91,7 @@ export class AuthService {
     // Resolve organization: use provided or fallback to first active organization
     let organizationId = dto.organizationId;
     if (!organizationId) {
-      const defaultOrg = await prisma.organization.findFirst({
-        where: { status: 'ACTIVE' },
-        orderBy: { createdAt: 'asc' },
-      });
+      const defaultOrg = await this.authRepository.findDefaultOrganization();
       if (!defaultOrg) {
         throw new BadRequestError('No active organization found to attach user');
       }
@@ -118,174 +99,152 @@ export class AuthService {
     }
 
     const passwordHash = await PasswordUtils.hash(dto.password);
-    // Public self-registration is strictly restricted to TRAINEE accounts to prevent privilege escalation.
-    // Administrative roles (ADMIN, SUPER_ADMIN, TRAINER) must be provisioned through internal governance workflows.
+    // Public self-registration is strictly restricted to TRAINEE accounts
     const assignedRole = Role.TRAINEE;
 
-    // Create user and auto-create corresponding profile in a transaction
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          organizationId,
-          departmentId: dto.departmentId,
-          email: dto.email.toLowerCase(),
-          passwordHash,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phone: dto.phone,
-          role: assignedRole,
-          status: UserStatus.APPROVED, // Default to approved for demo / direct register
-          emailVerified: true,
-        },
-        include: {
-          organization: { select: { name: true } },
-          department: { select: { name: true } },
-        },
-      });
-
-      if (assignedRole === Role.TRAINEE) {
-        await tx.traineeProfile.create({
-          data: {
-            userId: newUser.id,
-            designation: 'Trainee',
-            bio: 'Continuous learning member.',
-          },
-        });
-      } else if (assignedRole === Role.TRAINER) {
-        await tx.trainerProfile.create({
-          data: {
-            userId: newUser.id,
-            designation: 'Professional Trainer',
-            bio: 'Expert instructor.',
-            yearsExperience: 1,
-          },
-        });
-      }
-
-      // Log registration in Audit Log
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          userId: newUser.id,
-          action: 'USER_REGISTERED',
-          entityType: 'User',
-          entityId: newUser.id,
-          newValues: { email: newUser.email, role: newUser.role },
-          ipAddress,
-          userAgent,
-        },
-      });
-
-      return newUser;
+    // Create user in PENDING status with no active session
+    const user = await this.authRepository.createPendingUser({
+      email: dto.email,
+      passwordHash,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      organizationId,
+      departmentId: dto.departmentId,
+      role: assignedRole,
+      ipAddress,
+      userAgent,
     });
 
-    // Generate tokens
-    const permissions = permissionsMap[user.role] || [];
-    const tokenPayload: TokenPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      permissions,
-    };
-
-    const accessToken = TokenUtils.generateAccessToken(tokenPayload);
-    const refreshToken = TokenUtils.generateRefreshToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    const tokenHash = this.hashToken(refreshToken);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await prisma.refreshToken.create({
-      data: {
-        tokenHash,
+    // Generate Email Verification Token & Dispatch Verification Email
+    try {
+      const verificationToken = TokenUtils.generateEmailVerificationToken({
         userId: user.id,
-        expiresAt,
+        email: user.email,
+      });
+
+      const verificationSubject = 'Verify Your Email — Capacity Connect';
+      const verificationBody = `
+        <h2>Welcome to Capacity Connect, ${user.firstName}!</h2>
+        <p>Your registration for the MoES/IMD Digital Capacity Building Portal is currently <strong>PENDING ADMINISTRATIVE APPROVAL</strong>.</p>
+        <p>Please verify your official email address using the following verification token:</p>
+        <div style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 14px; word-break: break-all;">
+          ${verificationToken}
+        </div>
+        <p style="color: #64748b; font-size: 12px; margin-top: 16px;">This token is valid for 24 hours. Once your email is verified and an administrator approves your account, you will be able to sign in.</p>
+      `;
+
+      await mailService.sendEmail(user.email, verificationSubject, verificationBody);
+    } catch (mailError) {
+      // Email delivery failure should not roll back the user record, but is safely handled
+      await this.authRepository.createAuditLog({
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: 'VERIFICATION_EMAIL_DISPATCH_FAILED',
+        entityType: 'User',
+        entityId: user.id,
         ipAddress,
         userAgent,
-      },
-    });
+      });
+    }
 
-    const populatedUser = await this.getMe(user.id);
-
+    const permissions = permissionsMap[user.role] || [];
     return {
-      accessToken,
-      refreshToken,
-      user: populatedUser,
+      message:
+        'Registration successful. Your account is pending administrative approval. A verification link has been dispatched to your email.',
+      requiresApproval: true,
+      user: this.mapToAuthUser(user, permissions),
     };
   }
 
+  /**
+   * User Authentication (Login)
+   *
+   * Validates credentials and strictly enforces account status (must be APPROVED).
+   */
   public async login(
     email: string,
     password: string,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthResponseDto & { refreshToken: string }> {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-      include: {
-        organization: { select: { name: true } },
-        department: { select: { name: true } },
-        traineeProfile: true,
-        trainerProfile: true,
-      },
-    });
+    const user = await this.authRepository.findByEmail(email);
 
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    // Verify Password Hash
+    const passwordMatch = await PasswordUtils.compare(password, user.passwordHash);
+    if (!passwordMatch) {
+      await this.authRepository.createAuditLog({
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: 'LOGIN_FAILED',
+        entityType: 'User',
+        entityId: user.id,
+        newValues: { reason: 'Password mismatch' },
+        ipAddress,
+        userAgent,
+      });
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    // Strictly enforce lifecycle status: Only APPROVED users may login
     if (user.status !== UserStatus.APPROVED) {
       if (user.status === UserStatus.PENDING) {
+        await this.authRepository.createAuditLog({
+          organizationId: user.organizationId,
+          userId: user.id,
+          action: 'LOGIN_BLOCKED_PENDING',
+          entityType: 'User',
+          entityId: user.id,
+          ipAddress,
+          userAgent,
+        });
         throw new UnauthorizedError('Your account is awaiting administrative approval');
       }
       if (user.status === UserStatus.SUSPENDED || user.status === UserStatus.DEACTIVATED) {
-        throw new UnauthorizedError('Your account is currently unavailable. Please contact your administrator');
+        await this.authRepository.createAuditLog({
+          organizationId: user.organizationId,
+          userId: user.id,
+          action: 'LOGIN_BLOCKED_INACTIVE',
+          entityType: 'User',
+          entityId: user.id,
+          ipAddress,
+          userAgent,
+        });
+        throw new UnauthorizedError(
+          'Your account is currently unavailable. Please contact your administrator',
+        );
       }
       if (user.status === UserStatus.REJECTED) {
+        await this.authRepository.createAuditLog({
+          organizationId: user.organizationId,
+          userId: user.id,
+          action: 'LOGIN_BLOCKED_REJECTED',
+          entityType: 'User',
+          entityId: user.id,
+          ipAddress,
+          userAgent,
+        });
         throw new UnauthorizedError('Your registration request could not be approved');
       }
       throw new UnauthorizedError('Account is not authorized to sign in');
     }
 
-    const passwordMatch = await PasswordUtils.compare(password, user.passwordHash);
-    if (!passwordMatch) {
-      // Record failed login attempt in audit log
-      await prisma.auditLog.create({
-        data: {
-          organizationId: user.organizationId,
-          userId: user.id,
-          action: 'LOGIN_FAILED',
-          entityType: 'User',
-          entityId: user.id,
-          newValues: { reason: 'Password mismatch' },
-          ipAddress,
-          userAgent,
-        },
-      });
-      throw new UnauthorizedError('Invalid email or password');
-    }
-
     // Update lastLoginAt
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    await this.authRepository.updateLastLogin(user.id);
 
     // Record successful login audit
-    await prisma.auditLog.create({
-      data: {
-        organizationId: user.organizationId,
-        userId: user.id,
-        action: 'LOGIN_SUCCESS',
-        entityType: 'User',
-        entityId: user.id,
-        ipAddress,
-        userAgent,
-      },
+    await this.authRepository.createAuditLog({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: 'LOGIN_SUCCESS',
+      entityType: 'User',
+      entityId: user.id,
+      ipAddress,
+      userAgent,
     });
 
     // Generate tokens
@@ -308,14 +267,12 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    await prisma.refreshToken.create({
-      data: {
-        tokenHash,
-        userId: user.id,
-        expiresAt,
-        ipAddress,
-        userAgent,
-      },
+    await this.authRepository.saveRefreshToken({
+      tokenHash,
+      userId: user.id,
+      expiresAt,
+      ipAddress,
+      userAgent,
     });
 
     return {
@@ -325,6 +282,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Session Management: Refresh Token Rotation
+   */
   public async refreshAccessToken(
     token: string,
     ipAddress?: string,
@@ -332,17 +292,7 @@ export class AuthService {
   ): Promise<{ accessToken: string; newRefreshToken: string }> {
     const tokenHash = this.hashToken(token);
 
-    const storedToken = await prisma.refreshToken.findUnique({
-      where: { tokenHash },
-      include: {
-        user: {
-          include: {
-            organization: { select: { name: true } },
-            department: { select: { name: true } },
-          },
-        },
-      },
-    });
+    const storedToken = await this.authRepository.findRefreshToken(tokenHash);
 
     if (!storedToken || storedToken.revokedAt || new Date() > storedToken.expiresAt) {
       throw new UnauthorizedError('Refresh token has expired or been revoked');
@@ -372,44 +322,31 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Rotate refresh tokens: revoke old, persist new in transaction
-    await prisma.$transaction([
-      prisma.refreshToken.update({
-        where: { id: storedToken.id },
-        data: { revokedAt: new Date() },
-      }),
-      prisma.refreshToken.create({
-        data: {
-          tokenHash: newTokenHash,
-          userId: user.id,
-          expiresAt,
-          ipAddress,
-          userAgent,
-        },
-      }),
-    ]);
+    // Rotate refresh tokens: revoke old, persist new
+    await this.authRepository.rotateRefreshToken(storedToken.id, {
+      tokenHash: newTokenHash,
+      userId: user.id,
+      expiresAt,
+      ipAddress,
+      userAgent,
+    });
 
     return { accessToken, newRefreshToken };
   }
 
+  /**
+   * Session Management: Logout & Token Revocation
+   */
   public async logout(token: string): Promise<void> {
     const tokenHash = this.hashToken(token);
-    await prisma.refreshToken.updateMany({
-      where: { tokenHash, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.authRepository.revokeRefreshTokenByHash(tokenHash);
   }
 
+  /**
+   * Fetch Current Authenticated User Profile
+   */
   public async getMe(userId: string): Promise<AuthUserDto> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        organization: { select: { name: true } },
-        department: { select: { name: true } },
-        traineeProfile: true,
-        trainerProfile: true,
-      },
-    });
+    const user = await this.authRepository.findById(userId);
 
     if (!user) {
       throw new NotFoundError('Authenticated user profile not found');
@@ -419,28 +356,129 @@ export class AuthService {
     return this.mapToAuthUser(user, permissions);
   }
 
+  /**
+   * Email Verification
+   */
+  public async verifyEmail(token: string): Promise<{ message: string }> {
+    let payload;
+    try {
+      payload = TokenUtils.verifyEmailVerificationToken(token);
+    } catch (err) {
+      throw new BadRequestError('Email verification token is invalid or has expired');
+    }
+
+    const user = await this.authRepository.findById(payload.userId);
+    if (!user || user.email.toLowerCase() !== payload.email.toLowerCase()) {
+      throw new BadRequestError('Verification token does not match any registered account');
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email is already verified.' };
+    }
+
+    await this.authRepository.updateEmailVerified(user.id, true);
+
+    await this.authRepository.createAuditLog({
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: 'EMAIL_VERIFIED',
+      entityType: 'User',
+      entityId: user.id,
+      newValues: { emailVerified: true },
+    });
+
+    return { message: 'Email verified successfully.' };
+  }
+
+  /**
+   * Resend Email Verification Token
+   */
+  public async resendVerification(
+    email: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    const user = await this.authRepository.findByEmail(email);
+
+    // Generic response to protect against account enumeration
+    const genericResponse = {
+      message:
+        'If an account associated with this email exists, a verification email has been sent.',
+    };
+
+    if (!user || user.emailVerified) {
+      return genericResponse;
+    }
+
+    try {
+      const verificationToken = TokenUtils.generateEmailVerificationToken({
+        userId: user.id,
+        email: user.email,
+      });
+
+      const verificationSubject = 'Verify Your Email — Capacity Connect';
+      const verificationBody = `
+        <h2>Hello ${user.firstName},</h2>
+        <p>A new email verification request was initiated for your Capacity Connect account.</p>
+        <p>Please verify your email address using the following verification token:</p>
+        <div style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 14px; word-break: break-all;">
+          ${verificationToken}
+        </div>
+        <p style="color: #64748b; font-size: 12px; margin-top: 16px;">This token is valid for 24 hours.</p>
+      `;
+
+      await mailService.sendEmail(user.email, verificationSubject, verificationBody);
+
+      await this.authRepository.createAuditLog({
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: 'VERIFICATION_EMAIL_RESENT',
+        entityType: 'User',
+        entityId: user.id,
+        ipAddress,
+        userAgent,
+      });
+    } catch (mailError) {
+      // Safe logging without breaking client flow
+    }
+
+    return genericResponse;
+  }
+
   public async getOnboardingMeta(): Promise<{
     departments: Array<{ id: string; name: string; code: string; description: string | null }>;
     skills: Array<{ id: string; name: string; code: string; category: string | null }>;
   }> {
-    const excludedGenericDepts = ['Technology & Engineering', 'Human Resources', 'Training & Development'];
-    const departments = await prisma.department.findMany({
-      where: {
-        name: { notIn: excludedGenericDepts },
-      },
-      select: { id: true, name: true, code: true, description: true },
-      orderBy: { name: 'asc' },
-    });
+    const excludedGenericDepts = [
+      'Technology & Engineering',
+      'Human Resources',
+      'Training & Development',
+    ];
+    const departments = await this.authRepository.getDepartmentsExcluding(excludedGenericDepts);
 
-    const excludedGenericSkills = ['Java', 'Python', 'Machine Learning', 'Cloud Computing', 'SQL & PostgreSQL'];
-    const skills = await prisma.skill.findMany({
-      where: {
-        name: { notIn: excludedGenericSkills },
-      },
-      select: { id: true, name: true, code: true, category: true },
-      orderBy: { name: 'asc' },
-    });
-    return { departments, skills };
+    const excludedGenericSkills = [
+      'Java',
+      'Python',
+      'Machine Learning',
+      'Cloud Computing',
+      'SQL & PostgreSQL',
+    ];
+    const skills = await this.authRepository.getSkillsExcluding(excludedGenericSkills);
+
+    return {
+      departments: departments.map((d) => ({
+        id: d.id,
+        name: d.name,
+        code: d.code,
+        description: d.description,
+      })),
+      skills: skills.map((s) => ({
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        category: s.category,
+      })),
+    };
   }
 
   public async submitTraineeOnboarding(
@@ -455,76 +493,32 @@ export class AuthService {
       bio?: string;
     },
   ): Promise<AuthUserDto> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { traineeProfile: true },
-    });
+    const user = await this.authRepository.findById(userId);
 
     if (!user) {
       throw new NotFoundError('User not found');
     }
 
     // Update User details if provided
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(data.firstName ? { firstName: data.firstName } : {}),
-        ...(data.lastName ? { lastName: data.lastName } : {}),
-        ...(data.departmentId ? { departmentId: data.departmentId } : {}),
-      },
+    await this.authRepository.updateUser(userId, {
+      ...(data.firstName ? { firstName: data.firstName } : {}),
+      ...(data.lastName ? { lastName: data.lastName } : {}),
+      ...(data.departmentId ? { departmentId: data.departmentId } : {}),
     });
 
     // Upsert Trainee Profile with 100% completion
-    await prisma.traineeProfile.upsert({
-      where: { userId },
-      create: {
-        userId,
-        designation: data.designation,
-        bio: data.bio || null,
-        interests: data.interests || [],
-        profileCompletion: 100,
-      },
-      update: {
-        designation: data.designation,
-        bio: data.bio || null,
-        interests: data.interests || [],
-        profileCompletion: 100,
-      },
+    await this.authRepository.upsertTraineeProfile(userId, {
+      designation: data.designation,
+      bio: data.bio || null,
+      interests: data.interests || [],
+      profileCompletion: 100,
     });
 
     // Connect user skills
     if (data.skills && data.skills.length > 0) {
       for (const skillItem of data.skills) {
-        let skill = await prisma.skill.findFirst({
-          where: {
-            OR: [{ id: skillItem }, { name: { equals: skillItem, mode: 'insensitive' } }],
-          },
-        });
-
-        if (!skill) {
-          skill = await prisma.skill.create({
-            data: {
-              name: skillItem,
-              code: `SKILL-${skillItem.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}`,
-              category: 'General',
-            },
-          });
-        }
-
-        const existingUserSkill = await prisma.userSkill.findFirst({
-          where: { userId, skillId: skill.id },
-        });
-
-        if (!existingUserSkill) {
-          await prisma.userSkill.create({
-            data: {
-              userId,
-              skillId: skill.id,
-              proficiencyLevel: 2,
-              source: SkillSource.PROFILE,
-            },
-          });
-        }
+        const skill = await this.authRepository.findOrCreateSkill(skillItem);
+        await this.authRepository.ensureUserSkill(userId, skill.id, SkillSource.PROFILE);
       }
     }
 

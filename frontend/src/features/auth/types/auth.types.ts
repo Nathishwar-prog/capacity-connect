@@ -61,6 +61,12 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export interface RegisterResponse {
+  message: string;
+  requiresApproval: boolean;
+  user: AuthUser;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;

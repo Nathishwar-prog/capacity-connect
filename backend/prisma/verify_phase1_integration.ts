@@ -48,12 +48,16 @@ async function runPhase1MasterIntegrationSuite() {
     'Integration-Runner/1.0',
   );
   testUserId = regRes.user.id;
-  activeAccessToken = regRes.accessToken;
-  activeRefreshToken = regRes.refreshToken;
-  if (!testUserId || !activeAccessToken || !activeRefreshToken) {
-    throw new Error('Test 1 Failed: Missing tokens or user ID');
+  if (!testUserId || regRes.user.status !== 'PENDING') {
+    throw new Error('Test 1 Failed: Missing user ID or not in PENDING status');
   }
-  console.log('   ✅ Valid user registered. ID:', testUserId);
+  console.log('   ✅ Valid user registered in PENDING status. ID:', testUserId);
+
+  // Administrative approval for subsequent tests
+  await prisma.user.update({
+    where: { id: testUserId },
+    data: { status: 'APPROVED' },
+  });
 
   // 2. Register duplicate email
   console.log('\n2️⃣  [TEST 02/24] Register duplicate email (Conflict check)...');
@@ -92,6 +96,7 @@ async function runPhase1MasterIntegrationSuite() {
   }
   activeAccessToken = loginRes.accessToken;
   activeRefreshToken = loginRes.refreshToken;
+  void activeAccessToken;
   console.log('   ✅ Valid login authenticated and new session tokens issued.');
 
   // 5. Login wrong password

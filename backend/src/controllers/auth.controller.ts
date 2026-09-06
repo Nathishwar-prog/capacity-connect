@@ -10,26 +10,27 @@ export class AuthController {
     this.authService = authService;
   }
 
+  /**
+   * Public Registration (Signup)
+   *
+   * Creates an account in PENDING status awaiting Admin Approval.
+   * Does NOT issue tokens.
+   */
   public register = async (req: Request, res: Response): Promise<Response> => {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'] as string | undefined;
 
-    const { accessToken, refreshToken, user } = await this.authService.register(
-      req.body,
-      ipAddress,
-      userAgent,
-    );
+    const result = await this.authService.register(req.body, ipAddress, userAgent);
 
-    // Set secure HttpOnly cookie with refresh token
-    TokenUtils.setRefreshCookie(res, refreshToken);
-
-    return ResponseHelper.created(
-      res,
-      { accessToken, user },
-      'User registered and authenticated successfully',
-    );
+    return ResponseHelper.created(res, result, result.message);
   };
 
+  /**
+   * User Authentication (Login)
+   *
+   * Verifies credentials and checks that account is APPROVED.
+   * On success, issues Access Token and sets rotating Refresh Token cookie.
+   */
   public login = async (req: Request, res: Response): Promise<Response> => {
     const { email, password } = req.body;
     const ipAddress = req.ip || req.socket.remoteAddress;
@@ -52,6 +53,11 @@ export class AuthController {
     });
   };
 
+  /**
+   * Session Management: Token Refresh
+   *
+   * Rotates refresh token and generates new access token.
+   */
   public refresh = async (req: Request, res: Response): Promise<Response> => {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
     const ipAddress = req.ip || req.socket.remoteAddress;
@@ -78,6 +84,11 @@ export class AuthController {
     });
   };
 
+  /**
+   * Session Management: Logout
+   *
+   * Revokes refresh token in database and clears cookie.
+   */
   public logout = async (req: Request, res: Response): Promise<Response> => {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
@@ -93,6 +104,11 @@ export class AuthController {
     });
   };
 
+  /**
+   * Current Authenticated User Profile
+   *
+   * Returns safe account details from validated JWT session.
+   */
   public getMe = async (req: Request, res: Response): Promise<Response> => {
     const userId = req.user!.userId;
     const user = await this.authService.getMe(userId);
@@ -101,6 +117,35 @@ export class AuthController {
       res,
       message: 'Authenticated user profile retrieved successfully',
       data: user,
+    });
+  };
+
+  /**
+   * Email Verification
+   */
+  public verifyEmail = async (req: Request, res: Response): Promise<Response> => {
+    const { token } = req.body;
+    const result = await this.authService.verifyEmail(token);
+
+    return ResponseHelper.success({
+      res,
+      message: result.message,
+    });
+  };
+
+  /**
+   * Resend Verification Email
+   */
+  public resendVerification = async (req: Request, res: Response): Promise<Response> => {
+    const { email } = req.body;
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] as string | undefined;
+
+    const result = await this.authService.resendVerification(email, ipAddress, userAgent);
+
+    return ResponseHelper.success({
+      res,
+      message: result.message,
     });
   };
 

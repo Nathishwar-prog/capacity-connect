@@ -17,18 +17,25 @@ export interface RateLimitOptions {
  */
 export function createRateLimiter(options: RateLimitOptions) {
   const store = new Map<string, RateLimitRecord>();
-  const { windowMs, max, message = 'Too many requests from this IP, please try again later.' } = options;
+  const {
+    windowMs,
+    max,
+    message = 'Too many requests from this IP, please try again later.',
+  } = options;
 
   // Periodic garbage collection every 5 minutes to prevent memory leaks
-  const cleanup = setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of store.entries()) {
-      record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
-      if (record.timestamps.length === 0) {
-        store.delete(key);
+  const cleanup = setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, record] of store.entries()) {
+        record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
+        if (record.timestamps.length === 0) {
+          store.delete(key);
+        }
       }
-    }
-  }, Math.min(windowMs, 5 * 60 * 1000));
+    },
+    Math.min(windowMs, 5 * 60 * 1000),
+  );
 
   if (cleanup.unref) {
     cleanup.unref();

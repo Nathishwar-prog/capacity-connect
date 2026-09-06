@@ -85,7 +85,9 @@ export const hasPermission = (
     return true;
   }
   const rolePermissions = permissionsMap[userRole] || [];
-  return rolePermissions.includes(requiredPermission) || userPermissions.includes(requiredPermission);
+  return (
+    rolePermissions.includes(requiredPermission) || userPermissions.includes(requiredPermission)
+  );
 };
 
 export default permissionsMap;

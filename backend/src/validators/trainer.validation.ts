@@ -16,7 +16,11 @@ export const addTrainerExpertiseSchema = z.object({
 
 export const createCourseSchema = z.object({
   title: z.string().min(3, 'Course title must be at least 3 characters long'),
-  slug: z.string().min(3).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens').optional(),
+  slug: z
+    .string()
+    .min(3)
+    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens')
+    .optional(),
   description: z.string().min(10, 'Course description must be at least 10 characters long'),
   category: z.string().min(2, 'Category is required'),
   difficulty: z.nativeEnum(CourseDifficulty).default(CourseDifficulty.BEGINNER),
@@ -112,22 +116,26 @@ export const createAssessmentSchema = z.object({
   assessmentType: z.nativeEnum(AssessmentType).default(AssessmentType.MCQ),
   durationMinutes: z.number().int().min(5).max(300).default(45),
   passingScore: z.number().min(0).max(100).default(70.0),
-  questions: z.array(
-    z.object({
-      questionText: z.string().min(5, 'Question text must be at least 5 characters'),
-      questionType: z.nativeEnum(QuestionType).default(QuestionType.SINGLE_CHOICE),
-      marks: z.number().min(0.5).default(1.0),
-      orderIndex: z.number().int().default(1),
-      explanation: z.string().optional().nullable(),
-      options: z.array(
-        z.object({
-          optionText: z.string().min(1, 'Option text is required'),
-          isCorrect: z.boolean().default(false),
-          orderIndex: z.number().int().default(1),
-        }),
-      ).min(2, 'Each question must have at least 2 options'),
-    }),
-  ).min(1, 'Assessment must contain at least 1 question'),
+  questions: z
+    .array(
+      z.object({
+        questionText: z.string().min(5, 'Question text must be at least 5 characters'),
+        questionType: z.nativeEnum(QuestionType).default(QuestionType.SINGLE_CHOICE),
+        marks: z.number().min(0.5).default(1.0),
+        orderIndex: z.number().int().default(1),
+        explanation: z.string().optional().nullable(),
+        options: z
+          .array(
+            z.object({
+              optionText: z.string().min(1, 'Option text is required'),
+              isCorrect: z.boolean().default(false),
+              orderIndex: z.number().int().default(1),
+            }),
+          )
+          .min(2, 'Each question must have at least 2 options'),
+      }),
+    )
+    .min(1, 'Assessment must contain at least 1 question'),
 });
 
 export const assessmentIdParamSchema = z.object({

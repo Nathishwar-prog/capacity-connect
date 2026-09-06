@@ -22,7 +22,12 @@ export class TrainerController {
 
   public addExpertise = async (req: Request, res: Response): Promise<Response> => {
     const data = await this.trainerService.addExpertise(req.user!.userId, req.body);
-    return ResponseHelper.success({ res, statusCode: 201, message: 'Expertise skill added successfully', data });
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: 'Expertise skill added successfully',
+      data,
+    });
   };
 
   public removeExpertise = async (req: Request, res: Response): Promise<Response> => {
@@ -53,7 +58,12 @@ export class TrainerController {
 
   public createCourse = async (req: Request, res: Response): Promise<Response> => {
     const data = await this.trainerService.createCourse(req.user!.userId, req.body);
-    return ResponseHelper.success({ res, statusCode: 201, message: 'Course draft created successfully', data });
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: 'Course draft created successfully',
+      data,
+    });
   };
 
   public updateCourse = async (req: Request, res: Response): Promise<Response> => {
@@ -96,7 +106,12 @@ export class TrainerController {
       req.user!.role,
       req.body,
     );
-    return ResponseHelper.success({ res, statusCode: 201, message: 'Module created successfully', data });
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: 'Module created successfully',
+      data,
+    });
   };
 
   public updateModule = async (req: Request, res: Response): Promise<Response> => {
@@ -128,7 +143,12 @@ export class TrainerController {
       req.user!.role,
       req.body,
     );
-    return ResponseHelper.success({ res, statusCode: 201, message: 'Lesson created successfully', data });
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: 'Lesson created successfully',
+      data,
+    });
   };
 
   public updateLesson = async (req: Request, res: Response): Promise<Response> => {
@@ -233,7 +253,12 @@ export class TrainerController {
 
   public createAssessment = async (req: Request, res: Response): Promise<Response> => {
     const data = await this.trainerService.createAssessment(req.user!.userId, req.body);
-    return ResponseHelper.success({ res, statusCode: 201, message: 'Assessment created successfully', data });
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: 'Assessment created successfully',
+      data,
+    });
   };
 
   public getAssessmentAttempts = async (req: Request, res: Response): Promise<Response> => {

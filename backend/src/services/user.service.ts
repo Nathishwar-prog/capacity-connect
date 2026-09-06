@@ -82,7 +82,13 @@ export class UserService {
     // Save refresh token to db (expiring in 7 days)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    await this.userRepository.saveRefreshToken(user.id, refreshToken, expiresAt, ipAddress, userAgent);
+    await this.userRepository.saveRefreshToken(
+      user.id,
+      refreshToken,
+      expiresAt,
+      ipAddress,
+      userAgent,
+    );
 
     return { accessToken, refreshToken, user };
   }
@@ -99,7 +105,9 @@ export class UserService {
 
     const user = storedToken.user;
     if (!user || user.status !== UserStatus.APPROVED) {
-      throw new UnauthorizedError('User account associated with this token is inactive or not approved');
+      throw new UnauthorizedError(
+        'User account associated with this token is inactive or not approved',
+      );
     }
 
     const permissions = permissionsMap[user.role] || [];
@@ -122,7 +130,13 @@ export class UserService {
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    await this.userRepository.saveRefreshToken(user.id, newRefreshToken, expiresAt, ipAddress, userAgent);
+    await this.userRepository.saveRefreshToken(
+      user.id,
+      newRefreshToken,
+      expiresAt,
+      ipAddress,
+      userAgent,
+    );
 
     return { accessToken, newRefreshToken };
   }

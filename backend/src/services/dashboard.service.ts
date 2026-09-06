@@ -39,7 +39,13 @@ export class DashboardService {
             modules: {
               include: {
                 lessons: {
-                  select: { id: true, title: true, contentType: true, durationMinutes: true, orderIndex: true },
+                  select: {
+                    id: true,
+                    title: true,
+                    contentType: true,
+                    durationMinutes: true,
+                    orderIndex: true,
+                  },
                   orderBy: { orderIndex: 'asc' },
                 },
               },
@@ -52,7 +58,8 @@ export class DashboardService {
     });
 
     const activeEnrollments = enrollments.filter(
-      (e: any) => e.status === EnrollmentStatus.ENROLLED || e.status === EnrollmentStatus.IN_PROGRESS,
+      (e: any) =>
+        e.status === EnrollmentStatus.ENROLLED || e.status === EnrollmentStatus.IN_PROGRESS,
     );
     const completedCount = enrollments.filter(
       (e: any) => e.status === EnrollmentStatus.COMPLETED,
@@ -74,7 +81,8 @@ export class DashboardService {
       const allLessons = primaryEnrollment.course.modules.flatMap((m: any) =>
         m.lessons.map((l: any) => ({ ...l, moduleTitle: m.title })),
       );
-      const nextIncompleteLesson = allLessons.find((l: any) => !completedLessonIdSet.has(l.id)) || allLessons[0];
+      const nextIncompleteLesson =
+        allLessons.find((l: any) => !completedLessonIdSet.has(l.id)) || allLessons[0];
 
       continueLearning = {
         enrollmentId: primaryEnrollment.id,
@@ -84,10 +92,15 @@ export class DashboardService {
         category: primaryEnrollment.course.category,
         difficulty: primaryEnrollment.course.difficulty,
         progressPercentage: primaryEnrollment.progressPercentage,
-        currentModuleTitle: nextIncompleteLesson?.moduleTitle || primaryEnrollment.course.modules[0]?.title || 'Core Foundations',
+        currentModuleTitle:
+          nextIncompleteLesson?.moduleTitle ||
+          primaryEnrollment.course.modules[0]?.title ||
+          'Core Foundations',
         currentLessonTitle: nextIncompleteLesson?.title || 'Introduction to Subject',
         currentLessonType: nextIncompleteLesson?.contentType || 'ARTICLE',
-        lastActivityDate: primaryEnrollment.lastAccessedAt ? primaryEnrollment.lastAccessedAt.toISOString() : primaryEnrollment.enrolledAt.toISOString(),
+        lastActivityDate: primaryEnrollment.lastAccessedAt
+          ? primaryEnrollment.lastAccessedAt.toISOString()
+          : primaryEnrollment.enrolledAt.toISOString(),
       };
     }
 
@@ -119,8 +132,12 @@ export class DashboardService {
     }
 
     // 4. Calculate overall progress %
-    const totalProgress = activeEnrollments.reduce((sum: number, e: any) => sum + e.progressPercentage, 0);
-    const avgProgress = activeEnrollments.length > 0 ? Math.round(totalProgress / activeEnrollments.length) : 0;
+    const totalProgress = activeEnrollments.reduce(
+      (sum: number, e: any) => sum + e.progressPercentage,
+      0,
+    );
+    const avgProgress =
+      activeEnrollments.length > 0 ? Math.round(totalProgress / activeEnrollments.length) : 0;
 
     // 5. Fetch assessments
     const attempts = await prisma.assessmentAttempt.findMany({
@@ -228,8 +245,12 @@ export class DashboardService {
 
     // Profile completion calculation
     let profileScore = 40;
-    if (user?.traineeProfile?.designation) profileScore += 30;
-    if (user?.department) profileScore += 30;
+    if (user?.traineeProfile?.designation) {
+      profileScore += 30;
+    }
+    if (user?.department) {
+      profileScore += 30;
+    }
 
     return {
       user: {
@@ -252,7 +273,9 @@ export class DashboardService {
       },
       activeCourses: activeEnrollments.map((e: any) => {
         const allLessons = e.course.modules.flatMap((m: any) => m.lessons);
-        const completedLessons = allLessons.filter((l: any) => completedLessonIdSet.has(l.id)).length;
+        const completedLessons = allLessons.filter((l: any) =>
+          completedLessonIdSet.has(l.id),
+        ).length;
         return {
           id: e.id,
           courseId: e.courseId,
@@ -321,7 +344,9 @@ export class DashboardService {
             id: primaryTrainer.id,
             name: `${primaryTrainer.firstName} ${primaryTrainer.lastName || ''}`.trim(),
             designation: primaryTrainer.trainerProfile?.designation || 'Lead Scientist',
-            bio: primaryTrainer.trainerProfile?.bio || 'Senior expert in observational and synoptic meteorology.',
+            bio:
+              primaryTrainer.trainerProfile?.bio ||
+              'Senior expert in observational and synoptic meteorology.',
           }
         : null,
       achievements: achievements.map((ach) => ({
