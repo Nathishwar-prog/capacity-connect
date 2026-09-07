@@ -595,7 +595,285 @@ All trainer operations require authenticated identity and role enforcement (`TRA
 
 ---
 
-## 6. Standard Error Handling & Response Codes
+## 6. Admin User Management Endpoints (`/api/v1/admin/users/*`)
+
+All Admin User Management endpoints require authentication (`Bearer <token>`) and restrict access to administrative roles (`ADMIN`, `SUPER_ADMIN`) with specific source-defined permissions. Endpoints are also aliased at `/admin/users/*` for direct root-path access.
+
+### 6.1 List, Search, Filter, and Paginate Users
+- **METHOD**: `GET`
+- **URL**: `/api/v1/admin/users` (Alias: `/admin/users`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:read` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (Query parameters)
+- **QUERY PARAMETERS**:
+  - `search` (string, optional): Case-insensitive match on `firstName`, `lastName`, or `email`.
+  - `role` (enum, optional): `TRAINEE`, `TRAINER`, `ADMIN`, `SUPER_ADMIN`.
+  - `status` (enum, optional): `PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`, `DEACTIVATED`.
+  - `department` (string, optional): Department name, code, or UUID.
+  - `departmentId` (uuid, optional): Department UUID identifier.
+  - `page` (integer, optional, default: 1): Page number (1-indexed).
+  - `limit` (integer, optional, default: 20, max: 100): Page size limit.
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User directory retrieved successfully",
+    "data": [
+      {
+        "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+        "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+        "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+        "email": "official@imd.gov.in",
+        "firstName": "Ramesh",
+        "lastName": "Sharma",
+        "phone": "+919876543210",
+        "avatarUrl": null,
+        "role": "TRAINEE",
+        "status": "APPROVED",
+        "emailVerified": true,
+        "lastLoginAt": "2026-09-07T12:00:00.000Z",
+        "createdAt": "2026-09-01T08:00:00.000Z",
+        "updatedAt": "2026-09-07T12:00:00.000Z",
+        "permissions": ["courses:read", "assessments:take"]
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 20,
+      "total": 45,
+      "totalPages": 3
+    }
+  }
+  ```
+- **ERRORS**:
+  - `400 Bad Request`: Invalid query parameter format or unsupported filter enum
+  - `401 Unauthorized`: Missing, expired, or invalid credentials
+  - `403 Forbidden`: Caller lacks required administrative role or `user:read` permission
+- **PAGINATION**: Implemented at database level via `page` and `limit`
+- **FILTERS**: Supported via `search`, `role`, `status`, `department`, `departmentId`
+
+### 6.2 Get Safe User Administrative Details by ID
+- **METHOD**: `GET`
+- **URL**: `/api/v1/admin/users/:id` (Alias: `/admin/users/:id`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:read` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User retrieved successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "official@imd.gov.in",
+      "firstName": "Ramesh",
+      "lastName": "Sharma",
+      "phone": "+919876543210",
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "APPROVED",
+      "emailVerified": true,
+      "lastLoginAt": "2026-09-07T12:00:00.000Z",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T12:00:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID v4 parameter
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:read`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.3 Approve User Registration
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/approve` (Alias: `/admin/users/:id/approve`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:approve` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User approved successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "new.user@imd.gov.in",
+      "firstName": "New",
+      "lastName": "Officer",
+      "phone": null,
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "APPROVED",
+      "emailVerified": false,
+      "lastLoginAt": null,
+      "createdAt": "2026-09-07T10:00:00.000Z",
+      "updatedAt": "2026-09-07T14:50:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `USER_APPROVED` event
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID v4 parameter
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:approve`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.4 Reject User Registration
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/reject` (Alias: `/admin/users/:id/reject`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:reject` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User rejected successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": null,
+      "email": "rejected.applicant@external.org",
+      "firstName": "External",
+      "lastName": "Applicant",
+      "phone": null,
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "REJECTED",
+      "emailVerified": false,
+      "lastLoginAt": null,
+      "createdAt": "2026-09-07T10:00:00.000Z",
+      "updatedAt": "2026-09-07T14:50:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `USER_REJECTED` event
+- **SESSION EFFECT**: Revokes any active refresh tokens for the target user
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID v4 parameter
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:reject`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.5 Update User Status
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/status` (Alias: `/admin/users/:id/status`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:approve` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST BODY**:
+  ```json
+  {
+    "status": "SUSPENDED"
+  }
+  ```
+- **ALLOWED STATUS VALUES**: `PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`, `DEACTIVATED`
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User status updated successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "official@imd.gov.in",
+      "firstName": "Ramesh",
+      "lastName": "Sharma",
+      "phone": "+919876543210",
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "SUSPENDED",
+      "emailVerified": true,
+      "lastLoginAt": "2026-09-07T12:00:00.000Z",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T14:55:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `ACCOUNT_SUSPENDED` (for suspension), `USER_APPROVED`, `USER_REJECTED`, or `USER_STATUS_UPDATED`
+- **SESSION EFFECT**: When status changes to `SUSPENDED`, `DEACTIVATED`, or `REJECTED`, all active refresh tokens for the user are immediately revoked
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID format or unsupported status string
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required administrative permission
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.6 Update User Role
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/role` (Alias: `/admin/users/:id/role`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:role:update` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST BODY**:
+  ```json
+  {
+    "role": "TRAINER"
+  }
+  ```
+- **ALLOWED ROLE VALUES**: `TRAINEE`, `TRAINER`, `ADMIN`
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User role updated successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "promoted.instructor@imd.gov.in",
+      "firstName": "Dr. Sunita",
+      "lastName": "Patel",
+      "phone": "+919876543211",
+      "avatarUrl": null,
+      "role": "TRAINER",
+      "status": "APPROVED",
+      "emailVerified": true,
+      "lastLoginAt": "2026-09-07T12:00:00.000Z",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T14:55:00.000Z",
+      "permissions": ["course:create", "course:update", "assessment:create", "resource:upload", "analytics:view"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `ROLE_CHANGED` event
+- **SESSION EFFECT**: Revokes active refresh tokens immediately to force token rotation with updated role claims
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID format or unsupported role enum
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:role:update`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+---
+
+## 7. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 
@@ -616,3 +894,4 @@ All error responses strictly follow the uniform JSON format:
 | **409 Conflict** | Duplicate Resource | Email address already registered |
 | **429 Too Many Requests** | Rate Limit Exceeded | Client exceeded sliding-window request threshold |
 | **500 Internal Server Error** | Unexpected Failure | Database or server operational exception |
+

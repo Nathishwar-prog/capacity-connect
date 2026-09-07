@@ -262,6 +262,7 @@ For in-depth guides, consult the [`docs/`](./docs) folder:
 * 🧱 **[Architecture Guide](./docs/architecture.md)** — Clean Architecture & SOLID principles.
 * 🔐 **[Authentication Guide](./docs/authentication/README.md)** — Account lifecycle, session management, and verification.
 * 🛡️ **[RBAC Authorization Guide](./docs/rbac/README.md)** — Role-based access control, source permissions, and server guards.
+* 👥 **[User Management Guide](./docs/user-management/README.md)** — Administrative user directory, search, filtering, approval lifecycle, and role governance.
 * 🛠️ **[Customization Guide](./docs/customization.md)** — Step-by-step feature expansion.
 * 📂 **[Structure Reference](./docs/structure.md)** — Detailed directory reference.
 * 🌐 **[REST API Specifications](./docs/api.md)** — Request/Response schema contracts.
