@@ -35,6 +35,10 @@
     {
       "name": "Trainee",
       "description": "Trainee dashboard"
+    },
+    {
+      "name": "Admin - User Management",
+      "description": "Administrative endpoints for user directory, search, filtering, approval, rejection, status management, and role assignment"
     }
   ],
   "components": {
@@ -411,6 +415,179 @@
                 }
               }
             }
+          }
+        }
+      },
+      "AdminUserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "departmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "ADMIN",
+              "TRAINER",
+              "TRAINEE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED",
+              "DEACTIVATED"
+            ]
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 45
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 3
+          }
+        }
+      },
+      "AdminUserListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "User directory retrieved successfully"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserResponse"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "AdminUserSingleResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "User operation successful"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AdminUserResponse"
+          }
+        }
+      },
+      "AdminUserStatusUpdateRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED",
+              "DEACTIVATED"
+            ],
+            "example": "APPROVED"
+          }
+        }
+      },
+      "AdminUserRoleUpdateRequest": {
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "TRAINEE",
+              "TRAINER",
+              "ADMIN"
+            ],
+            "example": "TRAINER"
           }
         }
       }
@@ -2091,6 +2268,395 @@
         "responses": {
           "200": {
             "description": "Feedback"
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "tags": [
+          "Admin - User Management"
+        ],
+        "summary": "List, search, filter, and paginate users",
+        "description": "Retrieve paginated user directory with search and multi-dimensional filters. Requires administrative role and user:read permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query matching firstName, lastName, or email"
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TRAINEE",
+                "TRAINER",
+                "ADMIN",
+                "SUPER_ADMIN"
+              ]
+            },
+            "description": "Filter users by role"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SUSPENDED",
+                "DEACTIVATED"
+              ]
+            },
+            "description": "Filter users by account status"
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by department code, name, or UUID"
+          },
+          {
+            "name": "departmentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by department UUID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Page size limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User directory retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error on query parameters"
+          },
+          "401": {
+            "description": "Authentication credentials missing or invalid"
+          },
+          "403": {
+            "description": "Forbidden - user:read permission required"
+          }
+        }
+      }
+    },
+    "/admin/users/{id}": {
+      "get": {
+        "tags": [
+          "Admin - User Management"
+        ],
+        "summary": "Get safe administrative user details by ID",
+        "description": "Retrieve sanitized administrative user details by user UUID. Password hashes and authentication secrets are strictly excluded. Requires user:read permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Target user UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserSingleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid user UUID parameter"
+          },
+          "401": {
+            "description": "Authentication credentials missing or invalid"
+          },
+          "403": {
+            "description": "Forbidden - user:read permission required"
+          },
+          "404": {
+            "description": "User with specified ID not found"
+          }
+        }
+      }
+    },
+    "/admin/users/{id}/approve": {
+      "patch": {
+        "tags": [
+          "Admin - User Management"
+        ],
+        "summary": "Approve pending user registration",
+        "description": "Transitions user status to APPROVED, enabling login in the authentication lifecycle, and persists USER_APPROVED in audit trail. Requires user:approve permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Target user UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User approved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserSingleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid user UUID parameter"
+          },
+          "401": {
+            "description": "Authentication credentials missing or invalid"
+          },
+          "403": {
+            "description": "Forbidden - user:approve permission required"
+          },
+          "404": {
+            "description": "User with specified ID not found"
+          }
+        }
+      }
+    },
+    "/admin/users/{id}/reject": {
+      "patch": {
+        "tags": [
+          "Admin - User Management"
+        ],
+        "summary": "Reject user registration",
+        "description": "Transitions user status to REJECTED, revokes active refresh tokens, and persists USER_REJECTED in audit trail. Requires user:reject permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Target user UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User rejected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserSingleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid user UUID parameter"
+          },
+          "401": {
+            "description": "Authentication credentials missing or invalid"
+          },
+          "403": {
+            "description": "Forbidden - user:reject permission required"
+          },
+          "404": {
+            "description": "User with specified ID not found"
+          }
+        }
+      }
+    },
+    "/admin/users/{id}/status": {
+      "patch": {
+        "tags": [
+          "Admin - User Management"
+        ],
+        "summary": "Update user account status",
+        "description": "Updates account status (PENDING, APPROVED, REJECTED, SUSPENDED, DEACTIVATED). Automatically terminates active sessions if account is suspended or deactivated. Logs corresponding audit event (ACCOUNT_SUSPENDED, etc.). Requires user:approve permission and ADMIN role.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Target user UUID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserSingleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid status string"
+          },
+          "401": {
+            "description": "Authentication credentials missing or invalid"
+          },
+          "403": {
+            "description": "Forbidden - requires administrative privileges"
+          },
+          "404": {
+            "description": "User with specified ID not found"
+          }
+        }
+      }
+    },
+    "/admin/users/{id}/role": {
+      "patch": {
+        "tags": [
+          "Admin - User Management"
+        ],
+        "summary": "Update user role",
+        "description": "Assigns a new role (TRAINEE, TRAINER, ADMIN) to the user and revokes active refresh tokens to force immediate renewal of role and permission claims. Persists ROLE_CHANGED in audit trail. Requires user:role:update permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Target user UUID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserRoleUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserSingleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid role"
+          },
+          "401": {
+            "description": "Authentication credentials missing or invalid"
+          },
+          "403": {
+            "description": "Forbidden - user:role:update permission required"
+          },
+          "404": {
+            "description": "User with specified ID not found"
           }
         }
       }
