@@ -95,5 +95,13 @@ router.patch(
   asyncHandler(adminUserController.updateRole),
 );
 
+/**
+ * Administrative Audit Log Sub-Router
+ * GET /admin/audit-logs
+ * GET /admin/audit-logs/:id
+ */
+import { auditRouter } from './audit.routes';
+router.use('/audit-logs', auditRouter);
+
 export default router;
 export { router as adminRouter };

@@ -46,6 +46,8 @@ router.get('/', (_req, res) => {
         rejectUser: 'PATCH /api/v1/admin/users/:id/reject',
         updateStatus: 'PATCH /api/v1/admin/users/:id/status',
         updateRole: 'PATCH /api/v1/admin/users/:id/role',
+        listAuditLogs: 'GET /api/v1/admin/audit-logs',
+        getAuditLog: 'GET /api/v1/admin/audit-logs/:id',
       },
       dashboard: {
         trainee: 'GET /api/v1/dashboard/trainee',

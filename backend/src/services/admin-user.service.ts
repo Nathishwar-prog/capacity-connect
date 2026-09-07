@@ -3,6 +3,7 @@ import { IUserRepository } from '../repositories/user.repository';
 import { AdminUserFilterDto, PaginatedUsersResponseDto } from '../dto/admin-user.dto';
 import { UserDtoMapper } from '../dto/user.dto';
 import { NotFoundError } from '../errors/app-error';
+import { AuditService } from './audit.service';
 import logger from '../logger/winston.logger';
 
 export interface AdminActionContext {
@@ -13,9 +14,11 @@ export interface AdminActionContext {
 
 export class AdminUserService {
   private userRepository: IUserRepository;
+  private auditService: AuditService;
 
-  constructor(userRepository: IUserRepository) {
+  constructor(userRepository: IUserRepository, auditService: AuditService = new AuditService()) {
     this.userRepository = userRepository;
+    this.auditService = auditService;
   }
 
   /**
@@ -70,17 +73,13 @@ export class AdminUserService {
 
     const updatedUser = await this.userRepository.updateUserStatus(id, UserStatus.APPROVED);
 
-    await this.userRepository.createAuditLog({
-      organizationId: user.organizationId,
-      userId: context.adminUserId,
-      action: 'USER_APPROVED',
-      entityType: 'USER',
-      entityId: id,
-      oldValues: { status: oldStatus },
-      newValues: { status: UserStatus.APPROVED },
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
-    });
+    await this.auditService.logUserApproved(
+      context.adminUserId,
+      id,
+      user.organizationId,
+      oldStatus,
+      { ipAddress: context.ipAddress, userAgent: context.userAgent },
+    );
 
     logger.info(
       `[UserManagement] User ${id} (${user.email}) approved by admin ${context.adminUserId}`,
@@ -100,17 +99,13 @@ export class AdminUserService {
 
     const updatedUser = await this.userRepository.updateUserStatus(id, UserStatus.REJECTED);
 
-    await this.userRepository.createAuditLog({
-      organizationId: user.organizationId,
-      userId: context.adminUserId,
-      action: 'USER_REJECTED',
-      entityType: 'USER',
-      entityId: id,
-      oldValues: { status: oldStatus },
-      newValues: { status: UserStatus.REJECTED },
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
-    });
+    await this.auditService.logUserRejected(
+      context.adminUserId,
+      id,
+      user.organizationId,
+      oldStatus,
+      { ipAddress: context.ipAddress, userAgent: context.userAgent },
+    );
 
     logger.info(
       `[UserManagement] User ${id} (${user.email}) rejected by admin ${context.adminUserId}`,
@@ -140,27 +135,43 @@ export class AdminUserService {
 
     const updatedUser = await this.userRepository.updateUserStatus(id, newStatus);
 
-    // Map audit action cleanly to source-defined events where applicable
-    let auditAction = 'USER_STATUS_UPDATED';
     if (newStatus === UserStatus.SUSPENDED) {
-      auditAction = 'ACCOUNT_SUSPENDED';
+      await this.auditService.logAccountSuspended(
+        context.adminUserId,
+        id,
+        user.organizationId,
+        oldStatus,
+        { ipAddress: context.ipAddress, userAgent: context.userAgent },
+      );
     } else if (newStatus === UserStatus.APPROVED) {
-      auditAction = 'USER_APPROVED';
+      await this.auditService.logUserApproved(
+        context.adminUserId,
+        id,
+        user.organizationId,
+        oldStatus,
+        { ipAddress: context.ipAddress, userAgent: context.userAgent },
+      );
     } else if (newStatus === UserStatus.REJECTED) {
-      auditAction = 'USER_REJECTED';
+      await this.auditService.logUserRejected(
+        context.adminUserId,
+        id,
+        user.organizationId,
+        oldStatus,
+        { ipAddress: context.ipAddress, userAgent: context.userAgent },
+      );
+    } else {
+      await this.auditService.logEvent({
+        organizationId: user.organizationId,
+        userId: context.adminUserId,
+        action: 'USER_STATUS_UPDATED',
+        entityType: 'USER',
+        entityId: id,
+        oldValues: { status: oldStatus },
+        newValues: { status: newStatus },
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+      });
     }
-
-    await this.userRepository.createAuditLog({
-      organizationId: user.organizationId,
-      userId: context.adminUserId,
-      action: auditAction,
-      entityType: 'USER',
-      entityId: id,
-      oldValues: { status: oldStatus },
-      newValues: { status: newStatus },
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
-    });
 
     logger.info(
       `[UserManagement] User ${id} status updated from ${oldStatus} to ${newStatus} by admin ${context.adminUserId}`,
@@ -184,17 +195,14 @@ export class AdminUserService {
 
     const updatedUser = await this.userRepository.updateUserRole(id, newRole);
 
-    await this.userRepository.createAuditLog({
-      organizationId: user.organizationId,
-      userId: context.adminUserId,
-      action: 'ROLE_CHANGED',
-      entityType: 'USER',
-      entityId: id,
-      oldValues: { role: oldRole },
-      newValues: { role: newRole },
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
-    });
+    await this.auditService.logRoleChanged(
+      context.adminUserId,
+      id,
+      user.organizationId,
+      oldRole,
+      newRole,
+      { ipAddress: context.ipAddress, userAgent: context.userAgent },
+    );
 
     logger.info(
       `[UserManagement] User ${id} role updated from ${oldRole} to ${newRole} by admin ${context.adminUserId}`,
