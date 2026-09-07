@@ -7,6 +7,7 @@ import { courseRouter } from './course.routes';
 import { enrollmentRouter } from './enrollment.routes';
 import resourceRouter from './resource.routes';
 import trainerMonitoringRouter from './trainer-monitoring.routes';
+import assessmentRouter from './assessment.routes';
 
 const router = Router();
 
@@ -81,7 +82,21 @@ router.get('/', (_req, res) => {
         courseMonitoring: 'GET /api/v1/trainer/monitoring/courses/:courseId',
         traineeCourseDetail: 'GET /api/v1/trainer/monitoring/courses/:courseId/trainees/:traineeId',
         assessments: 'GET /api/v1/trainer/monitoring/assessments',
-      }
+      },
+      assessments: {
+        list: 'GET /api/v1/assessments',
+        create: 'POST /api/v1/assessments',
+        getById: 'GET /api/v1/assessments/:id',
+        updateById: 'PATCH /api/v1/assessments/:id',
+        deleteById: 'DELETE /api/v1/assessments/:id',
+        addQuestion: 'POST /api/v1/assessments/:assessmentId/questions',
+        updateQuestion: 'PATCH /api/v1/assessments/:assessmentId/questions/:questionId',
+        deleteQuestion: 'DELETE /api/v1/assessments/:assessmentId/questions/:questionId',
+        startAttempt: 'POST /api/v1/assessments/:assessmentId/attempts',
+        getAttempt: 'GET /api/v1/assessments/:assessmentId/attempts/:attemptId',
+        submitAttempt: 'POST /api/v1/assessments/:assessmentId/attempts/:attemptId/submit',
+        getResult: 'GET /api/v1/assessments/:assessmentId/attempts/:attemptId/result',
+      },
     },
   });
 });
@@ -97,5 +112,6 @@ router.use('/courses', courseRouter);
 router.use('/enrollments', enrollmentRouter);
 router.use('/resources', resourceRouter);
 router.use('/trainer/monitoring', trainerMonitoringRouter);
+router.use('/assessments', assessmentRouter);
 
 export default router;
