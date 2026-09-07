@@ -590,6 +590,605 @@
             "example": "TRAINER"
           }
         }
+      },
+      "PersonalInfoDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "Ramesh"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Sharma"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "ramesh.sharma@imd.gov.in"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+91-9876543210"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationName": {
+            "type": "string",
+            "nullable": true,
+            "example": "India Meteorological Department"
+          },
+          "departmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "departmentName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Numerical Weather Prediction"
+          }
+        }
+      },
+      "TraineeProfileResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personalInfo": {
+            "$ref": "#/components/schemas/PersonalInfoDto"
+          },
+          "designation": {
+            "type": "string",
+            "nullable": true,
+            "example": "Scientific Officer"
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "example": "Meteorological researcher specializing in numerical forecasting."
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Radar Meteorology",
+              "Climate Modeling"
+            ]
+          },
+          "profileCompletion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 85
+          },
+          "qualifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualificationResponse"
+            }
+          },
+          "workExperiences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkExperienceResponse"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSkillResponse"
+            }
+          },
+          "certificates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CertificateResponse"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateTraineeProfileRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "Ramesh"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Sharma"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+91-9876543210"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e"
+          },
+          "departmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "designation": {
+            "type": "string",
+            "nullable": true,
+            "example": "Senior Meteorologist"
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "example": "Updated research focus on cyclone dynamics."
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Radar Meteorology",
+              "Monsoon Dynamics"
+            ]
+          }
+        }
+      },
+      "QualificationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "degree": {
+            "type": "string",
+            "example": "Master of Science (M.Sc.)"
+          },
+          "fieldOfStudy": {
+            "type": "string",
+            "example": "Atmospheric Sciences"
+          },
+          "institution": {
+            "type": "string",
+            "example": "Indian Institute of Technology, Delhi"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Dissertation on monsoon tracking algorithms."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateQualificationRequest": {
+        "type": "object",
+        "required": [
+          "degree",
+          "fieldOfStudy",
+          "institution",
+          "startDate"
+        ],
+        "properties": {
+          "degree": {
+            "type": "string",
+            "example": "Master of Science (M.Sc.)"
+          },
+          "fieldOfStudy": {
+            "type": "string",
+            "example": "Atmospheric Sciences"
+          },
+          "institution": {
+            "type": "string",
+            "example": "Indian Institute of Technology, Delhi"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2018-07-15T00:00:00.000Z"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2020-05-30T00:00:00.000Z"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Specialization in numerical meteorological simulation."
+          }
+        }
+      },
+      "UpdateQualificationRequest": {
+        "type": "object",
+        "properties": {
+          "degree": {
+            "type": "string"
+          },
+          "fieldOfStudy": {
+            "type": "string"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "WorkExperienceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "companyName": {
+            "type": "string",
+            "example": "India Meteorological Department"
+          },
+          "jobTitle": {
+            "type": "string",
+            "example": "Assistant Meteorologist"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "example": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Supervised synoptic radar stations."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateWorkExperienceRequest": {
+        "type": "object",
+        "required": [
+          "companyName",
+          "jobTitle",
+          "startDate"
+        ],
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "example": "India Meteorological Department"
+          },
+          "jobTitle": {
+            "type": "string",
+            "example": "Assistant Meteorologist"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2021-01-10T00:00:00.000Z"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "default": false
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Weather analysis and forecast dissemination."
+          }
+        }
+      },
+      "UpdateWorkExperienceRequest": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string"
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UserSkillResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "skillId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Doppler Weather Radar"
+          },
+          "code": {
+            "type": "string",
+            "example": "DWR-TECH"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "example": "Observational Systems"
+          },
+          "proficiencyLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 4
+          },
+          "yearsExperience": {
+            "type": "integer",
+            "nullable": true,
+            "example": 3
+          },
+          "source": {
+            "type": "string",
+            "example": "PROFILE"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AddUserSkillRequest": {
+        "type": "object",
+        "properties": {
+          "skillId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c3d4e5f6-a7b8-9012-cdef-1234567890ab"
+          },
+          "skillName": {
+            "type": "string",
+            "example": "Doppler Weather Radar"
+          },
+          "proficiencyLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "default": 1
+          },
+          "yearsExperience": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60,
+            "nullable": true,
+            "example": 2
+          }
+        }
+      },
+      "CertificateResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "WMO Global Observing System Certification"
+          },
+          "issuingOrganization": {
+            "type": "string",
+            "example": "World Meteorological Organization (WMO)"
+          },
+          "credentialId": {
+            "type": "string",
+            "nullable": true,
+            "example": "WMO-GOS-2023-8874"
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiryDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "certificateUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://credentials.wmo.int/verify/8874"
+          },
+          "verificationStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "VERIFIED",
+              "REJECTED",
+              "EXPIRED"
+            ],
+            "example": "PENDING"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateCertificateRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "issuingOrganization",
+          "issueDate"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "WMO Global Observing System Certification"
+          },
+          "issuingOrganization": {
+            "type": "string",
+            "example": "World Meteorological Organization (WMO)"
+          },
+          "credentialId": {
+            "type": "string",
+            "nullable": true,
+            "example": "WMO-GOS-2023-8874"
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-04-10T00:00:00.000Z"
+          },
+          "expiryDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-04-10T00:00:00.000Z"
+          },
+          "certificateUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://credentials.wmo.int/verify/8874"
+          }
+        }
+      },
+      "AvailableSkillResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Doppler Weather Radar"
+          },
+          "code": {
+            "type": "string",
+            "example": "SKILL-DWR"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "example": "Observational Systems"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Operation and interpretation of dual-pol radar data."
+          }
+        }
       }
     }
   },
@@ -2657,6 +3256,1263 @@
           },
           "404": {
             "description": "User with specified ID not found"
+          }
+        }
+      }
+    },
+    "/trainee/profile": {
+      "get": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Get trainee profile",
+        "description": "Retrieves current authenticated trainee profile including personal info, qualifications, work experiences, skills, and certificates.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trainee profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraineeProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "403": {
+            "description": "Forbidden — Trainee, Admin, or Super Admin role required"
+          },
+          "404": {
+            "description": "Trainee profile not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Update trainee profile",
+        "description": "Updates personal info and trainee profile attributes (designation, bio, interests). Dynamically updates profile completion score.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTraineeProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Trainee profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraineeProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "403": {
+            "description": "Forbidden — Trainee, Admin, or Super Admin role required"
+          },
+          "404": {
+            "description": "Trainee profile not found"
+          }
+        }
+      }
+    },
+    "/trainee/skills": {
+      "get": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "List trainee skills",
+        "description": "Lists all skills associated with the authenticated trainee profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trainee skills retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserSkillResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "403": {
+            "description": "Forbidden — Trainee role required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Add skill to trainee profile",
+        "description": "Associates a new or existing skill with the trainee profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddUserSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Skill added to trainee profile successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSkillResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/trainee/skills/{skillId}": {
+      "delete": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Remove skill from trainee profile",
+        "description": "Removes a skill mapping from the trainee profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skillId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Skill identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skill removed from profile successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill mapping not found"
+          }
+        }
+      }
+    },
+    "/trainee/skills/available": {
+      "get": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "List available system skills",
+        "description": "Retrieves catalog of configurable platform skills for profile onboarding and skill addition.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search term for skill name or code"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Skill category filter"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Pagination offset"
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Page size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available skills catalog retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailableSkillResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainee/qualifications": {
+      "get": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "List trainee qualifications",
+        "description": "Retrieves all academic and institutional qualifications for authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Qualifications retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QualificationResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Add qualification to trainee profile",
+        "description": "Adds an educational qualification to trainee profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQualificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Qualification created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainee/qualifications/{id}": {
+      "put": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Update trainee qualification",
+        "description": "Updates an existing qualification owned by the authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Qualification identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQualificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Qualification updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Qualification not found or access denied"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Delete trainee qualification",
+        "description": "Deletes a qualification owned by the authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Qualification identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Qualification deleted successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Qualification not found or access denied"
+          }
+        }
+      }
+    },
+    "/trainee/experience": {
+      "get": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "List trainee work experiences",
+        "description": "Retrieves all work experience entries for authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work experiences retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkExperienceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Add work experience to trainee profile",
+        "description": "Adds a professional work experience entry to trainee profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkExperienceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Work experience created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkExperienceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainee/experience/{id}": {
+      "put": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Update trainee work experience",
+        "description": "Updates an existing work experience record owned by the authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Work experience identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkExperienceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work experience updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkExperienceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Work experience not found or access denied"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Delete trainee work experience",
+        "description": "Deletes a work experience record owned by the authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Work experience identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work experience deleted successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Work experience not found or access denied"
+          }
+        }
+      }
+    },
+    "/trainee/certificates": {
+      "get": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "List trainee certificates",
+        "description": "Retrieves all professional certificates associated with the trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CertificateResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Register certificate on trainee profile",
+        "description": "Registers a professional certificate for verification.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCertificateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Certificate registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainee/certificates/{id}": {
+      "delete": {
+        "tags": [
+          "Trainee"
+        ],
+        "summary": "Delete trainee certificate",
+        "description": "Deletes a certificate owned by the authenticated trainee.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Certificate identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate deleted successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Certificate not found or access denied"
+          }
+        }
+      }
+    },
+    "/trainer/qualifications": {
+      "get": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "List trainer qualifications",
+        "description": "Retrieves all academic and institutional qualifications for authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Qualifications retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QualificationResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Add qualification to trainer profile",
+        "description": "Adds an educational qualification to trainer profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQualificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Qualification created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainer/qualifications/{id}": {
+      "put": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Update trainer qualification",
+        "description": "Updates a qualification owned by the authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Qualification identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQualificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Qualification updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Qualification not found or access denied"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Delete trainer qualification",
+        "description": "Deletes a qualification owned by the authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Qualification identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Qualification deleted successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Qualification not found or access denied"
+          }
+        }
+      }
+    },
+    "/trainer/experience": {
+      "get": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "List trainer work experiences",
+        "description": "Retrieves all work experience entries for authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work experiences retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkExperienceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Add work experience to trainer profile",
+        "description": "Adds a professional work experience entry to trainer profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkExperienceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Work experience created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkExperienceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainer/experience/{id}": {
+      "put": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Update trainer work experience",
+        "description": "Updates an existing work experience record owned by the authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Work experience identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkExperienceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work experience updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkExperienceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Work experience not found or access denied"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Delete trainer work experience",
+        "description": "Deletes a work experience record owned by the authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Work experience identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work experience deleted successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Work experience not found or access denied"
+          }
+        }
+      }
+    },
+    "/trainer/skills": {
+      "get": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "List trainer skills",
+        "description": "Lists all skills associated with the authenticated trainer profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trainer skills retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserSkillResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Add skill to trainer profile",
+        "description": "Associates a new or existing skill with the trainer profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddUserSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Skill added to trainer profile successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSkillResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainer/skills/{skillId}": {
+      "delete": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Remove skill from trainer profile",
+        "description": "Removes a skill mapping from the trainer profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skillId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Skill identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skill removed from profile successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Skill mapping not found"
+          }
+        }
+      }
+    },
+    "/trainer/certificates": {
+      "get": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "List trainer certificates",
+        "description": "Retrieves all professional certificates associated with the trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CertificateResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Register certificate on trainer profile",
+        "description": "Registers a professional certificate on trainer profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCertificateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Certificate registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          }
+        }
+      }
+    },
+    "/trainer/certificates/{id}": {
+      "delete": {
+        "tags": [
+          "Trainer"
+        ],
+        "summary": "Delete trainer certificate",
+        "description": "Deletes a certificate owned by the authenticated trainer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Certificate identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate deleted successfully"
+          },
+          "401": {
+            "description": "Authentication credentials required"
+          },
+          "404": {
+            "description": "Certificate not found or access denied"
           }
         }
       }

@@ -873,7 +873,482 @@ All Admin User Management endpoints require authentication (`Bearer <token>`) an
 
 ---
 
-## 7. Standard Error Handling & Response Codes
+## 7. Trainee Profile Endpoints (`/api/v1/trainee/*`)
+
+Self-service profile and competency portfolio endpoints for authenticated Trainee accounts. Enforces strict user-identity isolation where Trainees operate strictly on their own data.
+
+### 7.1 Retrieve Own Trainee Profile
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainee/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Trainee profile retrieved successfully",
+    "data": {
+      "id": "uuid-trainee-profile",
+      "userId": "uuid-user",
+      "personalInfo": {
+        "firstName": "Ramesh",
+        "lastName": "Sharma",
+        "email": "ramesh.sharma@imd.gov.in",
+        "phone": "+91-9876543210",
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+        "organizationId": "uuid-org",
+        "organizationName": "India Meteorological Department",
+        "departmentId": "uuid-dept",
+        "departmentName": "Numerical Weather Prediction"
+      },
+      "designation": "Scientific Officer",
+      "bio": "Meteorological researcher specializing in numerical forecasting and synoptic analysis.",
+      "interests": ["Radar Meteorology", "Monsoon Dynamics"],
+      "profileCompletion": 85,
+      "qualifications": [],
+      "workExperiences": [],
+      "skills": [],
+      "certificates": [],
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T14:55:00.000Z"
+    }
+  }
+  ```
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or invalid Bearer JWT
+  - `403 Forbidden`: Role not authorized
+  - `404 Not Found`: Trainee profile not found
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.2 Update Own Trainee Profile
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/trainee/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "firstName": "Ramesh",
+    "lastName": "Sharma",
+    "phone": "+91-9876543210",
+    "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    "departmentId": "uuid-dept",
+    "designation": "Senior Scientific Officer",
+    "bio": "Updated meteorological research focus on tropical cyclone trajectory tracking.",
+    "interests": ["Radar Meteorology", "Tropical Cyclones", "Climate Modeling"]
+  }
+  ```
+- **RESPONSE (200 OK)**: Full updated TraineeProfileResponseDto with dynamically updated `profileCompletion` score.
+- **ERRORS**:
+  - `400 Bad Request`: Validation failure on input schema
+  - `401 Unauthorized`: Missing or invalid token
+  - `403 Forbidden`: Role not authorized
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.3 List Trainee Skills
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainee/skills`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Skills retrieved successfully",
+    "data": [
+      {
+        "id": "uuid-user-skill",
+        "userId": "uuid-user",
+        "skillId": "uuid-skill",
+        "name": "Doppler Weather Radar",
+        "code": "DWR-TECH",
+        "category": "Observational Systems",
+        "proficiencyLevel": 4,
+        "yearsExperience": 3,
+        "source": "PROFILE",
+        "createdAt": "2026-09-02T10:00:00.000Z",
+        "updatedAt": "2026-09-02T10:00:00.000Z"
+      }
+    ]
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.4 Add Skill to Trainee Profile
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainee/skills`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "skillId": "uuid-skill",
+    "proficiencyLevel": 4,
+    "yearsExperience": 3
+  }
+  ```
+  *(Alternatively, `skillName` may be supplied if `skillId` is unknown)*
+- **RESPONSE (201 Created)**: UserSkillResponseDto
+- **ERRORS**:
+  - `400 Bad Request`: Neither `skillId` nor `skillName` provided, or level out of range (1-5)
+  - `401 Unauthorized`: Missing credentials
+  - `403 Forbidden`: Role unauthorized
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.5 Remove Skill from Trainee Profile
+- **METHOD**: `DELETE`
+- **URL**: `/api/v1/trainee/skills/:skillId`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (skillId in path parameter)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Skill removed from profile successfully"
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.6 List Available System Skills Catalog
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainee/skills/available`
+- **AUTHORIZATION**: `Bearer <token>`
+- **REQUEST**: Query parameters: `search` (string), `category` (string), `skip` (number), `take` (number)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Available skills catalog retrieved successfully",
+    "data": {
+      "skills": [
+        {
+          "id": "uuid-skill",
+          "name": "Doppler Weather Radar",
+          "code": "DWR-TECH",
+          "category": "Observational Systems",
+          "description": "Operation and interpretation of dual-pol radar data"
+        }
+      ],
+      "total": 42
+    }
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`
+- **PAGINATION**: Supported via `skip` and `take` query parameters
+- **FILTERS**: Supported via `search` (name/code) and `category` query parameters
+
+### 7.7 Qualifications Management (`/api/v1/trainee/qualifications`)
+- **GET `/api/v1/trainee/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of QualificationResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainee/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**:
+    ```json
+    {
+      "degree": "M.Sc. Atmospheric Science",
+      "fieldOfStudy": "Meteorology",
+      "institution": "Indian Institute of Technology, Delhi",
+      "startDate": "2018-07-15T00:00:00.000Z",
+      "endDate": "2020-05-30T00:00:00.000Z",
+      "description": "Specialization in numerical weather prediction models."
+    }
+    ```
+  - **RESPONSE (201 Created)**: Created QualificationResponseDto
+  - **ERRORS**: `400 Bad Request` (start date > end date or missing required field), `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainee/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: Partial Qualification update fields
+  - **RESPONSE (200 OK)**: Updated QualificationResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainee/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Qualification deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 7.8 Work Experience Management (`/api/v1/trainee/experience`)
+- **GET `/api/v1/trainee/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of WorkExperienceResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainee/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**:
+    ```json
+    {
+      "companyName": "India Meteorological Department",
+      "jobTitle": "Assistant Meteorologist",
+      "startDate": "2021-01-10T00:00:00.000Z",
+      "endDate": null,
+      "isCurrent": true,
+      "description": "Synoptic chart analysis and local forecast generation."
+    }
+    ```
+  - **RESPONSE (201 Created)**: Created WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainee/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: Partial WorkExperience update fields
+  - **RESPONSE (200 OK)**: Updated WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainee/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Work experience deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 7.9 Certificates Management (`/api/v1/trainee/certificates`)
+- **GET `/api/v1/trainee/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of CertificateResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainee/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**:
+    ```json
+    {
+      "title": "WMO Tropical Cyclone Warning Operations",
+      "issuingOrganization": "World Meteorological Organization",
+      "credentialId": "WMO-TC-2023-1102",
+      "issueDate": "2023-08-15T00:00:00.000Z",
+      "expiryDate": "2026-08-15T00:00:00.000Z",
+      "certificateUrl": "https://credentials.wmo.int/verify/1102"
+    }
+    ```
+  - **RESPONSE (201 Created)**: Created CertificateResponseDto with `verificationStatus = PENDING`
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainee/certificates/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Certificate deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+---
+
+## 8. Trainer Profile Endpoints (`/api/v1/trainer/*`)
+
+Self-service profile and portfolio endpoints for instructors/trainers. Supports Bio, Designation, Total Experience, Subject Expertise, Academic Qualifications, Work History, and Certificates.
+
+### 8.1 Retrieve Own Trainer Profile
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainer/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Trainer profile retrieved",
+    "data": {
+      "user": {
+        "id": "uuid-trainer",
+        "email": "trainer.name@imd.gov.in",
+        "firstName": "Dr. Sunita",
+        "lastName": "Patel",
+        "phone": "+91-9876543211",
+        "role": "TRAINER",
+        "status": "APPROVED",
+        "organization": { "id": "uuid-org", "name": "India Meteorological Department" },
+        "department": { "id": "uuid-dept", "name": "Monsoon Research" },
+        "trainerProfile": {
+          "id": "uuid-tp",
+          "designation": "Principal Scientific Instructor",
+          "organizationName": "National Meteorological Training Centre (NMTC)",
+          "bio": "Lead researcher in monsoon dynamic models with 14 years instructional experience.",
+          "yearsExperience": 14,
+          "expertise": [
+            {
+              "id": "uuid-exp",
+              "proficiencyLevel": 5,
+              "yearsExperience": 10,
+              "skill": { "id": "uuid-skill", "name": "Numerical Weather Prediction", "code": "NWP-01" }
+            }
+          ]
+        },
+        "qualifications": [],
+        "workExperiences": [],
+        "certificates": []
+      },
+      "stats": {
+        "totalCourses": 6,
+        "publishedCourses": 5,
+        "learnersTrained": 142,
+        "avgCompletionRate": 78.4,
+        "avgAssessmentScore": 84.1,
+        "competenciesCovered": 12
+      }
+    }
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.2 Update Own Trainer Profile
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/trainer/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "designation": "Chief Scientist & Master Instructor",
+    "organizationName": "National Meteorological Training Centre",
+    "bio": "Specialized instructor for advanced atmospheric physics and radar remote sensing.",
+    "yearsExperience": 16
+  }
+  ```
+- **RESPONSE (200 OK)**: Updated TrainerProfile record
+- **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.3 Add Trainer Expertise Skill
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainer/expertise`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "skillId": "uuid-skill",
+    "proficiencyLevel": 5,
+    "yearsExperience": 12
+  }
+  ```
+- **RESPONSE (201 Created)**: TrainerExpertise record including Skill relation
+- **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.4 Remove Trainer Expertise Skill
+- **METHOD**: `DELETE`
+- **URL**: `/api/v1/trainer/expertise/:skillId`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**: `{ "success": true, "message": "Expertise skill removed successfully" }`
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.5 Trainer Qualifications Management (`/api/v1/trainer/qualifications`)
+- **GET `/api/v1/trainer/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of QualificationResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: CreateQualificationRequest
+  - **RESPONSE (201 Created)**: Created QualificationResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainer/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: UpdateQualificationRequest
+  - **RESPONSE (200 OK)**: Updated QualificationResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Qualification deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 8.6 Trainer Work Experience Management (`/api/v1/trainer/experience`)
+- **GET `/api/v1/trainer/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of WorkExperienceResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: CreateWorkExperienceRequest
+  - **RESPONSE (201 Created)**: Created WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainer/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: UpdateWorkExperienceRequest
+  - **RESPONSE (200 OK)**: Updated WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Work experience deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 8.7 Trainer Skills Management (`/api/v1/trainer/skills`)
+- **GET `/api/v1/trainer/skills`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of UserSkillResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/skills`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: AddUserSkillRequest
+  - **RESPONSE (201 Created)**: Created UserSkillResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/skills/:skillId`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Skill removed from profile successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 8.8 Trainer Certificates Management (`/api/v1/trainer/certificates`)
+- **GET `/api/v1/trainer/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of CertificateResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: CreateCertificateRequest
+  - **RESPONSE (201 Created)**: Created CertificateResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/certificates/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Certificate deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+---
+
+## 9. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 
