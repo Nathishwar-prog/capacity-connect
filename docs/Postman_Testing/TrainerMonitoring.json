@@ -1,0 +1,241 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Capacity Connect — Trainer Monitoring APIs (M3 Development 6)",
+        "version": "1.0.0",
+        "description": "Postman & OpenAPI testing specification for Backend Trainer Monitoring APIs. Enforces RBAC (TRAINER, ADMIN, SUPER_ADMIN), canonical seed users (alex.trainer@enterprise.com, admin@enterprise.com, user@enterprise.com), course ownership IDOR protection, trainee enrollment progress tracking, assessment scores, and completion status."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5000/api/v1",
+            "description": "Local REST API Gateway"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "summary": "1. Authentication — Login Canonical Seed User",
+                "description": "Obtain JWT token for test user. Canonical accounts:\n- TRAINER: alex.trainer@enterprise.com / Password123!\n- ADMIN: admin@enterprise.com / Password123!\n- TRAINEE: user@enterprise.com / Password123!",
+                "security": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "alex.trainer@enterprise.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "Password123!"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successfully authenticated. Returns accessToken."
+                    }
+                }
+            }
+        },
+        "/trainer/monitoring/overview": {
+            "get": {
+                "summary": "2. Get Trainer Monitoring Overview Metrics",
+                "description": "Aggregates total authorized courses, enrolled trainees, assessments, pass rates, and completion percentages for the logged-in trainer or admin.",
+                "responses": {
+                    "200": {
+                        "description": "Overview metrics retrieved successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden — Trainees are restricted from monitoring endpoints"
+                    }
+                }
+            }
+        },
+        "/trainer/monitoring/trainees": {
+            "get": {
+                "summary": "3. List Enrolled Trainees Progress & Performance",
+                "description": "Paginated list of enrolled trainees across trainer's authorized courses. Supports filtering by courseId, enrollment status, completion status, and text search.",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ENROLLED",
+                                "IN_PROGRESS",
+                                "COMPLETED",
+                                "DROPPED"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "completionStatus",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "completed",
+                                "in_progress",
+                                "not_started"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Trainees monitoring list retrieved"
+                    }
+                }
+            }
+        },
+        "/trainer/monitoring/courses/{courseId}": {
+            "get": {
+                "summary": "4. Get Course Level Monitoring Details",
+                "description": "Course statistics and enrolled trainees breakdown for a specific course. Enforces strict IDOR ownership checks.",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course monitoring metrics retrieved"
+                    },
+                    "403": {
+                        "description": "Forbidden — Trainer does not own course"
+                    }
+                }
+            }
+        },
+        "/trainer/monitoring/courses/{courseId}/trainees/{traineeId}": {
+            "get": {
+                "summary": "5. Get Detailed Trainee Monitoring Record",
+                "description": "Detailed lesson progress breakdown and assessment attempt scores for a specific trainee in a specific course.",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "traineeId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Trainee course monitoring detail retrieved"
+                    }
+                }
+            }
+        },
+        "/trainer/monitoring/assessments": {
+            "get": {
+                "summary": "6. Get Assessment Participation & Scores Monitoring",
+                "description": "List of assessment attempts with scores, percentages, and PASS/FAIL indicators across authorized courses.",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "attemptStatus",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "IN_PROGRESS",
+                                "SUBMITTED",
+                                "EXPIRED",
+                                "ABANDONED"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "passed",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assessment monitoring records retrieved"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -526,7 +526,28 @@ All course management & structure endpoints require authentication (`Bearer <tok
 
 ---
 
-## 7. Standard Error Handling & Response Codes
+## 7. Trainer Monitoring APIs (`/api/v1/trainer/monitoring/*`)
+
+All trainer monitoring endpoints require authentication (`Bearer <token>`), RBAC role check (`TRAINER`, `ADMIN`, `SUPER_ADMIN`), and `ANALYTICS_VIEW` permission. IDOR protections are strictly enforced for course ownership.
+
+### 7.1 Monitoring Overview
+- **`GET /api/v1/trainer/monitoring/overview`**: Aggregated monitoring metrics (authorized courses, trainees, average progress %, pass rates) and authorized course list summaries.
+
+### 7.2 Trainees Monitoring List
+- **`GET /api/v1/trainer/monitoring/trainees`**: Paginated list of enrolled trainees with progress breakdown, lesson counts, assessment summary, and completion state. Query filters: `courseId`, `status`, `completionStatus`, `search`, `page`, `limit`.
+
+### 7.3 Course Level Monitoring
+- **`GET /api/v1/trainer/monitoring/courses/:courseId`**: Course metrics and enrolled trainees breakdown for a specific course (IDOR protected).
+
+### 7.4 Trainee Course Detail Monitoring
+- **`GET /api/v1/trainer/monitoring/courses/:courseId/trainees/:traineeId`**: Detailed progress breakdown and assessment participation details for an individual trainee in an authorized course (IDOR protected).
+
+### 7.5 Assessment Monitoring
+- **`GET /api/v1/trainer/monitoring/assessments`**: Query assessment attempt records across authorized courses, including scores, percentages, and PASS/FAIL indicators.
+
+---
+
+## 8. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 

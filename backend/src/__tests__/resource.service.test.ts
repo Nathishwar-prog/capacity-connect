@@ -3,7 +3,7 @@ import { ResourceRepository } from '../repositories/resource.repository';
 import { CourseRepository } from '../repositories/course.repository';
 import prisma from '../database/client';
 import { ResourceType, ResourceStatus, Role } from '@prisma/client';
-import { ForbiddenError, BadRequestError, NotFoundError } from '../errors/app-error';
+import { ForbiddenError, BadRequestError } from '../errors/app-error';
 
 describe('ResourceService Integration & Unit Test Suite', () => {
     let resourceService: ResourceService;

@@ -6,6 +6,7 @@ import { dashboardRouter } from './dashboard.routes';
 import { courseRouter } from './course.routes';
 import { enrollmentRouter } from './enrollment.routes';
 import resourceRouter from './resource.routes';
+import trainerMonitoringRouter from './trainer-monitoring.routes';
 
 const router = Router();
 
@@ -73,6 +74,13 @@ router.get('/', (_req, res) => {
         detachFromCourse: 'DELETE /api/v1/resources/courses/:courseId/detach/:resourceId',
         attachToLesson: 'POST /api/v1/resources/lessons/:lessonId/attach/:resourceId',
         detachFromLesson: 'DELETE /api/v1/resources/lessons/:lessonId/detach/:resourceId',
+      },
+      trainerMonitoring: {
+        overview: 'GET /api/v1/trainer/monitoring/overview',
+        trainees: 'GET /api/v1/trainer/monitoring/trainees',
+        courseMonitoring: 'GET /api/v1/trainer/monitoring/courses/:courseId',
+        traineeCourseDetail: 'GET /api/v1/trainer/monitoring/courses/:courseId/trainees/:traineeId',
+        assessments: 'GET /api/v1/trainer/monitoring/assessments',
       }
     },
   });
@@ -88,5 +96,6 @@ router.use('/dashboard', dashboardRouter);
 router.use('/courses', courseRouter);
 router.use('/enrollments', enrollmentRouter);
 router.use('/resources', resourceRouter);
+router.use('/trainer/monitoring', trainerMonitoringRouter);
 
 export default router;

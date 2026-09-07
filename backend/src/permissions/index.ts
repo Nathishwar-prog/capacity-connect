@@ -92,6 +92,7 @@ export const permissionsMap: Record<Role, string[]> = {
     Permissions.RESOURCES_CREATE,
     Permissions.RESOURCES_UPDATE,
     Permissions.RESOURCES_PUBLISH,
+    Permissions.ANALYTICS_VIEW,
   ],
   TRAINEE: [
     Permissions.COURSES_READ,
