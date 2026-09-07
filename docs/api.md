@@ -871,6 +871,150 @@ All Admin User Management endpoints require authentication (`Bearer <token>`) an
 - **PAGINATION**: Not applicable
 - **FILTERS**: Not applicable
 
+### 6.7 Query Platform Audit Logs
+## GET /api/v1/admin/audit-logs
+
+Method:
+GET
+
+URL:
+/api/v1/admin/audit-logs
+
+Authorization:
+Bearer <token> (Roles: ADMIN, SUPER_ADMIN; Permission: user:read)
+
+Request:
+Query parameters:
+- `page` (integer, default: 1): Page number
+- `limit` (integer, default: 20, max: 100): Page limit
+- `action` (string, optional): Filter by audit action (`USER_APPROVED`, `USER_REJECTED`, `ROLE_CHANGED`, `ACCOUNT_SUSPENDED`, `COURSE_APPROVAL`, `CERTIFICATE_VERIFICATION`)
+- `entityType` (string, optional): Filter by entity type (e.g. `USER`, `COURSE`, `CERTIFICATE`)
+- `entityId` (string, optional): Filter by target entity ID
+- `userId` (uuid, optional): Filter by actor user UUID
+- `startDate` (ISO 8601 string, optional): Earliest creation timestamp
+- `endDate` (ISO 8601 string, optional): Latest creation timestamp
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Audit logs retrieved successfully",
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "organizationId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "userId": "095bec5d-572d-479a-9106-105a78f89273",
+      "action": "USER_APPROVED",
+      "entityType": "USER",
+      "entityId": "95399184-63b2-42b8-8fe1-6faf1f118a9a",
+      "oldValues": {
+        "status": "PENDING"
+      },
+      "newValues": {
+        "status": "APPROVED"
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0",
+      "createdAt": "2026-09-07T12:00:00.000Z",
+      "user": {
+        "id": "095bec5d-572d-479a-9106-105a78f89273",
+        "firstName": "Super",
+        "lastName": "Admin",
+        "email": "admin@capacityconnect.io",
+        "role": "ADMIN"
+      },
+      "organization": {
+        "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "name": "India Meteorological Department",
+        "code": "IMD"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 50,
+    "totalPages": 3
+  }
+}
+```
+
+Errors:
+- `401 Unauthorized`: Missing, expired, or invalid credentials
+- `403 Forbidden`: Caller lacks required administrative role or `user:read` permission
+- `422 Unprocessable Entity` / `400 Bad Request`: Invalid query parameter format
+
+Pagination:
+Implemented at database level via `page` and `limit` (max 100)
+
+Filters:
+Supported via `action`, `entityType`, `entityId`, `userId`, `startDate`, `endDate`, and organization isolation (`organizationId`)
+
+### 6.8 Retrieve Single Audit Log Record by ID
+## GET /api/v1/admin/audit-logs/:id
+
+Method:
+GET
+
+URL:
+/api/v1/admin/audit-logs/:id
+
+Authorization:
+Bearer <token> (Roles: ADMIN, SUPER_ADMIN; Permission: user:read)
+
+Request:
+Path parameter:
+- `id` (uuid, required): Unique AuditLog UUID identifier
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Audit log retrieved successfully",
+  "data": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "organizationId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "userId": "095bec5d-572d-479a-9106-105a78f89273",
+    "action": "USER_APPROVED",
+    "entityType": "USER",
+    "entityId": "95399184-63b2-42b8-8fe1-6faf1f118a9a",
+    "oldValues": {
+      "status": "PENDING"
+    },
+    "newValues": {
+      "status": "APPROVED"
+    },
+    "ipAddress": "127.0.0.1",
+    "userAgent": "Mozilla/5.0",
+    "createdAt": "2026-09-07T12:00:00.000Z",
+    "user": {
+      "id": "095bec5d-572d-479a-9106-105a78f89273",
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "admin@capacityconnect.io",
+      "role": "ADMIN"
+    },
+    "organization": {
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "name": "India Meteorological Department",
+      "code": "IMD"
+    }
+  }
+}
+```
+
+Errors:
+- `400 Bad Request`: Invalid UUID format
+- `401 Unauthorized`: Missing or invalid credentials
+- `403 Forbidden`: Caller lacks required administrative permission
+- `404 Not Found`: Audit log record not found or inaccessible under organization isolation
+
+Pagination:
+Not Applicable
+
+Filters:
+Not Applicable
+
 ---
 
 ## 7. Trainee Profile Endpoints (`/api/v1/trainee/*`)
