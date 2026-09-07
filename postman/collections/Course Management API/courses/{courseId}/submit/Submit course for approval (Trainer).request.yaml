@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/courses/:courseId/submit"
+method: POST
+pathVariables:
+  courseId: string
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/Submit course for approval (Trainer).resources/examples
+order: 1000

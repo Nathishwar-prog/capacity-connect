@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/courses/:courseId/reject"
+method: POST
+pathVariables:
+  courseId: string
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/Reject course (Admin alternative flow).resources/examples
+order: 1000

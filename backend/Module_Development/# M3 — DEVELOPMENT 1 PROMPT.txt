@@ -1,0 +1,2188 @@
+# CAPACITY CONNECT — M3 DEVELOPMENT 1
+
+## COURSE MANAGEMENT — BACKEND IMPLEMENTATION
+
+You are working as the **senior backend engineer and software architect** for the CAPACITY CONNECT enterprise application.
+
+Your task is to **fully implement M3 — Development 1: Course Management** in the existing repository.
+
+This is a **backend-only development milestone**.
+
+Do not implement unrelated frontend functionality. Do not redesign the existing application architecture. Do not create a parallel Course system.
+
+The implementation must integrate cleanly with the existing backend and expose a stable API contract that the frontend and subsequent LMS modules can consume.
+
+---
+
+# 0. GOVERNING INSTRUCTIONS — READ FIRST
+
+Before touching any source file, inspect and follow these project documents:
+
+1. `INSTRUCTION.md`
+2. `DOMAINSPECIFICRULE.md`
+3. Existing backend source under `backend/src/`
+4. Existing Prisma schema and migrations
+5. Existing API/documentation conventions
+6. Existing authentication, authorization, permission, validation, error, logging, and middleware implementations
+
+`INSTRUCTION.md` is the mandatory engineering workflow for this repository. Follow its architecture, Git, testing, documentation, quality, and Definition-of-Done requirements unless this prompt explicitly narrows the scope to this backend milestone. 
+
+`DOMAINSPECIFICRULE.md` is mandatory for domain relevance. CAPACITY CONNECT must remain a domain-oriented capacity-building platform for the MoES/IMD ecosystem and must not be treated as a generic LMS. Do not invent official MoES/IMD terminology, courses, competencies, policies, or requirements. 
+
+The supplied project requirements identify Course Management as part of the Learning Engine and specify:
+
+```text
+Create Course
+Update Course
+Delete / Archive Course
+Submit Course
+Approve Course
+Reject Course
+Publish Course
+```
+
+with:
+
+```text
+Title
+Description
+Category
+Difficulty
+Duration
+Trainer
+Organization
+Prerequisites
+Status
+```
+
+
+
+---
+
+# 1. SOURCE INSPECTION & ARCHITECTURE ALIGNMENT
+
+## 1.1 Inspect the actual repository first
+
+Before implementation:
+
+* Check Git status.
+* Check current Git branch.
+* Inspect repository structure.
+* Inspect `backend/src/`.
+* Inspect existing route registration.
+* Inspect existing controllers.
+* Inspect existing services.
+* Inspect existing repositories.
+* Inspect DTO patterns.
+* Inspect validation patterns.
+* Inspect authentication middleware.
+* Inspect authorization/permission middleware.
+* Inspect error handling.
+* Inspect response helpers.
+* Inspect logging.
+* Inspect audit logging.
+* Inspect event/notification infrastructure.
+* Inspect rate limiting.
+* Inspect Prisma client setup.
+* Inspect `schema.prisma`.
+* Inspect existing migrations.
+* Inspect existing database conventions.
+* Inspect existing API documentation.
+* Inspect tests and testing conventions.
+
+Do not assume the architecture from this prompt is more accurate than the actual repository.
+
+**The existing codebase has priority.**
+
+If an existing utility, middleware, repository helper, service pattern, validator, DTO convention, response helper, or permission mechanism already solves a problem, reuse or extend it.
+
+Do not duplicate functionality.
+
+---
+
+## 1.2 Existing backend architecture
+
+Align the implementation with:
+
+```text
+backend/src/
+├── config/
+├── auth/
+├── permissions/
+├── routes/
+├── controllers/
+├── services/
+├── repositories/
+├── database/
+├── middlewares/
+├── validators/
+├── schemas/
+├── dto/
+├── errors/
+├── logger/
+├── storage/
+├── uploads/
+├── mails/
+├── cache/
+├── queues/
+├── jobs/
+├── events/
+└── notifications/
+```
+
+Do not introduce random directories.
+
+Do not create an unnecessary `course-engine`, `course-management-engine`, or parallel architecture.
+
+Follow the existing project convention for file placement.
+
+---
+
+# 2. DATABASE-FIRST INSPECTION
+
+## 2.1 Inspect the existing Prisma Course model
+
+The existing project already contains Course-related database structures.
+
+Inspect the actual current schema before changing anything.
+
+Expected existing concepts include:
+
+```text
+Course
+CoursePrerequisite
+CourseModule
+Lesson
+Resource
+CourseResource
+LessonResource
+Enrollment
+Assessment
+CourseCompetency
+Recommendation
+Feedback
+```
+
+The Course model already represents concepts including:
+
+```text
+id
+organizationId
+trainerId
+title
+slug
+description
+thumbnailUrl
+category
+difficulty
+durationMinutes
+status
+publishedAt
+createdAt
+updatedAt
+deletedAt
+```
+
+**Do not blindly recreate these models.**
+
+Confirm the actual schema and use the repository's current definitions as the source of truth.
+
+---
+
+# 3. DATABASE CHANGE POLICY
+
+Before creating a Prisma migration:
+
+1. Compare the requirements against the existing schema.
+2. Determine what already exists.
+3. Reuse existing fields and relations.
+4. Identify only genuinely missing requirements.
+5. Determine whether the missing requirement truly belongs in Course Management.
+6. Avoid schema changes that belong to future modules.
+
+Do not create a migration merely because this feature has started.
+
+---
+
+## 3.1 Important schema decisions
+
+Explicitly investigate these before implementation:
+
+### Course approval state
+
+The requirements describe:
+
+```text
+Draft
+↓
+Submit
+↓
+Admin Review
+↓
+Approved
+↓
+Published
+```
+
+but the existing Course status model may not have a separate `APPROVED` state.
+
+Do **not** automatically add an `APPROVED` enum.
+
+Determine how the existing schema and application architecture intend to represent approval.
+
+If the existing design intentionally uses:
+
+```text
+PENDING_APPROVAL
+↓
+PUBLISHED
+```
+
+after approval, preserve it.
+
+If a separate approval state is genuinely required and supported by the project's requirements, document the justification before modifying the schema.
+
+Do not invent lifecycle states simply because they appear conceptually in the problem statement.
+
+---
+
+### Rejection reason
+
+Determine whether rejection reasons are already supported by:
+
+* Course fields
+* audit logs
+* review tables
+* events
+* metadata
+* another existing mechanism
+
+If no suitable mechanism exists, evaluate whether persistent rejection history is required.
+
+Do not add arbitrary schema fields without architectural justification.
+
+---
+
+### Soft deletion
+
+The existing Course model has archive/deletion-related fields.
+
+Prefer the established soft-delete/archive architecture.
+
+Do not physically delete Course records if doing so would break:
+
+* enrollment history
+* assessment history
+* competency history
+* feedback
+* recommendations
+* certification records
+* organizational analytics
+
+---
+
+# 4. COURSE DOMAIN BOUNDARY
+
+This module owns:
+
+```text
+Course
+├── Metadata
+├── Ownership
+├── Organization association
+├── Trainer association
+├── Slug
+├── Prerequisites
+└── Lifecycle
+```
+
+This module does **not** implement:
+
+```text
+Course Modules
+Lessons
+Resources
+Enrollment
+Progress
+Assessment
+Competency Mapping
+Skill Gap
+Trainer Matching
+Certification
+Recommendation
+Advanced Analytics
+AI
+```
+
+Those are separate modules.
+
+However, Course Management must expose clean contracts so those future modules can depend on Course safely.
+
+---
+
+# 5. COURSE LIFECYCLE
+
+Implement the Course lifecycle as a controlled state machine.
+
+Conceptually:
+
+```text
+DRAFT
+  │
+  │ submit
+  ▼
+PENDING_APPROVAL
+  │
+  ├── reject ──────► REJECTED
+  │
+  └── approve ────► approved lifecycle state
+                           │
+                           │ publish
+                           ▼
+                       PUBLISHED
+                           │
+                           │ archive
+                           ▼
+                       ARCHIVED
+```
+
+The exact mapping must use the **existing Prisma enum and application conventions**.
+
+Never perform arbitrary status mutation from a generic update endpoint.
+
+For example, clients must not be allowed to send:
+
+```text
+{
+  "status": "PUBLISHED"
+}
+```
+
+to bypass the publication workflow.
+
+Lifecycle transitions must be explicit service operations.
+
+---
+
+# 6. USER ROLES & ACCESS MODEL
+
+The system has:
+
+```text
+ADMIN
+TRAINER
+TRAINEE
+SUPER_ADMIN
+```
+
+Use the existing role and permission architecture.
+
+Do not implement role checks independently in every controller.
+
+---
+
+## 6.1 Trainer capabilities
+
+Trainer may:
+
+```text
+Create own course
+Read own course
+Update own eligible course
+Submit own course
+Archive own eligible course
+```
+
+Trainer must not:
+
+```text
+Approve course
+Reject course
+Publish another trainer's course
+Modify another trainer's course
+Bypass organization boundaries
+```
+
+---
+
+## 6.2 Admin capabilities
+
+Admin may:
+
+```text
+Review courses
+Approve courses
+Reject courses
+Publish eligible courses
+Manage courses according to existing permissions
+```
+
+Use the existing admin authorization model.
+
+---
+
+## 6.3 Trainee capabilities
+
+For this backend milestone, Trainee must not mutate Course lifecycle state.
+
+Trainees may eventually consume published courses through Course Discovery/Enrollment modules.
+
+Do not implement enrollment here.
+
+---
+
+## 6.4 Super Admin
+
+Reuse the existing elevated-role behavior.
+
+Do not create a separate Course-specific Super Admin authorization implementation.
+
+---
+
+# 7. ORGANIZATION ISOLATION
+
+Course contains an organization relationship.
+
+Every protected Course operation must account for:
+
+```text
+Authenticated User
+       ↓
+User Organization
+       ↓
+Course Organization
+```
+
+Never authorize solely based on:
+
+```text
+courseId
+```
+
+A Trainer must not manipulate a course belonging to another organization.
+
+An Admin must only access organizations permitted by the existing authorization model.
+
+Do not introduce cross-organization access simply because the user has an Admin role.
+
+---
+
+# 8. COURSE CREATION
+
+Implement creation of a new Course by an authorized Trainer.
+
+Expected flow:
+
+```text
+Trainer
+ ↓
+Authentication
+ ↓
+Authorization
+ ↓
+Validation
+ ↓
+Controller
+ ↓
+Service
+ ↓
+Repository
+ ↓
+Prisma
+ ↓
+PostgreSQL
+```
+
+New courses should begin in the existing draft state.
+
+The client must not arbitrarily control:
+
+```text
+trainerId
+organizationId
+status
+publishedAt
+deletedAt
+```
+
+Derive protected ownership/context from the authenticated user and existing application context.
+
+---
+
+## 8.1 Create-course validation
+
+Validate:
+
+```text
+title
+description
+category
+difficulty
+durationMinutes
+prerequisites
+```
+
+according to existing validation conventions.
+
+Consider:
+
+* empty strings
+* whitespace-only values
+* maximum lengths
+* unsupported difficulty values
+* invalid duration
+* malformed UUIDs
+* duplicate prerequisites
+* self-prerequisites
+* nonexistent prerequisites
+* cross-organization prerequisites
+
+Do not invent arbitrary validation limits without checking existing project conventions or requirements.
+
+---
+
+# 9. SLUG MANAGEMENT
+
+The existing Course model uses a unique slug.
+
+Inspect the repository for an existing slug utility.
+
+If one exists:
+
+**reuse it.**
+
+If not, implement the slug logic inside the appropriate Course architecture rather than creating an unnecessary global abstraction.
+
+Handle:
+
+* duplicate titles
+* duplicate slugs
+* special characters
+* whitespace
+* casing
+* renamed courses
+* concurrent creation
+
+The database unique constraint must remain the final protection against race conditions.
+
+Do not rely solely on:
+
+```text
+check slug
+↓
+insert
+```
+
+because concurrent requests can still collide.
+
+---
+
+# 10. COURSE UPDATE
+
+Course updates must consider:
+
+```text
+Role
++
+Ownership
++
+Organization
++
+Current Status
+```
+
+Trainer should generally be able to update their own editable courses.
+
+Do not permit unrestricted modification of courses that are:
+
+```text
+PENDING_APPROVAL
+PUBLISHED
+ARCHIVED
+```
+
+unless the existing project requirements explicitly support that transition.
+
+Pay particular attention to published courses.
+
+Changing important published course metadata may affect:
+
+* future enrollments
+* existing enrollments
+* assessments
+* competencies
+* recommendations
+* analytics
+* certificates
+
+Do not introduce a complex versioning system unless the existing architecture requires it, but do not treat published courses as ordinary mutable drafts either.
+
+---
+
+# 11. ARCHIVE / DELETE
+
+Use the existing archive/soft-delete model.
+
+The operation should preserve historical references.
+
+Do not physically delete a Course that has dependent business records.
+
+The archive operation must verify:
+
+```text
+course exists
++
+caller authorized
++
+organization valid
++
+current status permits archive
+```
+
+Ensure archived courses cannot accidentally appear in normal published-course discovery.
+
+---
+
+# 12. COURSE SUBMISSION
+
+Implement:
+
+```text
+DRAFT
+ ↓
+SUBMIT
+ ↓
+PENDING_APPROVAL
+```
+
+Before submission verify:
+
+```text
+Course exists
++
+Trainer owns course
++
+Correct organization
++
+Current status is eligible
++
+Required course data is present
++
+Prerequisites are valid
+```
+
+Do not allow:
+
+```text
+PUBLISHED → SUBMIT
+ARCHIVED → SUBMIT
+PENDING_APPROVAL → SUBMIT
+```
+
+unless existing business rules explicitly support such transitions.
+
+Repeated submission requests must not corrupt lifecycle state.
+
+---
+
+# 13. COURSE APPROVAL
+
+Approval is an Admin governance operation.
+
+Before approval:
+
+```text
+Authenticate
+ ↓
+Authorize
+ ↓
+Validate course
+ ↓
+Verify organization
+ ↓
+Verify current lifecycle state
+ ↓
+Apply approved transition
+ ↓
+Audit
+```
+
+Only authorized Admin/Super Admin users may perform this operation.
+
+Trainer must never be able to approve their own course.
+
+Do not implement approval merely as:
+
+```textcourse.status = ...
+```
+
+without validating the complete lifecycle.
+
+---
+
+# 14. COURSE REJECTION
+
+Implement explicit rejection workflow.
+
+Expected lifecycle:
+
+```text
+PENDING_APPROVAL
+        ↓
+      REJECT
+        ↓
+     REJECTED
+```
+
+Rejecting a course must:
+
+* verify Admin authorization
+* verify organization scope
+* verify course state
+* reject invalid lifecycle transitions
+* record audit information
+* preserve historical information
+* return a consistent API response
+
+If the requirements or existing architecture require a rejection reason, validate it and persist it through the appropriate existing mechanism.
+
+Do not silently discard an Admin-provided rejection reason.
+
+---
+
+# 15. COURSE PUBLICATION
+
+Publishing is a controlled lifecycle operation.
+
+Do not allow a course to become publicly discoverable without satisfying the project's approval workflow.
+
+Before publishing verify:
+
+```text
+Course exists
++
+Caller authorized
++
+Organization valid
++
+Course has passed required approval state
++
+Course is not archived
++
+Course is otherwise publishable
+```
+
+When publishing, maintain the existing publication metadata such as:
+
+```text
+publishedAt
+status
+```
+
+Trainee-facing consumers must only treat eligible published courses as discoverable.
+
+---
+
+# 16. PREREQUISITE MANAGEMENT
+
+Reuse the existing `CoursePrerequisite` architecture.
+
+Do not create another prerequisite table.
+
+Validate:
+
+### Existence
+
+Referenced prerequisite Course must exist.
+
+### Ownership / organization
+
+Do not allow unauthorized cross-organization prerequisite relationships.
+
+### Self-reference
+
+Reject:
+
+```text
+Course A → Course A
+```
+
+### Duplicate
+
+Do not allow duplicate prerequisite relationships.
+
+### Circular dependency
+
+Where the existing business rules prohibit cycles, detect:
+
+```text
+A → B
+B → C
+C → A
+```
+
+Do not rely solely on the database composite key to detect graph cycles.
+
+Keep prerequisite validation in the appropriate business/service layer.
+
+---
+
+# 17. COURSE CATEGORY & DOMAIN MODEL
+
+Do not hardcode generic categories into business logic.
+
+The domain rules explicitly require Capacity Connect's taxonomy to remain configurable and relevant to the MoES/IMD ecosystem. 
+
+Do not seed arbitrary production categories such as:
+
+```text
+Generic Programming
+Web Development
+MERN
+Competitive Programming
+Generic Software Engineering
+```
+
+unless the approved requirements explicitly require them.
+
+Do not invent official MoES/IMD categories.
+
+For this module, use the existing Course category representation and architecture.
+
+Future domain taxonomy can evolve through the competency/domain modules.
+
+---
+
+# 18. REPOSITORY LAYER
+
+Implement or extend the existing Course repository following repository conventions.
+
+Repository responsibilities:
+
+```text
+Create
+Find by ID
+Find by slug
+List
+Update
+Archive
+Find pending approval courses
+Manage prerequisite relations
+```
+
+Support appropriate:
+
+* pagination
+* filtering
+* sorting
+* search
+* relation loading
+
+Do not put business rules in the repository.
+
+Do not put role authorization in the repository.
+
+Do not put HTTP concerns in the repository.
+
+Use Prisma through the project's existing Prisma access pattern.
+
+---
+
+# 19. SERVICE LAYER
+
+The Course service is the main business layer.
+
+It should orchestrate:
+
+```text
+Authentication context
+ ↓
+Role / Permission
+ ↓
+Organization
+ ↓
+Ownership
+ ↓
+Course state
+ ↓
+Business validation
+ ↓
+Repository
+ ↓
+Audit / Events
+```
+
+Expected service responsibilities:
+
+```text
+createCourse
+getCourse
+listCourses
+updateCourse
+archiveCourse
+submitCourse
+approveCourse
+rejectCourse
+publishCourse
+```
+
+Use the project's naming conventions if they differ.
+
+Do not create separate services for every trivial field.
+
+Keep Course lifecycle rules centralized.
+
+---
+
+# 20. DTO LAYER
+
+Create/extend Course DTO contracts according to the existing DTO architecture.
+
+Define explicit request and response contracts.
+
+Do not expose raw Prisma objects.
+
+Create appropriate contracts for:
+
+```text
+CreateCourse
+UpdateCourse
+CourseResponse
+CourseListResponse
+SubmitCourse
+ApproveCourse
+RejectCourse
+PublishCourse
+```
+
+Do not create a DTO for a lifecycle operation if the existing architecture convention does not require one.
+
+Use the existing project convention.
+
+---
+
+# 21. VALIDATION LAYER
+
+Use the existing validation mechanism, preferably the project's established Zod architecture.
+
+Validate:
+
+### Request body
+
+Course metadata.
+
+### Path parameters
+
+Course ID.
+
+### Query parameters
+
+Search/filter/pagination.
+
+### Lifecycle operations
+
+Reject inappropriate payloads.
+
+For example, `publish` should not accept arbitrary:
+
+```text
+status
+publishedAt
+organizationId
+trainerId
+```
+
+from the client.
+
+---
+
+# 22. CONTROLLER LAYER
+
+Controllers must remain thin.
+
+Controller responsibilities:
+
+```text
+Receive request
+ ↓
+Extract authenticated user/context
+ ↓
+Extract params/body/query
+ ↓
+Call CourseService
+ ↓
+Return standardized response
+```
+
+Do not put:
+
+* Prisma calls
+* lifecycle logic
+* ownership logic
+* organization logic
+* prerequisite graph algorithms
+* slug-generation workflows
+* complex validation
+* permission business rules
+
+inside controllers.
+
+Reuse the existing response helper and error handling.
+
+---
+
+# 23. MIDDLEWARE / AUTHORIZATION
+
+Every protected Course route must use the existing:
+
+```text
+Authentication middleware
+Authorization / permission middleware
+Validation middleware
+Rate limiting where appropriate
+```
+
+Do not implement JWT parsing manually inside Course controllers.
+
+Do not implement role checks manually in each endpoint if the existing permission middleware supports the requirement.
+
+Extend the permission matrix appropriately.
+
+Candidate permissions, to be reconciled with the existing naming convention:
+
+```text
+course:create
+course:read
+course:update
+course:archive
+course:submit
+course:approve
+course:reject
+course:publish
+```
+
+The project source explicitly identifies permissions such as:
+
+```text
+course:create
+course:update
+course:approve
+```
+
+so maintain consistency with those conventions. 
+
+---
+
+# 24. ROUTE DESIGN
+
+Use the project's existing API versioning and route conventions.
+
+If the repository uses `/api/v1`, the Course API should follow that convention.
+
+The intended REST contract is:
+
+| Method   | Endpoint                      | Purpose        |
+| -------- | ----------------------------- | -------------- |
+| `POST`   | `/api/v1/courses`             | Create Course  |
+| `GET`    | `/api/v1/courses`             | List Courses   |
+| `GET`    | `/api/v1/courses/:id`         | Get Course     |
+| `PATCH`  | `/api/v1/courses/:id`         | Update Course  |
+| `DELETE` | `/api/v1/courses/:id`         | Archive Course |
+| `POST`   | `/api/v1/courses/:id/submit`  | Submit Course  |
+| `POST`   | `/api/v1/courses/:id/approve` | Approve Course |
+| `POST`   | `/api/v1/courses/:id/reject`  | Reject Course  |
+| `POST`   | `/api/v1/courses/:id/publish` | Publish Course |
+
+**Before implementing, reconcile these endpoints with the existing route conventions.**
+
+Do not introduce duplicate endpoints if equivalent Course routes already exist.
+
+If the project uses a different route naming convention, preserve it.
+
+---
+
+# 25. COURSE LISTING
+
+The Course list endpoint should support the project's existing pagination pattern.
+
+Where appropriate, support:
+
+```text
+Search
+Category
+Difficulty
+Status
+Trainer
+Organization
+Pagination
+Sorting
+```
+
+But authorization must determine which records are visible.
+
+For example:
+
+### Trainer
+
+May see their own courses and any additional courses explicitly allowed by the existing role/permission architecture.
+
+### Admin
+
+May see organization-level courses according to authorization.
+
+### Trainee
+
+Should not see unpublished courses through a public/discovery-oriented listing.
+
+Do not leak:
+
+```text
+draft courses
+pending courses
+rejected courses
+archived courses
+```
+
+to unauthorized consumers.
+
+---
+
+# 26. API RESPONSE CONTRACT
+
+Use the existing response format.
+
+Do not invent a second API response structure.
+
+Responses should expose only intended Course information.
+
+Do not accidentally serialize:
+
+```text
+password
+tokens
+internal Prisma metadata
+private trainer information
+internal organization fields
+audit internals
+```
+
+when returning Course data.
+
+---
+
+# 27. ERROR HANDLING
+
+Reuse the existing centralized error system.
+
+Potential semantic outcomes:
+
+```text
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+409 Conflict
+422 Business / Validation Error
+429 Rate Limited
+500 Internal Server Error
+```
+
+Use the repository's actual error conventions rather than blindly introducing these codes.
+
+Examples of business conflicts:
+
+```text
+Course already submitted
+Course already published
+Course already archived
+Invalid lifecycle transition
+Duplicate slug
+Duplicate prerequisite
+Self prerequisite
+Circular prerequisite
+Unauthorized ownership
+Cross-organization access
+```
+
+Never expose:
+
+```text
+Prisma stack traces
+SQL
+database internals
+JWT
+refresh token
+secrets
+internal filesystem information
+```
+
+---
+
+# 28. SECURITY REQUIREMENTS
+
+Verify all of the following:
+
+```text
+[ ] JWT authentication
+[ ] RBAC
+[ ] Permission enforcement
+[ ] Organization isolation
+[ ] Course ownership checks
+[ ] Input validation
+[ ] Parameter validation
+[ ] Mass-assignment protection
+[ ] SQL injection protection through Prisma
+[ ] XSS-safe handling where applicable
+[ ] Rate limiting
+[ ] Secure error responses
+[ ] Audit logging
+[ ] No sensitive data in logs
+```
+
+Never trust client-provided:
+
+```text
+trainerId
+organizationId
+status
+publishedAt
+deletedAt
+```
+
+when those values can be derived or controlled by the backend.
+
+---
+
+# 29. RATE LIMITING
+
+Use the existing rate-limiting infrastructure.
+
+Apply appropriate protection to mutation endpoints:
+
+```text
+Create
+Update
+Submit
+Approve
+Reject
+Publish
+Archive
+```
+
+Do not introduce a new rate-limit implementation if the project already has one.
+
+The objective is to protect against:
+
+* request flooding
+* repeated lifecycle transitions
+* automation abuse
+* accidental duplicate submissions
+
+---
+
+# 30. AUDIT LOGGING
+
+Reuse the existing audit-log infrastructure.
+
+At minimum evaluate events for:
+
+```text
+COURSE_CREATED
+COURSE_UPDATED
+COURSE_SUBMITTED
+COURSE_APPROVED
+COURSE_REJECTED
+COURSE_PUBLISHED
+COURSE_ARCHIVED
+```
+
+Do not create a separate Course audit system if `AuditLog` already provides the required capability.
+
+Never log:
+
+```text
+password
+JWT
+refresh token
+API key
+secret
+sensitive personal data
+```
+
+The project source explicitly requires security-sensitive actions such as Course Approval to be auditable. 
+
+---
+
+# 31. EVENTS / NOTIFICATIONS
+
+Inspect existing:
+
+```text
+events/
+notifications/
+mails/
+queues/
+jobs/
+```
+
+Before introducing new behavior.
+
+Where the existing architecture supports it, Course lifecycle changes may emit events such as:
+
+```text
+Course Submitted
+Course Approved
+Course Rejected
+Course Published
+```
+
+Potential notification consumers may later notify Trainers or Trainees.
+
+Do not implement unnecessary asynchronous processing.
+
+Do not create a queue merely because queues exist in the architecture.
+
+Use asynchronous infrastructure only when justified by existing project patterns or workload.
+
+---
+
+# 32. TRANSACTION MANAGEMENT
+
+Use Prisma transactions where a Course operation modifies multiple related records and atomicity is required.
+
+Examples:
+
+```text
+Course update
++
+Prerequisite replacement
+```
+
+or:
+
+```text
+Lifecycle update
++
+audit persistence
+```
+
+if those records are part of the same transactional boundary.
+
+Do not use transactions indiscriminately.
+
+Follow the existing database transaction conventions.
+
+---
+
+# 33. CONCURRENCY
+
+Consider concurrent requests for:
+
+```text
+Two trainers creating the same slug
+Two Admins approving the same course
+Two requests publishing the same course
+Repeated submission
+Repeated archive
+Concurrent prerequisite modification
+```
+
+Database constraints and service-level state checks must work together.
+
+Do not assume HTTP-level serialization.
+
+---
+
+# 34. API DOCUMENTATION — MANDATORY
+
+Document **EVERY Course API endpoint**.
+
+Do not document only the primary CRUD operations.
+
+The documentation must cover:
+
+```text
+POST   /courses
+GET    /courses
+GET    /courses/:id
+PATCH  /courses/:id
+DELETE /courses/:id
+POST   /courses/:id/submit
+POST   /courses/:id/approve
+POST   /courses/:id/reject
+POST   /courses/:id/publish
+```
+
+Use the actual final paths if repository conventions differ.
+
+For every endpoint document:
+
+```text
+Endpoint
+HTTP Method
+Purpose
+Authentication
+Authorization
+Required Permission
+Allowed Roles
+Path Parameters
+Query Parameters
+Request Headers
+Request Body
+Field Validation
+Success Response
+Error Responses
+Pagination
+Filters
+Sorting
+Side Effects
+Audit Events
+Lifecycle Effects
+```
+
+Update the project's global API documentation, including `docs/api.md` if that is the established location.
+
+The project requirements explicitly state that API documentation must identify method, URL, authorization, request, response, errors, pagination, and filters. 
+
+---
+
+# 35. FEATURE DOCUMENTATION
+
+Create:
+
+```text
+docs/course-management/README.md
+```
+
+The README must contain:
+
+```text
+# Course Management
+
+## 1. Overview
+
+## 2. Objective
+
+## 3. Scope
+
+## 4. User Roles
+
+## 5. Course Lifecycle
+
+## 6. Functional Flow
+
+## 7. Architecture
+
+## 8. Backend Architecture
+
+## 9. Database
+
+## 10. Course Model
+
+## 11. Prerequisite Model
+
+## 12. API Endpoints
+
+## 13. Authentication & Authorization
+
+## 14. Validation
+
+## 15. Error Handling
+
+## 16. Security
+
+## 17. Audit Logging
+
+## 18. Transaction / Concurrency Considerations
+
+## 19. Testing
+
+## 20. Scalability
+
+## 21. Files Created / Modified
+
+## 22. Git Information
+
+## 23. Future Integration
+
+## 24. Future Modules Dependent on Course
+```
+
+Every API endpoint must be documented inside this README.
+
+---
+
+# 36. FUTURE MODULE COMPATIBILITY
+
+Design Course Management so that future modules can safely consume it.
+
+Future dependencies include:
+
+```text
+Course
+ ↓
+Course Module
+ ↓
+Lesson
+ ↓
+Resource
+ ↓
+Enrollment
+ ↓
+Progress
+ ↓
+Assessment
+ ↓
+Competency
+ ↓
+Skill Gap
+ ↓
+Recommendation
+ ↓
+Certification
+```
+
+Do not implement these future modules now.
+
+But do not design Course Management in a way that prevents them from being added.
+
+---
+
+# 37. TESTING REQUIREMENTS
+
+Implement tests according to the repository's existing test framework.
+
+## Repository tests
+
+Cover:
+
+```text
+Create
+Read
+List
+Update
+Archive
+Slug lookup
+Prerequisite handling
+Pagination
+Filtering
+Sorting
+```
+
+---
+
+## Service tests
+
+Cover:
+
+```text
+Trainer ownership
+Organization isolation
+Role permissions
+Valid state transitions
+Invalid state transitions
+Submission
+Approval
+Rejection
+Publication
+Archive
+Prerequisite validation
+Self prerequisite
+Duplicate prerequisite
+Circular prerequisite
+Slug conflict
+Concurrent lifecycle attempts where practical
+```
+
+---
+
+## API integration tests
+
+Test complete HTTP behavior:
+
+```text
+HTTP
+ ↓
+Authentication
+ ↓
+Authorization
+ ↓
+Validation
+ ↓
+Controller
+ ↓
+Service
+ ↓
+Repository
+ ↓
+Prisma
+ ↓
+Database
+```
+
+---
+
+# 38. REQUIRED NEGATIVE TEST MATRIX
+
+At minimum test:
+
+| Scenario                                 | Expected                                                  |
+| ---------------------------------------- | --------------------------------------------------------- |
+| Unauthenticated create                   | Reject                                                    |
+| Trainee creates course                   | Reject                                                    |
+| Unauthorized Trainer creates course      | Reject                                                    |
+| Valid Trainer creates course             | Success                                                   |
+| Missing title                            | Validation failure                                        |
+| Invalid duration                         | Validation failure                                        |
+| Invalid difficulty                       | Validation failure                                        |
+| Duplicate slug                           | Conflict                                                  |
+| Trainer updates own eligible course      | Success                                                   |
+| Trainer updates another Trainer's course | Forbidden                                                 |
+| Cross-organization update                | Forbidden                                                 |
+| Trainer submits own draft                | Success                                                   |
+| Trainer submits published course         | Reject                                                    |
+| Trainer approves course                  | Forbidden                                                 |
+| Admin approves pending course            | Success                                                   |
+| Unauthorized Admin scope                 | Forbidden                                                 |
+| Admin rejects pending course             | Success                                                   |
+| Invalid rejection state                  | Reject                                                    |
+| Admin publishes eligible course          | Success                                                   |
+| Trainer publishes unauthorized course    | Forbidden                                                 |
+| Publish archived course                  | Reject                                                    |
+| Self prerequisite                        | Reject                                                    |
+| Duplicate prerequisite                   | Reject                                                    |
+| Circular prerequisite                    | Reject                                                    |
+| Unknown prerequisite                     | Reject                                                    |
+| Unknown Course ID                        | Not Found                                                 |
+| Repeated submit                          | Safe rejection/conflict                                   |
+| Repeated approve                         | Safe rejection/idempotent according to project convention |
+| Repeated publish                         | Safe rejection/idempotent according to project convention |
+| Archived course visibility               | Must respect visibility rules                             |
+
+---
+
+# 39. GIT WORKFLOW
+
+Before modifying source:
+
+```text
+1. git status
+2. git branch
+3. Understand current working tree
+4. Create dedicated feature branch
+```
+
+Use:
+
+```text
+feature/course-management
+```
+
+Do not work directly on:
+
+```text
+main
+master
+```
+
+unless the repository's actual development branch differs and the project workflow explicitly requires another base.
+
+---
+
+# 40. IMPLEMENTATION SEQUENCE
+
+Follow this exact engineering sequence unless existing repository architecture requires a justified variation:
+
+```text
+Repository Inspection
+        ↓
+Prisma / Database Verification
+        ↓
+Architecture Impact Analysis
+        ↓
+Git Feature Branch
+        ↓
+Database Changes Only If Required
+        ↓
+Course Repository
+        ↓
+Course Service
+        ↓
+Course DTOs
+        ↓
+Course Validators
+        ↓
+Course Controller
+        ↓
+Course Permissions
+        ↓
+Course Middleware Integration
+        ↓
+Course Routes
+        ↓
+Route Registration
+        ↓
+Audit / Event Integration
+        ↓
+Repository Tests
+        ↓
+Service Tests
+        ↓
+API Integration Tests
+        ↓
+TypeScript
+        ↓
+ESLint
+        ↓
+Prisma Validation
+        ↓
+Build
+        ↓
+API Documentation
+        ↓
+Feature Documentation
+        ↓
+Git Diff Review
+```
+
+Do not skip layers simply because an endpoint appears simple.
+
+---
+
+# 41. DO NOT OVERENGINEER
+
+Do not introduce:
+
+* CQRS
+* event sourcing
+* microservices
+* unnecessary factories
+* unnecessary interfaces
+* unnecessary repositories
+* unnecessary caching
+* unnecessary queues
+* unnecessary abstractions
+* a new state-machine framework
+
+unless the existing project already uses them or the Course requirements genuinely justify them.
+
+The architecture must be scalable but proportionate.
+
+Follow the project's existing style.
+
+---
+
+# 42. CHANGE IMPACT ANALYSIS
+
+Before implementation, explicitly identify whether Course Management affects:
+
+```text
+Authentication
+RBAC
+Permissions
+Organization
+Trainer
+User
+AuditLog
+Notifications
+Events
+Database
+API registration
+Future Enrollment
+Future Assessment
+Future Competency
+Future Recommendation
+Documentation
+Tests
+```
+
+Do not modify unrelated modules unnecessarily.
+
+If an existing module requires a change, make the smallest safe change and document why.
+
+---
+
+# 43. DEFINITION OF DONE FOR M3 DEVELOPMENT 1
+
+Do not report this module as complete until all applicable items are satisfied:
+
+```text
+[ ] Existing repository inspected
+[ ] Existing Course schema inspected
+[ ] Existing Prisma migrations inspected
+[ ] Existing auth inspected
+[ ] Existing RBAC inspected
+[ ] Existing permissions inspected
+[ ] Existing validation inspected
+[ ] Existing error architecture inspected
+[ ] Existing response architecture inspected
+[ ] Existing audit architecture inspected
+[ ] Existing API conventions inspected
+
+[ ] Feature branch created
+[ ] Course repository implemented/extended
+[ ] Course service implemented/extended
+[ ] Course DTOs implemented/extended
+[ ] Course validators implemented/extended
+[ ] Course controller implemented/extended
+[ ] Course permissions implemented/extended
+[ ] Course middleware integrated
+[ ] Course routes implemented
+[ ] Routes registered
+
+[ ] Create Course works
+[ ] Read Course works
+[ ] List Courses works
+[ ] Update Course works
+[ ] Archive Course works
+[ ] Submit Course works
+[ ] Approve Course works
+[ ] Reject Course works
+[ ] Publish Course works
+
+[ ] Course ownership enforced
+[ ] Organization isolation enforced
+[ ] RBAC enforced
+[ ] Permission checks enforced
+[ ] Lifecycle transitions enforced
+[ ] Prerequisite validation enforced
+[ ] Slug uniqueness handled
+[ ] Mass assignment prevented
+[ ] Rate limiting applied appropriately
+[ ] Audit logging integrated
+[ ] Error handling integrated
+
+[ ] Repository tests pass
+[ ] Service tests pass
+[ ] API integration tests pass
+[ ] Regression tests pass
+[ ] TypeScript passes
+[ ] ESLint passes
+[ ] Prisma validation passes
+[ ] Build passes
+
+[ ] docs/api.md updated
+[ ] Every Course API endpoint documented
+[ ] docs/course-management/README.md created
+[ ] Documentation index updated where applicable
+[ ] Root README updated where applicable
+[ ] Git diff reviewed
+```
+
+---
+
+# 44. IMPORTANT SCOPE RESTRICTION
+
+This milestone is **M3 — Development 1: Course Management Backend**.
+
+Do not implement:
+
+```text
+Course Modules
+Lessons
+Resources
+Enrollment
+Learning Progress
+Assessment Engine
+Competency Engine
+Skill Gap Engine
+Trainer Matching
+Certification
+AI
+Advanced Analytics
+Frontend Course Builder
+Trainee Course UI
+Trainer Dashboard UI
+Admin Dashboard UI
+```
+
+Those belong to later modules.
+
+Only create backend infrastructure required to make Course Management production-ready and correctly integrated.
+
+---
+
+# 45. FINAL API CONTRACT TO PRODUCE
+
+After inspecting the repository and reconciling naming conventions, the final implementation must provide the equivalent of:
+
+```text
+COURSE MANAGEMENT API
+
+POST   /api/v1/courses
+GET    /api/v1/courses
+GET    /api/v1/courses/:id
+PATCH  /api/v1/courses/:id
+DELETE /api/v1/courses/:id
+
+POST   /api/v1/courses/:id/submit
+POST   /api/v1/courses/:id/approve
+POST   /api/v1/courses/:id/reject
+POST   /api/v1/courses/:id/publish
+```
+
+Every endpoint must have:
+
+```text
+Authentication
+Authorization
+Permission
+Request
+Response
+Validation
+Errors
+Pagination where applicable
+Filters where applicable
+Audit behavior
+```
+
+Do not expose a generic:
+
+```text
+PATCH /courses/:id
+{
+    "status": "PUBLISHED"
+}
+```
+
+mechanism that bypasses lifecycle authorization.
+
+Lifecycle actions must remain explicit.
+
+---
+
+# 46. FINAL BUSINESS FLOW
+
+The completed backend must support this Course lifecycle:
+
+```text
+                    TRAINER
+                       │
+                       ▼
+                 CREATE COURSE
+                       │
+                       ▼
+                     DRAFT
+                       │
+                       │ Update
+                       ├──────────────┐
+                       │              │
+                       ▼              │
+                    SUBMIT            │
+                       │              │
+                       ▼              │
+              PENDING_APPROVAL        │
+                       │              │
+              ┌────────┴────────┐     │
+              │                 │     │
+              ▼                 ▼     │
+           APPROVE           REJECT   │
+              │                 │     │
+              │                 ▼     │
+              │              REJECTED─┘
+              │
+              ▼
+        APPROVED/ELIGIBLE
+              │
+              │ Publish
+              ▼
+          PUBLISHED
+              │
+              │ Archive
+              ▼
+          ARCHIVED
+```
+
+The exact `APPROVED/ELIGIBLE` representation must follow the existing Prisma lifecycle model. **Do not add a new status merely to reproduce this diagram.**
+
+---
+
+# 47. FINAL END-TO-END ARCHITECTURE
+
+The finished implementation should fit this architecture:
+
+```text
+                     HTTP CLIENT
+                         │
+                         ▼
+                  COURSE ROUTES
+                         │
+                         ▼
+              AUTHENTICATION MIDDLEWARE
+                         │
+                         ▼
+             AUTHORIZATION / PERMISSIONS
+                         │
+                         ▼
+                 VALIDATION LAYER
+                         │
+                         ▼
+                 COURSE CONTROLLER
+                         │
+                         ▼
+                   COURSE SERVICE
+                         │
+          ┌──────────────┼──────────────┐
+          │              │              │
+          ▼              ▼              ▼
+     Ownership       Lifecycle     Prerequisites
+     Validation      Validation      Validation
+          │              │              │
+          └──────────────┼──────────────┘
+                         ▼
+                  COURSE REPOSITORY
+                         │
+                         ▼
+                    PRISMA ORM
+                         │
+                         ▼
+                    POSTGRESQL
+                         │
+             ┌───────────┼───────────┐
+             ▼           ▼           ▼
+          Course    Organization  Prerequisite
+                         │
+                         ▼
+                  Audit / Events
+                         │
+                         ▼
+                    API RESPONSE
+```
+
+---
+
+# 48. FINAL ENGINEERING PRINCIPLE
+
+Treat this implementation as a **production enterprise Course Management module**, not a collection of CRUD endpoints.
+
+The module must establish a reliable foundation for the subsequent Capacity Connect learning lifecycle:
+
+```text
+COURSE
+  ↓
+MODULE
+  ↓
+LESSON
+  ↓
+RESOURCE
+  ↓
+ENROLLMENT
+  ↓
+LEARNING
+  ↓
+ASSESSMENT
+  ↓
+COMPETENCY
+  ↓
+SKILL GAP
+  ↓
+RECOMMENDATION
+  ↓
+CERTIFICATION
+```
+
+The Course module must therefore prioritize:
+
+```text
+Correctness
+Security
+Authorization
+Organization Isolation
+Lifecycle Integrity
+Data Consistency
+Auditability
+API Stability
+Testability
+Future Extensibility
+```
+
+Do not sacrifice these for speed of implementation.
+
+---
+
+# 49. COMPLETION REPORT
+
+After implementation, provide a structured engineering report containing:
+
+```text
+# Feature Completed
+
+## Feature
+Course Management — M3 Development 1
+
+## Branch
+feature/course-management
+
+## Database
+Changes / No migration required
+
+## Backend
+Repositories
+Services
+DTOs
+Validators
+Controllers
+Routes
+Permissions
+Middleware
+Audit
+
+## API
+Every endpoint implemented and documented
+
+## Security
+Authentication
+Authorization
+RBAC
+Organization isolation
+Validation
+Rate limiting
+
+## Testing
+Repository
+Service
+Integration
+Regression
+
+## Documentation
+docs/course-management/README.md
+docs/api.md
+Other updated documentation
+
+## Git
+Commits
+Branch
+Diff review
+
+## Validation
+TypeScript: PASS/FAIL
+ESLint: PASS/FAIL
+Prisma: PASS/FAIL
+Tests: PASS/FAIL
+Build: PASS/FAIL
+
+## Final Status
+COMPLETE / BLOCKED
+```
+
+**Do not say `FEATURE COMPLETE` if any required applicable validation or implementation stage has failed.**
+
+---
+
+## FINAL INSTRUCTION TO ANTIGRAVITY
+
+**Start by inspecting the actual repository and existing architecture. Do not begin by creating files.**
+
+Resolve all architecture/schema ambiguities from the existing codebase before implementation.
+
+Preserve existing conventions.
+
+Reuse existing infrastructure.
+
+Do not duplicate functionality.
+
+Do not invent unsupported MoES/IMD requirements.
+
+Do not implement unrelated modules.
+
+Implement M3 Development 1 completely as a secure, testable, documented Course Management backend module, with every API endpoint documented and with the Course lifecycle enforced at the backend service/authorization level.

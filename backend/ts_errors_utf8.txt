@@ -1,0 +1,4 @@
+﻿src/services/course.service.ts(27,19): error TS6133: 'getActiveUserWithOrg' is declared but its value is never read.
+src/services/course.service.ts(30,23): error TS2304: Cannot find name 'UnauthorizedError'.
+src/services/course.service.ts(124,101): error TS2345: Argument of type 'CourseStatus' is not assignable to parameter of type '"PENDING_APPROVAL" | "PUBLISHED" | "ARCHIVED"'.
+  Type '"REJECTED"' is not assignable to type '"PENDING_APPROVAL" | "PUBLISHED" | "ARCHIVED"'.

@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/courses/:courseId"
+method: PATCH
+headers:
+  Content-Type: application/json
+  Accept: application/json
+pathVariables:
+  courseId: string
+body:
+  type: json
+  content: |-
+    {
+      "difficulty": "string",
+      "durationMinutes": 6081
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/Update course details (Trainer).resources/examples
+order: 5000

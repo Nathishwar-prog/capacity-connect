@@ -3,6 +3,7 @@ import { healthRouter } from './health.routes';
 import { authRouter } from './auth.routes';
 import { userRouter } from './user.routes';
 import { dashboardRouter } from './dashboard.routes';
+import { courseRouter } from './course.routes';
 
 const router = Router();
 
@@ -38,6 +39,17 @@ router.get('/', (_req, res) => {
         trainer: 'GET /api/v1/dashboard/trainer',
         admin: 'GET /api/v1/dashboard/admin',
       },
+      courses: {
+        list: 'GET /api/v1/courses',
+        create: 'POST /api/v1/courses',
+        getById: 'GET /api/v1/courses/:id',
+        updateById: 'PATCH /api/v1/courses/:id',
+        archiveById: 'DELETE /api/v1/courses/:id',
+        submit: 'POST /api/v1/courses/:id/submit',
+        approve: 'POST /api/v1/courses/:id/approve',
+        reject: 'POST /api/v1/courses/:id/reject',
+        publish: 'POST /api/v1/courses/:id/publish'
+      }
     },
   });
 });
@@ -49,5 +61,6 @@ router.use('/health', healthRouter);
 router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/courses', courseRouter);
 
 export default router;
