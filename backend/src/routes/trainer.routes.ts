@@ -25,14 +25,29 @@ import {
   assessmentIdParamSchema,
 } from '../validators/trainer.validation';
 
+import { ProfileController } from '../controllers/profile.controller';
+import {
+  createQualificationSchema,
+  updateQualificationSchema,
+  qualificationIdParamSchema,
+  createWorkExperienceSchema,
+  updateWorkExperienceSchema,
+  experienceIdParamSchema,
+  addUserSkillSchema,
+  skillIdParamSchema,
+  createCertificateSchema,
+  certificateIdParamSchema,
+} from '../validators/profile.validation';
+
 const router = Router();
 const trainerController = new TrainerController();
+const profileController = new ProfileController();
 
 // All trainer endpoints require valid JWT authentication and TRAINER / ADMIN / SUPER_ADMIN roles
 router.use(authenticate);
 router.use(requireRole([Role.TRAINER, Role.ADMIN, Role.SUPER_ADMIN]));
 
-// --- 1. Profile & Expertise ---
+// --- 1. Profile, Expertise & Professional History ---
 router.get('/profile', asyncHandler(trainerController.getProfile));
 router.patch(
   '/profile',
@@ -45,6 +60,68 @@ router.post(
   asyncHandler(trainerController.addExpertise),
 );
 router.delete('/expertise/:skillId', asyncHandler(trainerController.removeExpertise));
+
+// Qualifications
+router.get('/qualifications', asyncHandler(profileController.getQualifications));
+router.post(
+  '/qualifications',
+  validate({ body: createQualificationSchema }),
+  asyncHandler(profileController.addQualification),
+);
+router.put(
+  '/qualifications/:id',
+  validate({ params: qualificationIdParamSchema, body: updateQualificationSchema }),
+  asyncHandler(profileController.updateQualification),
+);
+router.delete(
+  '/qualifications/:id',
+  validate({ params: qualificationIdParamSchema }),
+  asyncHandler(profileController.deleteQualification),
+);
+
+// Work Experience
+router.get('/experience', asyncHandler(profileController.getWorkExperiences));
+router.post(
+  '/experience',
+  validate({ body: createWorkExperienceSchema }),
+  asyncHandler(profileController.addWorkExperience),
+);
+router.put(
+  '/experience/:id',
+  validate({ params: experienceIdParamSchema, body: updateWorkExperienceSchema }),
+  asyncHandler(profileController.updateWorkExperience),
+);
+router.delete(
+  '/experience/:id',
+  validate({ params: experienceIdParamSchema }),
+  asyncHandler(profileController.deleteWorkExperience),
+);
+
+// Skills
+router.get('/skills', asyncHandler(profileController.getUserSkills));
+router.post(
+  '/skills',
+  validate({ body: addUserSkillSchema }),
+  asyncHandler(profileController.addUserSkill),
+);
+router.delete(
+  '/skills/:skillId',
+  validate({ params: skillIdParamSchema }),
+  asyncHandler(profileController.removeUserSkill),
+);
+
+// Certificates
+router.get('/certificates', asyncHandler(profileController.getCertificates));
+router.post(
+  '/certificates',
+  validate({ body: createCertificateSchema }),
+  asyncHandler(profileController.addCertificate),
+);
+router.delete(
+  '/certificates/:id',
+  validate({ params: certificateIdParamSchema }),
+  asyncHandler(profileController.deleteCertificate),
+);
 
 // --- 2. Dashboard ---
 router.get('/dashboard', asyncHandler(trainerController.getDashboard));
