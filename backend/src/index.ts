@@ -1,3 +1,5 @@
+import swaggerUi from 'swagger-ui-express';
+import openapiSpec from './docs/openapi.json';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -75,6 +77,9 @@ app.get('/', (_req, res) => {
   });
 });
 
+// --- Swagger API Documentation ---
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
+
 // --- 2. REST Endpoints ---
 app.use(config.API_PREFIX, apiRouter);
 
@@ -108,3 +113,6 @@ process.on('unhandledRejection', (reason: unknown) => {
     process.exit(1);
   });
 });
+
+export { app, server };
+export default app;

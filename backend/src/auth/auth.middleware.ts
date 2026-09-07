@@ -133,6 +133,8 @@ export const requireSelfOrRole = (
   };
 };
 
+export { hasPermission, Permissions, SOURCE_PERMISSIONS } from '../permissions';
+
 export default {
   authenticate,
   requireRole,

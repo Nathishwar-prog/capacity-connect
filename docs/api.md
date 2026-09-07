@@ -364,10 +364,12 @@ All dashboard endpoints require authentication (`Bearer <token>`) and enforce st
   ```
 
 ### 3.3 Admin Institutional Dashboard Summary
-- **Route**: `GET /api/v1/dashboard/admin`
-- **Access**: `ADMIN`, `SUPER_ADMIN`
-- **Description**: Aggregates institutional capacity-building metrics across the department, including user distribution by role, pending approvals, published courses count, competencies count, and security audit activity.
-- **Response (200 OK)**:
+- **METHOD**: `GET`
+- **URL**: `/api/v1/dashboard/admin`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `analytics:view` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
   ```json
   {
     "success": true,
@@ -397,8 +399,11 @@ All dashboard endpoints require authentication (`Bearer <token>`) and enforce st
     }
   }
   ```
-- **Error Codes**:
-  - `403 Forbidden`: User lacks administrative role
+- **ERRORS**:
+  - `401 Unauthorized`: Authentication credentials missing or invalid
+  - `403 Forbidden`: User lacks `analytics:view` permission or administrative role
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
 
 ---
 
@@ -407,20 +412,27 @@ All dashboard endpoints require authentication (`Bearer <token>`) and enforce st
 All user management endpoints require authentication (`Bearer <token>`).
 
 ### 4.1 List Users Directory
-- **Route**: `GET /api/v1/users`
-- **Access**: `ADMIN` or `SUPER_ADMIN`
-- **Query Parameters**:
-  - `page` (optional, default: 1)
-  - `limit` (optional, default: 20)
-  - `search` (optional, searches name and email)
-  - `role` (optional: `SUPER_ADMIN`, `ADMIN`, `TRAINER`, `TRAINEE`)
-  - `status` (optional: `PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`)
-- **Response (200 OK)**:
+- **METHOD**: `GET`
+- **URL**: `/api/v1/users`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:read` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (Query parameters only)
+- **RESPONSE (200 OK)**:
   ```json
   {
     "success": true,
     "message": "Users retrieved successfully",
-    "data": [ ... ],
+    "data": [
+      {
+        "id": "user-uuid-1",
+        "email": "user@enterprise.com",
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "role": "TRAINEE",
+        "status": "APPROVED",
+        "emailVerified": true
+      }
+    ],
     "meta": {
       "page": 1,
       "limit": 20,
@@ -429,6 +441,11 @@ All user management endpoints require authentication (`Bearer <token>`).
     }
   }
   ```
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or malformed token
+  - `403 Forbidden`: Missing required permission: `user:read`
+- **PAGINATION**: Supported via query parameters (`page`, `limit`)
+- **FILTERS**: Supported via `search`, `role`, `status`
 
 ### 4.2 Create New User (Administrative Provisioning)
 - **Route**: `POST /api/v1/users`
@@ -484,7 +501,101 @@ All user management endpoints require authentication (`Bearer <token>`).
 
 ---
 
-## 5. Standard Error Handling & Response Codes
+## 5. Trainer Protected Operations (`/api/v1/trainer/*`)
+
+All trainer operations require authenticated identity and role enforcement (`TRAINER`, `ADMIN`, `SUPER_ADMIN`) alongside granular source permission checks.
+
+### 5.1 Create Course
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainer/courses`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `course:create` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "title": "Doppler Weather Radar Operations",
+    "description": "Comprehensive operational training on DWR interpretation and nowcasting.",
+    "category": "Radar Meteorology",
+    "difficulty": "INTERMEDIATE"
+  }
+  ```
+- **RESPONSE (201 Created)**: Created course entity
+- **ERRORS**:
+  - `400 Bad Request`: Validation failure on course schema
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `course:create`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 5.2 Update Course
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/trainer/courses/:courseId`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `course:update` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "title": "Advanced Doppler Weather Radar Operations",
+    "difficulty": "ADVANCED"
+  }
+  ```
+- **RESPONSE (200 OK)**: Updated course entity
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `course:update`
+  - `404 Not Found`: Course not found
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 5.3 Create Assessment
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainer/assessments`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `assessment:create` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "title": "Synoptic Weather Chart Diagnostic Quiz",
+    "subject": "Synoptic Meteorology",
+    "passingScore": 60,
+    "durationMinutes": 30
+  }
+  ```
+- **RESPONSE (201 Created)**: Created assessment entity
+- **ERRORS**:
+  - `400 Bad Request`: Validation failure on assessment schema
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `assessment:create`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 5.4 View Trainer Analytics
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainer/analytics`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `analytics:view` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Trainer analytics retrieved successfully",
+    "data": {
+      "totalCourses": 2,
+      "totalEnrollments": 14,
+      "completionRate": 85.5
+    }
+  }
+  ```
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `analytics:view`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+---
+
+## 6. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 

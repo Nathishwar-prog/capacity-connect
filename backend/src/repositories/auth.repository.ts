@@ -170,73 +170,76 @@ export class AuthRepository implements IAuthRepository {
   public async createPendingUser(data: CreatePendingUserData): Promise<UserWithRelations> {
     const assignedRole = data.role || Role.TRAINEE;
 
-    return prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          organizationId: data.organizationId,
-          departmentId: data.departmentId,
-          email: data.email.toLowerCase(),
-          passwordHash: data.passwordHash,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          role: assignedRole,
-          status: UserStatus.PENDING, // Strictly enforces required PENDING approval stage
-          emailVerified: false,
-        },
-        include: {
-          organization: { select: { name: true } },
-          department: { select: { name: true } },
-          traineeProfile: true,
-          trainerProfile: true,
-        },
-      });
-
-      let traineeProfile = null;
-      let trainerProfile = null;
-
-      if (assignedRole === Role.TRAINEE) {
-        traineeProfile = await tx.traineeProfile.create({
+    return prisma.$transaction(
+      async (tx) => {
+        const newUser = await tx.user.create({
           data: {
-            userId: newUser.id,
-            designation: 'Trainee',
-            bio: 'Continuous learning member.',
+            organizationId: data.organizationId,
+            departmentId: data.departmentId,
+            email: data.email.toLowerCase(),
+            passwordHash: data.passwordHash,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            role: assignedRole,
+            status: UserStatus.PENDING, // Strictly enforces required PENDING approval stage
+            emailVerified: false,
+          },
+          include: {
+            organization: { select: { name: true } },
+            department: { select: { name: true } },
+            traineeProfile: true,
+            trainerProfile: true,
           },
         });
-      } else if (assignedRole === Role.TRAINER) {
-        trainerProfile = await tx.trainerProfile.create({
+
+        let traineeProfile = null;
+        let trainerProfile = null;
+
+        if (assignedRole === Role.TRAINEE) {
+          traineeProfile = await tx.traineeProfile.create({
+            data: {
+              userId: newUser.id,
+              designation: 'Trainee',
+              bio: 'Continuous learning member.',
+            },
+          });
+        } else if (assignedRole === Role.TRAINER) {
+          trainerProfile = await tx.trainerProfile.create({
+            data: {
+              userId: newUser.id,
+              designation: 'Professional Trainer',
+              bio: 'Expert instructor.',
+              yearsExperience: 1,
+            },
+          });
+        }
+
+        await tx.auditLog.create({
           data: {
+            organizationId: data.organizationId,
             userId: newUser.id,
-            designation: 'Professional Trainer',
-            bio: 'Expert instructor.',
-            yearsExperience: 1,
+            action: 'USER_REGISTERED',
+            entityType: 'User',
+            entityId: newUser.id,
+            newValues: {
+              email: newUser.email,
+              role: newUser.role,
+              status: UserStatus.PENDING,
+            },
+            ipAddress: data.ipAddress,
+            userAgent: data.userAgent,
           },
         });
-      }
 
-      await tx.auditLog.create({
-        data: {
-          organizationId: data.organizationId,
-          userId: newUser.id,
-          action: 'USER_REGISTERED',
-          entityType: 'User',
-          entityId: newUser.id,
-          newValues: {
-            email: newUser.email,
-            role: newUser.role,
-            status: UserStatus.PENDING,
-          },
-          ipAddress: data.ipAddress,
-          userAgent: data.userAgent,
-        },
-      });
-
-      return {
-        ...newUser,
-        traineeProfile,
-        trainerProfile,
-      };
-    });
+        return {
+          ...newUser,
+          traineeProfile,
+          trainerProfile,
+        };
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
   }
 
   public async saveRefreshToken(data: SaveRefreshTokenData): Promise<RefreshToken> {

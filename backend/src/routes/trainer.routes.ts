@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Role } from '@prisma/client';
 import { TrainerController } from '../controllers/trainer.controller';
-import { authenticate, requireRole } from '../auth/auth.middleware';
+import { authenticate, requireRole, requirePermission, Permissions } from '../auth/auth.middleware';
 import { asyncHandler } from '../errors/async.handler';
 import { validate } from '../validators/validate.middleware';
 import {
@@ -53,6 +53,7 @@ router.get('/dashboard', asyncHandler(trainerController.getDashboard));
 router.get('/courses', asyncHandler(trainerController.getCourses));
 router.post(
   '/courses',
+  requirePermission(Permissions.COURSE_CREATE),
   validate({ body: createCourseSchema }),
   asyncHandler(trainerController.createCourse),
 );
@@ -63,6 +64,7 @@ router.get(
 );
 router.patch(
   '/courses/:courseId',
+  requirePermission(Permissions.COURSE_UPDATE),
   validate({ params: courseIdParamSchema, body: updateCourseSchema }),
   asyncHandler(trainerController.updateCourse),
 );
@@ -153,6 +155,7 @@ router.get(
 router.get('/assessments', asyncHandler(trainerController.getAssessments));
 router.post(
   '/assessments',
+  requirePermission(Permissions.ASSESSMENT_CREATE),
   validate({ body: createAssessmentSchema }),
   asyncHandler(trainerController.createAssessment),
 );
@@ -168,7 +171,11 @@ router.get(
 );
 
 // --- 8. Analytics & Feedback ---
-router.get('/analytics', asyncHandler(trainerController.getAnalytics));
+router.get(
+  '/analytics',
+  requirePermission(Permissions.ANALYTICS_VIEW),
+  asyncHandler(trainerController.getAnalytics),
+);
 router.get('/feedback', asyncHandler(trainerController.getFeedback));
 
 export default router;
