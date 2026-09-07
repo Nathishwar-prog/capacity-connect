@@ -1,0 +1,560 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Capacity Connect — Resource Library API (M3 Development 4)",
+        "version": "1.0.0",
+        "description": "Comprehensive Postman & OpenAPI manual testing specification for Resource Library backend module. Enforces strict RBAC (ADMIN, TRAINER, TRAINEE), canonical seed users (admin@enterprise.com, alex.trainer@enterprise.com, user@enterprise.com), resource approval lifecycle, and course/lesson attachment mappings."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5000/api/v1",
+            "description": "Local REST API Gateway"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        },
+        "schemas": {
+            "Resource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "example": "res-uuid-1234"
+                    },
+                    "uploadedBy": {
+                        "type": "string",
+                        "example": "usr-trainer-uuid"
+                    },
+                    "organizationId": {
+                        "type": "string",
+                        "example": "org-moes-imd"
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "Doppler Radar Technical Manual"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Comprehensive technical guide for C-band weather radar calibration"
+                    },
+                    "resourceType": {
+                        "type": "string",
+                        "enum": [
+                            "VIDEO",
+                            "PDF",
+                            "PRESENTATION",
+                            "DOCUMENT",
+                            "LINK",
+                            "IMAGE"
+                        ],
+                        "example": "PDF"
+                    },
+                    "url": {
+                        "type": "string",
+                        "example": "/uploads/doppler-manual.pdf"
+                    },
+                    "fileName": {
+                        "type": "string",
+                        "example": "doppler-manual.pdf"
+                    },
+                    "mimeType": {
+                        "type": "string",
+                        "example": "application/pdf"
+                    },
+                    "fileSize": {
+                        "type": "integer",
+                        "example": 2048500
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "DRAFT",
+                            "PENDING_APPROVAL",
+                            "PUBLISHED",
+                            "REJECTED",
+                            "ARCHIVED"
+                        ],
+                        "example": "PENDING_APPROVAL"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "summary": "1. Authentication — Login Canonical Seed User",
+                "description": "Obtain JWT token for test user. Canonical accounts:\n- ADMIN: admin@enterprise.com / Password123!\n- TRAINER: alex.trainer@enterprise.com / Password123!\n- TRAINEE: user@enterprise.com / Password123!",
+                "security": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "alex.trainer@enterprise.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "Password123!"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successfully authenticated. Returns accessToken."
+                    }
+                }
+            }
+        },
+        "/resources": {
+            "get": {
+                "summary": "2. List Resources with Filters & Pagination",
+                "description": "Query resources. TRAINEEs receive only PUBLISHED resources.",
+                "parameters": [
+                    {
+                        "name": "resourceType",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "VIDEO",
+                                "PDF",
+                                "PRESENTATION",
+                                "DOCUMENT",
+                                "LINK",
+                                "IMAGE"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "DRAFT",
+                                "PENDING_APPROVAL",
+                                "PUBLISHED",
+                                "REJECTED",
+                                "ARCHIVED"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    },
+                    {
+                        "name": "take",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of resources"
+                    }
+                }
+            }
+        },
+        "/resources/link": {
+            "post": {
+                "summary": "3. Create External Link Resource",
+                "description": "Create a LINK resource. TRAINER uploads yield PENDING_APPROVAL status. ADMIN uploads yield PUBLISHED status.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "IMD Open Weather Data Portal"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Real-time meteorological observations dataset link"
+                                    },
+                                    "url": {
+                                        "type": "string",
+                                        "example": "https://mausam.imd.gov.in"
+                                    }
+                                },
+                                "required": [
+                                    "title",
+                                    "url"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Link resource created"
+                    }
+                }
+            }
+        },
+        "/resources/upload": {
+            "post": {
+                "summary": "4. Upload File Resource (Multipart Form Data)",
+                "description": "Upload a file resource (VIDEO, PDF, PRESENTATION, DOCUMENT, IMAGE). Content validation enforces allowed extension and MIME types.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Severe Storm Weather Case Study"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Analysis report on monsoon convective storms"
+                                    },
+                                    "resourceType": {
+                                        "type": "string",
+                                        "enum": [
+                                            "VIDEO",
+                                            "PDF",
+                                            "PRESENTATION",
+                                            "DOCUMENT",
+                                            "IMAGE"
+                                        ],
+                                        "example": "PDF"
+                                    }
+                                },
+                                "required": [
+                                    "file",
+                                    "title",
+                                    "resourceType"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "File uploaded and resource created"
+                    }
+                }
+            }
+        },
+        "/resources/{id}": {
+            "get": {
+                "summary": "5. Get Single Resource Details by ID",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource details"
+                    }
+                }
+            },
+            "patch": {
+                "summary": "6. Update Resource Metadata",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Updated Weather Manual Title"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Updated description for radar manual"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Metadata updated"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "7. Delete/Archive Resource",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource soft-deleted"
+                    }
+                }
+            }
+        },
+        "/resources/{id}/approve": {
+            "patch": {
+                "summary": "8. Approve Resource (Admin Only)",
+                "description": "Transitions resource status from PENDING_APPROVAL to PUBLISHED.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource approved and published"
+                    }
+                }
+            }
+        },
+        "/resources/{id}/reject": {
+            "patch": {
+                "summary": "9. Reject Resource (Admin Only)",
+                "description": "Transitions resource status to REJECTED with reason.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Incomplete documentation or metadata formatting."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Resource rejected"
+                    }
+                }
+            }
+        },
+        "/resources/{id}/publish": {
+            "patch": {
+                "summary": "10. Publish Resource (Owner or Admin)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource published"
+                    }
+                }
+            }
+        },
+        "/resources/courses/{courseId}/attach/{resourceId}": {
+            "post": {
+                "summary": "11. Attach Resource to Course",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource attached to course"
+                    }
+                }
+            }
+        },
+        "/resources/courses/{courseId}/detach/{resourceId}": {
+            "delete": {
+                "summary": "12. Detach Resource from Course",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource detached from course"
+                    }
+                }
+            }
+        },
+        "/resources/lessons/{lessonId}/attach/{resourceId}": {
+            "post": {
+                "summary": "13. Attach Resource to Lesson",
+                "parameters": [
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource attached to lesson"
+                    }
+                }
+            }
+        },
+        "/resources/lessons/{lessonId}/detach/{resourceId}": {
+            "delete": {
+                "summary": "14. Detach Resource from Lesson",
+                "parameters": [
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource detached from lesson"
+                    }
+                }
+            }
+        }
+    }
+}

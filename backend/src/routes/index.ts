@@ -5,6 +5,7 @@ import { userRouter } from './user.routes';
 import { dashboardRouter } from './dashboard.routes';
 import { courseRouter } from './course.routes';
 import { enrollmentRouter } from './enrollment.routes';
+import resourceRouter from './resource.routes';
 
 const router = Router();
 
@@ -57,6 +58,21 @@ router.get('/', (_req, res) => {
         getById: 'GET /api/v1/enrollments/:id',
         updateProgress: 'POST /api/v1/enrollments/:id/lessons/:lessonId/progress',
         drop: 'POST /api/v1/enrollments/:id/drop'
+      },
+      resources: {
+        list: 'GET /api/v1/resources',
+        createLink: 'POST /api/v1/resources/link',
+        uploadFile: 'POST /api/v1/resources/upload',
+        getById: 'GET /api/v1/resources/:id',
+        updateMetadata: 'PATCH /api/v1/resources/:id',
+        delete: 'DELETE /api/v1/resources/:id',
+        approve: 'PATCH /api/v1/resources/:id/approve',
+        reject: 'PATCH /api/v1/resources/:id/reject',
+        publish: 'PATCH /api/v1/resources/:id/publish',
+        attachToCourse: 'POST /api/v1/resources/courses/:courseId/attach/:resourceId',
+        detachFromCourse: 'DELETE /api/v1/resources/courses/:courseId/detach/:resourceId',
+        attachToLesson: 'POST /api/v1/resources/lessons/:lessonId/attach/:resourceId',
+        detachFromLesson: 'DELETE /api/v1/resources/lessons/:lessonId/detach/:resourceId',
       }
     },
   });
@@ -71,5 +87,6 @@ router.use('/users', userRouter);
 router.use('/dashboard', dashboardRouter);
 router.use('/courses', courseRouter);
 router.use('/enrollments', enrollmentRouter);
+router.use('/resources', resourceRouter);
 
 export default router;

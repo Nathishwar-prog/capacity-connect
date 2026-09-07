@@ -32,6 +32,14 @@ export const Permissions = {
   COMPETENCIES_READ: 'competencies:read',
   COMPETENCIES_MANAGE: 'competencies:manage',
 
+  // Resource Library
+  RESOURCES_READ: 'resources:read',
+  RESOURCES_CREATE: 'resources:create',
+  RESOURCES_UPDATE: 'resources:update',
+  RESOURCES_APPROVE: 'resources:approve',
+  RESOURCES_PUBLISH: 'resources:publish',
+  RESOURCES_DELETE: 'resources:delete',
+
   // Organization & Analytics
   ANALYTICS_VIEW: 'analytics:view',
   ORGANIZATION_MANAGE: 'organization:manage',
@@ -60,6 +68,12 @@ export const permissionsMap: Record<Role, string[]> = {
     Permissions.ASSESSMENTS_EVALUATE,
     Permissions.COMPETENCIES_READ,
     Permissions.COMPETENCIES_MANAGE,
+    Permissions.RESOURCES_READ,
+    Permissions.RESOURCES_CREATE,
+    Permissions.RESOURCES_UPDATE,
+    Permissions.RESOURCES_APPROVE,
+    Permissions.RESOURCES_PUBLISH,
+    Permissions.RESOURCES_DELETE,
     Permissions.ANALYTICS_VIEW,
     Permissions.ORGANIZATION_MANAGE,
   ],
@@ -74,12 +88,17 @@ export const permissionsMap: Record<Role, string[]> = {
     Permissions.ASSESSMENTS_UPDATE,
     Permissions.ASSESSMENTS_EVALUATE,
     Permissions.COMPETENCIES_READ,
+    Permissions.RESOURCES_READ,
+    Permissions.RESOURCES_CREATE,
+    Permissions.RESOURCES_UPDATE,
+    Permissions.RESOURCES_PUBLISH,
   ],
   TRAINEE: [
     Permissions.COURSES_READ,
     Permissions.ASSESSMENTS_READ,
     Permissions.ASSESSMENTS_TAKE,
     Permissions.COMPETENCIES_READ,
+    Permissions.RESOURCES_READ,
   ],
 };
 
