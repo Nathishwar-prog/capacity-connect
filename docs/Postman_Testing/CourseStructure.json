@@ -1,0 +1,803 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Course Management & Course Structure API",
+    "version": "1.0",
+    "description": "OpenAPI specification for the Course Management and Course Structure Backend used for automated & manual testing. Email IDs for authorization are fetched from the `user` table in the database."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Course": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx12345"
+          },
+          "title": {
+            "type": "string",
+            "example": "Radar Meteorology & Weather Analysis"
+          },
+          "description": {
+            "type": "string",
+            "example": "Comprehensive course covering Doppler radar data processing and storm tracking."
+          },
+          "category": {
+            "type": "string",
+            "example": "Atmospheric Sciences"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "BEGINNER",
+              "INTERMEDIATE",
+              "ADVANCED",
+              "EXPERT"
+            ],
+            "example": "INTERMEDIATE"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "example": 180
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PENDING_APPROVAL",
+              "PUBLISHED",
+              "REJECTED",
+              "ARCHIVED"
+            ],
+            "example": "DRAFT"
+          }
+        }
+      },
+      "CourseModule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "mod-12345"
+          },
+          "courseId": {
+            "type": "string",
+            "example": "course-12345"
+          },
+          "title": {
+            "type": "string",
+            "example": "Module 1: Radar Fundamentals"
+          },
+          "description": {
+            "type": "string",
+            "example": "Overview of electromagnetic radiation principles."
+          },
+          "orderIndex": {
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "Lesson": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "les-12345"
+          },
+          "moduleId": {
+            "type": "string",
+            "example": "mod-12345"
+          },
+          "title": {
+            "type": "string",
+            "example": "Lesson 1.1: Doppler Principle"
+          },
+          "description": {
+            "type": "string",
+            "example": "Frequency shift principles in weather radar."
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "VIDEO",
+              "PDF",
+              "PPT",
+              "ARTICLE",
+              "QUIZ",
+              "LINK",
+              "DOCUMENT"
+            ],
+            "example": "VIDEO"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "resourceUrl": {
+            "type": "string",
+            "example": "https://cdn.example.com/video1.mp4"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "example": 30
+          },
+          "orderIndex": {
+            "type": "integer",
+            "example": 0
+          },
+          "isPreview": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Login to obtain JWT token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful login"
+          }
+        }
+      }
+    },
+    "/courses": {
+      "post": {
+        "summary": "Create a new course (Trainer)",
+        "responses": {
+          "201": {
+            "description": "Course created"
+          }
+        }
+      },
+      "get": {
+        "summary": "List courses",
+        "responses": {
+          "200": {
+            "description": "List of courses"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}": {
+      "get": {
+        "summary": "Get course details",
+        "responses": {
+          "200": {
+            "description": "Course details"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update course details",
+        "responses": {
+          "200": {
+            "description": "Course updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Archive course",
+        "responses": {
+          "200": {
+            "description": "Course archived"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/submit": {
+      "post": {
+        "summary": "Submit course for approval",
+        "responses": {
+          "200": {
+            "description": "Course submitted"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/approve": {
+      "post": {
+        "summary": "Approve course (Admin)",
+        "responses": {
+          "200": {
+            "description": "Course approved"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/reject": {
+      "post": {
+        "summary": "Reject course (Admin)",
+        "responses": {
+          "200": {
+            "description": "Course rejected"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/structure": {
+      "get": {
+        "summary": "Get full hierarchical course structure (Modules -> Lessons -> Resources)",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full course structure hierarchy"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules": {
+      "post": {
+        "summary": "Create a module in course",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Module 1: Atmosphere"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Atmospheric principles"
+                  },
+                  "orderIndex": {
+                    "type": "integer",
+                    "example": 0
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Module created"
+          }
+        }
+      },
+      "get": {
+        "summary": "List modules for course ordered by orderIndex",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of modules"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/reorder": {
+      "patch": {
+        "summary": "Reorder modules in course",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "moduleOrders": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "orderIndex": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "orderIndex"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "moduleOrders"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modules reordered"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/{moduleId}": {
+      "get": {
+        "summary": "Get module by ID",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Module details"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update module details",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Module updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete module",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Module deleted"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/{moduleId}/lessons": {
+      "post": {
+        "summary": "Create a lesson in module",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Lesson 1.1: Doppler Effect"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Frequency shift principles"
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "example": "VIDEO"
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "example": 30
+                  },
+                  "isPreview": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesson created"
+          }
+        }
+      },
+      "get": {
+        "summary": "List lessons in module ordered by orderIndex",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of lessons"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/{moduleId}/lessons/reorder": {
+      "patch": {
+        "summary": "Reorder lessons in module",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lessons reordered"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}": {
+      "get": {
+        "summary": "Get lesson details with attached resources",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson details"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update lesson details",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete lesson",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson deleted"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}/resources": {
+      "post": {
+        "summary": "Attach resource to lesson",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resourceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "resourceId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Resource attached"
+          }
+        }
+      }
+    },
+    "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}/resources/{resourceId}": {
+      "delete": {
+        "summary": "Detach resource from lesson",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource detached"
+          }
+        }
+      }
+    }
+  }
+}

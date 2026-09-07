@@ -484,7 +484,38 @@ All user management endpoints require authentication (`Bearer <token>`).
 
 ---
 
-## 5. Standard Error Handling & Response Codes
+## 5. Course Management & Course Structure Endpoints (`/api/v1/courses/*`)
+
+All course management & structure endpoints require authentication (`Bearer <token>`) and enforce RBAC permission policies.
+
+### 5.1 Full Course Hierarchy
+- **Route**: `GET /api/v1/courses/:courseId/structure`
+- **Access**: `courses:read` permission (TRAINEE can access only if status is `PUBLISHED`)
+- **Description**: Returns complete hierarchical course tree containing ordered modules, ordered lessons, attached resources, and calculated module duration.
+
+### 5.2 Course Modules
+- **`POST /api/v1/courses/:courseId/modules`**: Create Module (`courses:update` required, course in `DRAFT`/`REJECTED`)
+- **`GET /api/v1/courses/:courseId/modules`**: List Modules ordered by `orderIndex`
+- **`GET /api/v1/courses/:courseId/modules/:moduleId`**: Get Module details
+- **`PATCH /api/v1/courses/:courseId/modules/:moduleId`**: Update Module title/description/orderIndex
+- **`DELETE /api/v1/courses/:courseId/modules/:moduleId`**: Delete Module (cascades lessons)
+- **`PATCH /api/v1/courses/:courseId/modules/reorder`**: Transactional reorder (`moduleOrders: [{ id, orderIndex }]`)
+
+### 5.3 Lessons
+- **`POST /api/v1/courses/:courseId/modules/:moduleId/lessons`**: Create Lesson (`contentType`: VIDEO, PDF, PPT, ARTICLE, QUIZ, LINK, DOCUMENT)
+- **`GET /api/v1/courses/:courseId/modules/:moduleId/lessons`**: List Lessons ordered by `orderIndex`
+- **`GET /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId`**: Get Lesson details with attached resources
+- **`PATCH /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId`**: Update Lesson attributes
+- **`DELETE /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId`**: Delete Lesson
+- **`PATCH /api/v1/courses/:courseId/modules/:moduleId/lessons/reorder`**: Transactional reorder (`lessonOrders: [{ id, orderIndex }]`)
+
+### 5.4 Lesson Resources
+- **`POST /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId/resources`**: Attach resource (`resourceId`)
+- **`DELETE /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId/resources/:resourceId`**: Detach resource
+
+---
+
+## 6. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 
@@ -498,10 +529,11 @@ All error responses strictly follow the uniform JSON format:
 
 | HTTP Status | Error Type | Trigger Conditions |
 | :--- | :--- | :--- |
-| **400 Bad Request** | Validation Failure | Request body failed Zod schema checks |
+| **400 Bad Request** | Validation Failure | Request body failed Zod schema checks or invalid reorder payload |
 | **401 Unauthorized** | Authentication Failure | Missing/expired access token or unapproved account |
-| **403 Forbidden** | RBAC Authorization Failure | Insufficient user role for the requested resource |
-| **404 Not Found** | Missing Entity | Resource with requested ID does not exist |
-| **409 Conflict** | Duplicate Resource | Email address already registered |
+| **403 Forbidden** | RBAC Authorization Failure | Insufficient user role or modifying another trainer's course |
+| **404 Not Found** | Missing Entity | Course, Module, Lesson, or Resource ID not found |
+| **409 Conflict** | State Conflict | Modifying structure of course in `PUBLISHED`/`PENDING_APPROVAL` status |
 | **429 Too Many Requests** | Rate Limit Exceeded | Client exceeded sliding-window request threshold |
 | **500 Internal Server Error** | Unexpected Failure | Database or server operational exception |
+
