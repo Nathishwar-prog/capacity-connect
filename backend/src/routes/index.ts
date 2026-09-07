@@ -4,6 +4,7 @@ import { authRouter } from './auth.routes';
 import { userRouter } from './user.routes';
 import { dashboardRouter } from './dashboard.routes';
 import { courseRouter } from './course.routes';
+import { enrollmentRouter } from './enrollment.routes';
 
 const router = Router();
 
@@ -49,6 +50,13 @@ router.get('/', (_req, res) => {
         approve: 'POST /api/v1/courses/:id/approve',
         reject: 'POST /api/v1/courses/:id/reject',
         publish: 'POST /api/v1/courses/:id/publish'
+      },
+      enrollments: {
+        enroll: 'POST /api/v1/enrollments',
+        myEnrollments: 'GET /api/v1/enrollments',
+        getById: 'GET /api/v1/enrollments/:id',
+        updateProgress: 'POST /api/v1/enrollments/:id/lessons/:lessonId/progress',
+        drop: 'POST /api/v1/enrollments/:id/drop'
       }
     },
   });
@@ -62,5 +70,6 @@ router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/dashboard', dashboardRouter);
 router.use('/courses', courseRouter);
+router.use('/enrollments', enrollmentRouter);
 
 export default router;

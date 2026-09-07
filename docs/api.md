@@ -515,7 +515,18 @@ All course management & structure endpoints require authentication (`Bearer <tok
 
 ---
 
-## 6. Standard Error Handling & Response Codes
+## 6. Enrollment & Progress Management APIs
+
+### 6.1 Course Enrollment
+- **`POST /api/v1/enrollments`**: Enroll in a published course (`courseId` in body). Requires `PUBLISHED` status & matching `organizationId`. Returns `201 Created` or `409 Conflict` if already enrolled.
+- **`GET /api/v1/enrollments`**: List my enrolled courses (query parameters: `status`, `skip`, `take`).
+- **`GET /api/v1/enrollments/:id`**: View enrollment details, module structure, and lesson completion tree.
+- **`POST /api/v1/enrollments/:id/lessons/:lessonId/progress`**: Update lesson completion (`completed: boolean`, `progressPercentage?: number`). Auto-recalculates course percentage and transitions status (`IN_PROGRESS` or `COMPLETED`).
+- **`POST /api/v1/enrollments/:id/drop`**: Drop course enrollment. Transitions status to `DROPPED`.
+
+---
+
+## 7. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 
@@ -536,4 +547,5 @@ All error responses strictly follow the uniform JSON format:
 | **409 Conflict** | State Conflict | Modifying structure of course in `PUBLISHED`/`PENDING_APPROVAL` status |
 | **429 Too Many Requests** | Rate Limit Exceeded | Client exceeded sliding-window request threshold |
 | **500 Internal Server Error** | Unexpected Failure | Database or server operational exception |
+
 
