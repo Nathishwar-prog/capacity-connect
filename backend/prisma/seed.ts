@@ -54,10 +54,15 @@ async function main() {
   await prisma.revisionAlgorithmConfig.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.notification.deleteMany();
-  await prisma.announcement.deleteMany();
+  await prisma.recommendationFeedback.deleteMany();
+  await prisma.recommendationEvent.deleteMany();
+  await prisma.recommendation.deleteMany();
+  await prisma.recommendationBatch.deleteMany();
+  await prisma.userRecommendationProfile.deleteMany();
+  await prisma.courseRecommendationProfile.deleteMany();
+  await prisma.recommendationAlgorithmConfig.deleteMany();
   await prisma.feedback.deleteMany();
   await prisma.trainerMatch.deleteMany();
-  await prisma.recommendation.deleteMany();
   await prisma.skillGap.deleteMany();
   await prisma.assessmentCompetencyResult.deleteMany();
   await prisma.userCompetency.deleteMany();
@@ -2243,6 +2248,28 @@ async function main() {
       ],
     });
   }
+
+  console.log('🤖 Seeding Recommendation Algorithm Configuration...');
+  await prisma.recommendationAlgorithmConfig.create({
+    data: {
+      version: 'v1.0.0',
+      description: 'Production Multi-Signal Recommendation Engine config with 9 normalized features and MMR diversity',
+      isActive: true,
+      wSkillRelevance: 0.25,
+      wContentSimilarity: 0.15,
+      wBehavioralAffinity: 0.10,
+      wCollaborative: 0.10,
+      wQuality: 0.15,
+      wFreshness: 0.05,
+      wContextual: 0.10,
+      wDifficultyAlignment: 0.05,
+      wHistoricalSuccess: 0.05,
+      mmrLambda: 0.70,
+      explorationRatio: 0.15,
+      maxPerCategory: 2,
+      maxPerTrainer: 2,
+    },
+  });
 
   console.log('✅ MoES / IMD database seeding finished successfully!');
   console.log(`- Organization: ${org.name} (${org.code})`);

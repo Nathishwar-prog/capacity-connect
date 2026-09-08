@@ -180,6 +180,29 @@ enum RecommendationStatus {
   EXPIRED
 }
 
+enum RecommendationEventType {
+  IMPRESSION
+  VIEW
+  CLICK
+  SAVE
+  DISMISS
+  START
+  ENROLL
+  COMPLETE
+  ABANDON
+  SHARE
+}
+
+enum RecommendationFeedbackType {
+  NOT_RELEVANT
+  ALREADY_KNOW_THIS
+  TOO_DIFFICULT
+  TOO_EASY
+  NOT_NOW
+  WRONG_TOPIC
+  INTERESTING
+}
+
 enum MatchSource {
   RULE_ENGINE
   AI
@@ -351,6 +374,12 @@ model User {
   trainerRecsGiven Recommendation[] @relation("TrainerRecommendations")
   traineeMatches   TrainerMatch[]   @relation("TraineeMatches")
   trainerMatches   TrainerMatch[]   @relation("TrainerMatches")
+
+  // Intelligent Recommendation Engine
+  recommendationBatches   RecommendationBatch[]
+  recommendationEvents    RecommendationEvent[]
+  recommendationFeedbacks RecommendationFeedback[]
+  recommendationProfile   UserRecommendationProfile?
 
   // Social & Engagement
   feedbackGiven        Feedback[]     @relation("FeedbackAuthor")
@@ -666,6 +695,10 @@ model Course {
   // AI Skill Gap Analyzer
   courseSkillGaps  SkillGap[]         @relation("CourseSkillGaps")
   skillGapAnalyses SkillGapAnalysis[]
+
+  // Intelligent Recommendation Engine
+  recommendationProfile CourseRecommendationProfile?
+  recommendationEvents  RecommendationEvent[]
 
   @@index([organizationId])
   @@index([trainerId])
@@ -1100,6 +1133,16 @@ model Recommendation {
   trainerId          String?
   resourceId         String?
   competencyId       String?
+  batchId            String?
+  rankPosition       Int?
+  algorithmVersion   String               @default("v1.0.0")
+  surface            String               @default("HOME")
+  candidateSource    String?
+  reasonCodes        String[]             @default([])
+  featureSnapshot    Json?
+  shownAt            DateTime?
+  clickedAt          DateTime?
+  actedAt            DateTime?
   score              Float?
   reason             String?
   source             RecommendationSource @default(RULE_ENGINE)
@@ -1108,17 +1151,153 @@ model Recommendation {
   createdAt          DateTime             @default(now())
   expiresAt          DateTime?
 
-  user       User        @relation("UserRecommendations", fields: [userId], references: [id], onDelete: Cascade)
-  course     Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  trainer    User?       @relation("TrainerRecommendations", fields: [trainerId], references: [id], onDelete: SetNull)
-  resource   Resource?   @relation(fields: [resourceId], references: [id], onDelete: SetNull)
-  competency Competency? @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+  user           User                    @relation("UserRecommendations", fields: [userId], references: [id], onDelete: Cascade)
+  course         Course?                 @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  trainer        User?                   @relation("TrainerRecommendations", fields: [trainerId], references: [id], onDelete: SetNull)
+  resource       Resource?               @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  competency     Competency?             @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+  batch          RecommendationBatch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  events         RecommendationEvent[]
+  feedbacks      RecommendationFeedback[]
 
   @@index([userId])
   @@index([recommendationType])
   @@index([status])
+  @@index([batchId])
   @@index([createdAt])
   @@map("recommendations")
+}
+
+model RecommendationBatch {
+  id               String           @id @default(uuid())
+  userId           String
+  surface          String           @default("HOME")
+  context          Json?
+  algorithmVersion String           @default("v1.0.0")
+  createdAt        DateTime         @default(now())
+  expiresAt        DateTime?
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
+  events          RecommendationEvent[]
+
+  @@index([userId])
+  @@index([surface])
+  @@index([createdAt])
+  @@map("recommendation_batches")
+}
+
+model RecommendationEvent {
+  id               String                  @id @default(uuid())
+  userId           String
+  recommendationId String?
+  batchId          String?
+  eventType        RecommendationEventType
+  position         Int?
+  surface          String                  @default("HOME")
+  courseId         String?
+  resourceId       String?
+  trainerId        String?
+  sessionId        String?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendation Recommendation?       @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+  batch          RecommendationBatch?  @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  course         Course?               @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([recommendationId])
+  @@index([batchId])
+  @@index([eventType])
+  @@index([courseId])
+  @@index([createdAt])
+  @@map("recommendation_events")
+}
+
+model RecommendationFeedback {
+  id               String                     @id @default(uuid())
+  userId           String
+  recommendationId String
+  feedbackType     RecommendationFeedbackType
+  reason           String?
+  rating           Int?
+  createdAt        DateTime                   @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([recommendationId])
+  @@index([feedbackType])
+  @@map("recommendation_feedbacks")
+}
+
+model RecommendationAlgorithmConfig {
+  id                    String    @id @default(uuid())
+  version               String    @unique
+  skillWeight           Float     @default(0.25)
+  contentWeight         Float     @default(0.15)
+  behaviorWeight        Float     @default(0.15)
+  collaborativeWeight   Float     @default(0.10)
+  qualityWeight         Float     @default(0.10)
+  contextWeight         Float     @default(0.08)
+  popularityWeight      Float     @default(0.07)
+  freshnessWeight       Float     @default(0.05)
+  explorationWeight     Float     @default(0.05)
+  explorationPercentage Float     @default(0.15)
+  diversityLambda       Float     @default(0.70)
+  maxSameCategory       Int       @default(3)
+  maxSameGroup          Int       @default(2)
+  maxSameTrainer        Int       @default(2)
+  minimumEvidence       Int       @default(3)
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  activatedAt           DateTime  @default(now())
+  deactivatedAt         DateTime?
+
+  @@map("recommendation_algorithm_configs")
+}
+
+model UserRecommendationProfile {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  preferredCategories   String[] @default([])
+  preferredDifficulty   String?
+  preferredContentTypes String[] @default([])
+  interestTopics        String[] @default([])
+  recentTopics          String[] @default([])
+  recentCourses         String[] @default([])
+  engagementScore       Float    @default(50.0)
+  explorationPreference Float    @default(0.15)
+  behaviorVector        Json?
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_recommendation_profiles")
+}
+
+model CourseRecommendationProfile {
+  id               String   @id @default(uuid())
+  courseId         String   @unique
+  skillCoverage    Json?
+  topicCoverage    Json?
+  qualityScore     Float    @default(75.0)
+  completionRate   Float    @default(0.0)
+  averageRating    Float    @default(4.5)
+  ratingCount      Int      @default(0)
+  popularityScore  Float    @default(50.0)
+  freshnessScore   Float    @default(100.0)
+  engagementScore  Float    @default(50.0)
+  updatedAt        DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@map("course_recommendation_profiles")
 }
 
 model TrainerMatch {

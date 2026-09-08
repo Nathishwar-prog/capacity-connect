@@ -9,7 +9,6 @@ import {
   RootCauseAlgorithm,
   ReadinessAlgorithm,
   GapClusteringAlgorithm,
-  TrendAlgorithm,
 } from '../algorithms';
 import { AISkillGapAnalyzer } from '../ai/skill-gap-analyzer';
 import {
@@ -86,12 +85,6 @@ describe('AI Skill Gap Analyzer — Comprehensive Simulations', () => {
 
   describe('Learner B: Core Prerequisite Gap (Gating Check)', () => {
     it('should gate readiness status to NOT_READY even when peripheral skills are advanced', () => {
-      const requirements: CompetencyRequirement[] = [
-        { competencyId: 'core-dyn', code: 'DYN-01', name: 'Atmospheric Dynamics (Core)', targetLevel: 4, importance: 1.0, criticality: 'CORE', weight: 1.0 },
-        { competencyId: 'py-sci', code: 'PY-01', name: 'Python for Earth Sciences', targetLevel: 3, importance: 0.8, criticality: 'NORMAL', weight: 1.0 },
-        { competencyId: 'netcdf', code: 'CDO-01', name: 'NetCDF Manipulation', targetLevel: 3, importance: 0.7, criticality: 'NORMAL', weight: 1.0 },
-      ];
-
       // Advanced in Python & NetCDF, but zero background in Atmospheric Dynamics
       const items: CalculatedGapItem[] = [
         {
