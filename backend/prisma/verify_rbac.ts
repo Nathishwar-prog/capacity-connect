@@ -7,27 +7,44 @@ import {
   requirePermission,
   requireSelfOrRole,
 } from '../src/auth/auth.middleware';
-import { Permissions } from '../src/permissions';
+import { Permissions, SOURCE_PERMISSIONS, permissionsMap, hasPermission } from '../src/permissions';
 import { TokenUtils, TokenPayload } from '../src/auth/token.utils';
+import { RbacService } from '../src/services/rbac.service';
+import { RbacRepository } from '../src/repositories/rbac.repository';
+import prisma from '../src/database/client';
 
 function mockRequest(options: {
   headers?: Record<string, string>;
   user?: TokenPayload;
   params?: Record<string, string>;
+  body?: Record<string, any>;
+  query?: Record<string, any>;
 }): Request {
   return {
     headers: options.headers || {},
     user: options.user,
     params: options.params || {},
+    body: options.body || {},
+    query: options.query || {},
   } as unknown as Request;
 }
 
 const mockResponse = {} as Response;
 
 async function verifyRbacMilestone() {
-  console.log('🧪 Starting Milestone 3: RBAC & Permissions Verification Suite...\n');
+  console.log('🧪 Starting Capacity Connect: M2 Development 2 — RBAC Verification Suite...\n');
 
-  // Test payloads
+  // 0. Synchronize Permissions in Database
+  console.log('0️⃣  Testing RBAC Repository & DB Permission Synchronization...');
+  if (SOURCE_PERMISSIONS.length !== 10) {
+    throw new Error(`Expected exactly 10 source permissions, found: ${SOURCE_PERMISSIONS.length}`);
+  }
+  const rbacRepo = new RbacRepository();
+  const rbacService = new RbacService(rbacRepo);
+  await rbacService.syncPermissions();
+  console.log(`   ✅ ${SOURCE_PERMISSIONS.length} source permissions synchronized into PostgreSQL permissions & role_permissions tables.`);
+
+  // Test payloads generated using source-defined role mappings
   const superAdminPayload: TokenPayload = {
     userId: 'super-admin-uuid-001',
     email: 'superadmin@capacityconnect.io',
@@ -39,29 +56,25 @@ async function verifyRbacMilestone() {
     userId: 'admin-uuid-002',
     email: 'admin@capacityconnect.io',
     role: Role.ADMIN,
-    permissions: [
-      Permissions.USERS_READ,
-      Permissions.USERS_WRITE,
-      Permissions.COURSES_APPROVE,
-    ],
+    permissions: permissionsMap[Role.ADMIN],
   };
 
   const trainerPayload: TokenPayload = {
     userId: 'trainer-uuid-003',
     email: 'trainer@capacityconnect.io',
     role: Role.TRAINER,
-    permissions: [Permissions.COURSES_READ, Permissions.COURSES_WRITE],
+    permissions: permissionsMap[Role.TRAINER],
   };
 
   const traineePayload: TokenPayload = {
     userId: 'trainee-uuid-004',
     email: 'trainee@capacityconnect.io',
     role: Role.TRAINEE,
-    permissions: [Permissions.COURSES_READ, Permissions.ASSESSMENTS_TAKE],
+    permissions: permissionsMap[Role.TRAINEE],
   };
 
-  // 1. Test Authentication Middleware with Valid / Invalid Tokens
-  console.log('1️⃣  Testing Authentication Middleware Token Guards...');
+  // 1. Test Authentication Middleware Guards (Authentication Boundary)
+  console.log('\n1️⃣  Testing Authentication Middleware Token Guards...');
   const validToken = TokenUtils.generateAccessToken(traineePayload);
 
   let authPassed = false;
@@ -120,33 +133,125 @@ async function verifyRbacMilestone() {
   if (!traineeBlocked) throw new Error('TRAINEE was not rejected with 403 on Admin route');
   console.log('   ✅ TRAINEE rejected with 403 Forbidden.');
 
-  // 3. Test Fine-Grained Permission Guards (requirePermission)
-  console.log('\n3️⃣  Testing Fine-Grained Permission Guards (requirePermission)...');
-  const courseApproveGuard = requirePermission(Permissions.COURSES_APPROVE);
+  // 3. Test Verification of All 10 Source-Defined Permissions Individually
+  console.log('\n3️⃣  Testing All 10 Source-Defined Permissions (requirePermission)...');
 
-  let adminPermPassed = false;
-  courseApproveGuard(mockRequest({ user: adminPayload }), mockResponse, (err?: any) => {
-    if (!err) adminPermPassed = true;
+  const expectedAdminPermissions = [
+    Permissions.USER_READ,
+    Permissions.USER_APPROVE,
+    Permissions.USER_REJECT,
+    Permissions.USER_ROLE_UPDATE,
+    Permissions.COURSE_CREATE,
+    Permissions.COURSE_UPDATE,
+    Permissions.COURSE_APPROVE,
+    Permissions.ASSESSMENT_CREATE,
+    Permissions.RESOURCE_UPLOAD,
+    Permissions.ANALYTICS_VIEW,
+  ];
+
+  const expectedTrainerPermissions = [
+    Permissions.COURSE_CREATE,
+    Permissions.COURSE_UPDATE,
+    Permissions.ASSESSMENT_CREATE,
+    Permissions.RESOURCE_UPLOAD,
+    Permissions.ANALYTICS_VIEW,
+  ];
+
+  const expectedTrainerDeniedPermissions = [
+    Permissions.USER_READ,
+    Permissions.USER_APPROVE,
+    Permissions.USER_REJECT,
+    Permissions.USER_ROLE_UPDATE,
+    Permissions.COURSE_APPROVE,
+  ];
+
+  for (const perm of expectedAdminPermissions) {
+    const guard = requirePermission(perm);
+
+    // Test Admin: Must be allowed for all 10 permissions
+    let adminOk = false;
+    guard(mockRequest({ user: adminPayload }), mockResponse, (err?: any) => {
+      if (!err) adminOk = true;
+    });
+    if (!adminOk) throw new Error(`ADMIN was unexpectedly denied permission: ${perm}`);
+
+    // Test Trainee: Must be rejected (403) for all 10 source permissions
+    let traineeBlocked = false;
+    guard(mockRequest({ user: traineePayload }), mockResponse, (err?: any) => {
+      if (err && err.statusCode === 403) traineeBlocked = true;
+    });
+    if (!traineeBlocked) throw new Error(`TRAINEE was not rejected with 403 for permission: ${perm}`);
+
+    // Test Super Admin: Must pass via wildcard bypass
+    let superAdminOk = false;
+    guard(mockRequest({ user: superAdminPayload }), mockResponse, (err?: any) => {
+      if (!err) superAdminOk = true;
+    });
+    if (!superAdminOk) throw new Error(`SUPER_ADMIN wildcard failed for permission: ${perm}`);
+
+    console.log(`   ✅ Permission '${perm}': ADMIN allowed, TRAINEE denied (403), SUPER_ADMIN allowed.`);
+  }
+
+  // 3. Test Trainer Role Specific Boundary
+  console.log('\n3️⃣  Testing TRAINER Specific Role Permissions Boundary...');
+  for (const perm of expectedTrainerPermissions) {
+    const guard = requirePermission(perm);
+    let trainerOk = false;
+    guard(mockRequest({ user: trainerPayload }), mockResponse, (err?: any) => {
+      if (!err) trainerOk = true;
+    });
+    if (!trainerOk) throw new Error(`TRAINER was denied allowed permission: ${perm}`);
+    console.log(`   ✅ TRAINER granted authorized permission: '${perm}'`);
+  }
+
+  for (const perm of expectedTrainerDeniedPermissions) {
+    const guard = requirePermission(perm);
+    let trainerBlocked = false;
+    guard(mockRequest({ user: trainerPayload }), mockResponse, (err?: any) => {
+      if (err && err.statusCode === 403) trainerBlocked = true;
+    });
+    if (!trainerBlocked) throw new Error(`TRAINER was not blocked for admin permission: ${perm}`);
+    console.log(`   ✅ TRAINER denied restricted admin permission: '${perm}' (403 Forbidden)`);
+  }
+
+  // 4. Test Client Injection / Spoofing Resilience
+  console.log('\n4️⃣  Testing Security: Client Injection Attack Resistance...');
+  // A malicious client passes role: 'ADMIN' in request body/query, but JWT token is TRAINEE
+  const spoofedBodyRequest = mockRequest({
+    user: traineePayload,
+    body: { role: 'ADMIN', permissions: ['*'] },
+    query: { role: 'ADMIN' },
+    headers: { 'x-role': 'ADMIN', 'x-permission': 'user:approve' },
   });
-  if (!adminPermPassed) throw new Error('Admin with COURSES_APPROVE failed permission check');
-  console.log('   ✅ User with COURSES_APPROVE passed check.');
 
-  let trainerPermDenied = false;
-  courseApproveGuard(mockRequest({ user: trainerPayload }), mockResponse, (err?: any) => {
-    if (err && err.statusCode === 403) trainerPermDenied = true;
+  const userApproveGuard = requirePermission(Permissions.USER_APPROVE);
+  let spoofBlocked = false;
+  userApproveGuard(spoofedBodyRequest, mockResponse, (err?: any) => {
+    if (err && err.statusCode === 403) spoofBlocked = true;
   });
-  if (!trainerPermDenied) throw new Error('Trainer without COURSES_APPROVE was not blocked');
-  console.log('   ✅ User lacking COURSES_APPROVE denied (403 Forbidden).');
+  if (!spoofBlocked) throw new Error('Security flaw: Client body/query role injection bypassed authorization');
+  console.log('   ✅ Client body/query/header role spoofing was completely ignored. Denied with 403.');
 
-  let superAdminWildcardPassed = false;
-  courseApproveGuard(mockRequest({ user: superAdminPayload }), mockResponse, (err?: any) => {
-    if (!err) superAdminWildcardPassed = true;
-  });
-  if (!superAdminWildcardPassed) throw new Error('Super Admin wildcard failed permission check');
-  console.log('   ✅ SUPER_ADMIN wildcard (*) passed permission check.');
+  // 5. Test RbacService Business Logic & Error Handling
+  console.log('\n5️⃣  Testing RbacService Layer...');
+  const matrix = rbacService.getRolePermissionMatrix();
+  if (!matrix.ADMIN.includes(Permissions.USER_READ) || !matrix.TRAINER.includes(Permissions.COURSE_CREATE)) {
+    throw new Error('RbacService returned invalid permission matrix');
+  }
+  console.log('   ✅ RbacService.getRolePermissionMatrix() returns verified source mapping.');
 
-  // 4. Test Self or Role Guard (requireSelfOrRole)
-  console.log('\n4️⃣  Testing Self-or-Role Guard (requireSelfOrRole)...');
+  const hasPermDirect = rbacService.hasPermission(Role.ADMIN, matrix.ADMIN, Permissions.USER_ROLE_UPDATE);
+  if (!hasPermDirect) throw new Error('RbacService.hasPermission returned false for ADMIN user:role:update');
+  const hasPermTraineeDenied = rbacService.hasPermission(Role.TRAINEE, matrix.TRAINEE, Permissions.USER_ROLE_UPDATE);
+  if (hasPermTraineeDenied) throw new Error('RbacService.hasPermission returned true for TRAINEE user:role:update');
+  console.log('   ✅ RbacService.hasPermission() direct evaluation verified.');
+
+  const directHasPermissionCheck = hasPermission(Role.ADMIN, matrix.ADMIN, Permissions.ANALYTICS_VIEW);
+  if (!directHasPermissionCheck) throw new Error('Direct hasPermission() failed for ADMIN analytics:view');
+  console.log('   ✅ Direct hasPermission() utility verified.');
+
+  // 6. Test Self or Role Guard (requireSelfOrRole)
+  console.log('\n6️⃣  Testing Self-or-Role Guard (requireSelfOrRole)...');
   const selfOrAdminGuard = requireSelfOrRole([Role.ADMIN, Role.SUPER_ADMIN]);
 
   let selfAllowed = false;
@@ -183,11 +288,15 @@ async function verifyRbacMilestone() {
   console.log('   ✅ Privileged ADMIN operating on another user allowed.');
 
   console.log('\n======================================================');
-  console.log('🎉 ALL 11 RBAC & PERMISSION GUARD TESTS PASSED!');
+  console.log('🎉 ALL 20 RBAC SOURCE PERMISSION & SECURITY TESTS PASSED!');
   console.log('======================================================');
 }
 
-verifyRbacMilestone().catch((e) => {
-  console.error('\n❌ RBAC Verification Failed:', e);
-  process.exit(1);
-});
+verifyRbacMilestone()
+  .catch((e) => {
+    console.error('\n❌ RBAC Verification Failed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

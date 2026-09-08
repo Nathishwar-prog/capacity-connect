@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Role } from '@prisma/client';
 import { DashboardController } from '../controllers/dashboard.controller';
 import { DashboardService } from '../services/dashboard.service';
-import { authenticate, requireRole } from '../auth/auth.middleware';
+import { authenticate, requireRole, requirePermission, Permissions } from '../auth/auth.middleware';
 import { asyncHandler } from '../errors/async.handler';
 
 const router = Router();
@@ -31,6 +31,7 @@ router.get(
 router.get(
   '/admin',
   requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
+  requirePermission(Permissions.ANALYTICS_VIEW),
   asyncHandler(dashboardController.getAdminDashboard),
 );
 

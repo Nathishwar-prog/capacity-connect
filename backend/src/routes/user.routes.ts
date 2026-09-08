@@ -4,7 +4,13 @@ import { UserController } from '../controllers/user.controller';
 import { UserService } from '../services/user.service';
 import { UserRepository } from '../repositories/user.repository';
 import { validate } from '../validators/validate.middleware';
-import { authenticate, requireRole, requireSelfOrRole } from '../auth/auth.middleware';
+import {
+  authenticate,
+  requireRole,
+  requirePermission,
+  Permissions,
+  requireSelfOrRole,
+} from '../auth/auth.middleware';
 import {
   createUserSchema,
   updateUserSchema,
@@ -25,6 +31,7 @@ router.use(authenticate);
 router.get(
   '/',
   requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
+  requirePermission(Permissions.USER_READ),
   asyncHandler(userController.getUserList),
 );
 

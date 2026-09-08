@@ -26,4 +26,3 @@ export const UserRoles = {
   TRAINER: 'TRAINER' as Role,
   TRAINEE: 'TRAINEE' as Role,
 } as const;
-

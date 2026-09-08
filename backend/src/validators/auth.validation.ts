@@ -37,3 +37,18 @@ export const loginSchema = z.object({
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().optional(),
 });
+
+export const verifyEmailSchema = z.object({
+  token: z
+    .string({ required_error: 'Verification token is required' })
+    .min(10, 'Verification token format is invalid')
+    .trim(),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z
+    .string({ required_error: 'Email is required' })
+    .email('Invalid email address format')
+    .toLowerCase()
+    .trim(),
+});

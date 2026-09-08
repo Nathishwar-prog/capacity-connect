@@ -1,3 +1,5 @@
+import swaggerUi from 'swagger-ui-express';
+import openapiSpec from './docs/openapi.json';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -7,6 +9,7 @@ import config from './config';
 import logger from './logger/winston.logger';
 import requestLogger from './logger/request.logger';
 import apiRouter from './routes';
+import { adminRouter } from './routes/admin.routes';
 import { globalErrorHandler } from './errors/error.middleware';
 import { NotFoundError } from './errors/app-error';
 
@@ -71,11 +74,19 @@ app.get('/', (_req, res) => {
       health: `${config.API_PREFIX}/health`,
       auth: `${config.API_PREFIX}/auth`,
       users: `${config.API_PREFIX}/users`,
+      admin: `${config.API_PREFIX}/admin`,
     },
   });
 });
 
+// --- Swagger API Documentation ---
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
+
 // --- 2. REST Endpoints ---
+// Mount root-level /admin alias for backwards compatibility and direct path access
+app.use('/admin', adminRouter);
+
+// Mount versioned REST API gateway (/api/v1)
 app.use(config.API_PREFIX, apiRouter);
 
 // Fallback Route for handling unmatched endpoints (404)
@@ -108,3 +119,6 @@ process.on('unhandledRejection', (reason: unknown) => {
     process.exit(1);
   });
 });
+
+export { app, server };
+export default app;
