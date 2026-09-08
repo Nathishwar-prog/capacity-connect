@@ -26,5 +26,13 @@
     "no-console": "warn",
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/__tests__/**/*.ts", "src/**/*.test.ts", "src/**/*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    }
+  ]
 }
