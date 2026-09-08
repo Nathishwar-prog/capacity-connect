@@ -16,18 +16,19 @@ interface AppShellProps {
 const DEFAULT_NOTIFICATIONS: TraineeNotification[] = [
   {
     id: 'notif-1',
-    title: 'Weather Forecasting Session Scheduled',
-    message: 'Weather Forecasting training session scheduled for tomorrow at 10:00 AM IST.',
-    timestamp: '25m ago',
+    title: 'Severe Weather Radar Nowcasting Workshop Scheduled',
+    message:
+      'Live operational training session with Dr. S. K. Roy (Radar Division) scheduled for tomorrow at 10:00 AM IST.',
+    timestamp: '15m ago',
     read: false,
     category: 'training',
-    actionUrl: '/trainee/courses',
+    actionUrl: '/learning/course-1',
   },
   {
     id: 'notif-2',
-    title: 'Assessment Assigned',
+    title: 'NWP WRF Numerical Modeling Assessment Assigned',
     message:
-      'Numerical Weather Prediction (NWP) Module 2 assessment is now available for submission.',
+      'Numerical Weather Prediction (NWP) Module 2 practical assessment is now available for evaluation.',
     timestamp: '2h ago',
     read: false,
     category: 'assessment',
@@ -35,12 +36,33 @@ const DEFAULT_NOTIFICATIONS: TraineeNotification[] = [
   },
   {
     id: 'notif-3',
-    title: 'Certificate Issued',
-    message: 'Credential verified: Satellite Meteorology & Radar Fundamentals course completion.',
+    title: 'Official Circular: Revised WMO-258 Forecasting Standards',
+    message:
+      'Director General of Meteorology bulletin regarding updated tropical cyclone warning nomenclature.',
+    timestamp: '5h ago',
+    read: false,
+    category: 'announcement',
+    actionUrl: '/trainee/notifications',
+  },
+  {
+    id: 'notif-4',
+    title: 'WMO-258 Satellite Meteorology Credential Issued',
+    message:
+      'Credential verified: Satellite Meteorology & INSAT-3DR Multispectral Imagery course completion.',
     timestamp: 'Yesterday',
     read: true,
     category: 'certificate',
     actionUrl: '/trainee/certificates',
+  },
+  {
+    id: 'notif-5',
+    title: 'Synoptic Observation Practice Session Completed',
+    message:
+      'Surface Weather Observation exercise evaluation submitted by Pune Training Center (Score: 92/100).',
+    timestamp: '2 days ago',
+    read: true,
+    category: 'training',
+    actionUrl: '/trainee/progress',
   },
 ];
 

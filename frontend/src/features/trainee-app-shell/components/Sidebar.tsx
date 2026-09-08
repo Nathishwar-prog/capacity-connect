@@ -12,7 +12,6 @@ import {
   Award,
   Bell,
   User,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -75,11 +74,6 @@ const TRAINEE_NAV_ITEMS: NavItem[] = [
     href: '/trainee/profile',
     label: 'Profile',
     icon: User,
-  },
-  {
-    href: '/trainee/settings',
-    label: 'Settings',
-    icon: Settings,
   },
 ];
 

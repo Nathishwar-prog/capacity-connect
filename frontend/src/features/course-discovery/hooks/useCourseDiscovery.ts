@@ -24,7 +24,7 @@ export function useCourseDiscovery() {
 
   // Local state for interactive local demo enrollment
   const [localCourses, setLocalCourses] = useState<CourseDetails[]>(mockCatalogCourses);
-  const [isUsingMock, setIsUsingMock] = useState(false);
+  const [isUsingMock, setIsUsingMock] = useState(true);
 
   // Query parameters object
   const queryParams: CourseQueryParams = useMemo(
@@ -53,6 +53,7 @@ export function useCourseDiscovery() {
         return null;
       }
     },
+    retry: false,
     staleTime: 1000 * 60 * 3,
   });
 

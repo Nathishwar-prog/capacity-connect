@@ -25,7 +25,7 @@ export function useLearningCourse(courseId: string, initialLessonId?: string) {
     return initialCourse?.currentLessonId || 'les-1-1';
   });
 
-  const [isUsingMock, setIsUsingMock] = useState(false);
+  const [isUsingMock, setIsUsingMock] = useState(true);
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(() => {
     const initialCourse = mockLearningCourses[courseId] || mockLearningCourses['course-1'];
     const initialCompleted = new Set<string>();
@@ -52,6 +52,7 @@ export function useLearningCourse(courseId: string, initialLessonId?: string) {
         return fallback;
       }
     },
+    retry: false,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -112,6 +113,7 @@ export function useLearningCourse(courseId: string, initialLessonId?: string) {
         return null;
       }
     },
+    retry: false,
     enabled: Boolean(activeLessonId),
   });
 
