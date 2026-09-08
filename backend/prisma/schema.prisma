@@ -219,6 +219,35 @@ enum AchievementType {
   BADGE
 }
 
+enum LearningEventType {
+  LESSON_VIEWED
+  LESSON_COMPLETED
+  QUIZ_ANSWERED
+  PRACTICE_ATTEMPT
+  ASSESSMENT_ANSWERED
+  ASSESSMENT_COMPLETED
+  REVISION_STARTED
+  REVISION_COMPLETED
+  RETRIEVAL_ATTEMPT
+  DIAGNOSTIC_ATTEMPT
+}
+
+enum RevisionSessionStatus {
+  GENERATED
+  STARTED
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+enum RevisionMode {
+  RECOVERY
+  REBUILD
+  STRENGTHEN
+  RETRIEVE
+  MAINTAIN_CHALLENGE
+}
+
 // ==============================================================================
 // 2. IDENTITY & ORGANIZATION
 // ==============================================================================
@@ -322,6 +351,14 @@ model User {
   createdAnnouncements Announcement[] @relation("AnnouncementAuthor")
   notifications        Notification[]
   achievements         Achievement[]
+
+  // Adaptive Revision Engine
+  learningEvents        LearningEvent[]
+  userTopicCompetencies UserTopicCompetency[]
+  userGroupCompetencies UserGroupCompetency[]
+  userTopicErrors       UserTopicError[]
+  revisionSessions      RevisionSession[]
+  revisionOutcomes      RevisionOutcome[]
 
   @@index([email])
   @@index([organizationId])
@@ -607,6 +644,11 @@ model Course {
   recommendations    Recommendation[]
   feedbacks          Feedback[]
 
+  // Adaptive Revision Engine
+  competencyGroups CompetencyGroup[]
+  learningTopics   LearningTopic[]
+  revisionSessions RevisionSession[]
+
   // Self-referencing Many-to-Many Prerequisites
   prerequisites   CoursePrerequisite[] @relation("CoursePrerequisites")
   prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteForCourses")
@@ -665,6 +707,7 @@ model Lesson {
   module          CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   lessonProgress  LessonProgress[]
   lessonResources LessonResource[]
+  lessonTopics    LessonTopic[]
 
   @@index([moduleId, orderIndex])
   @@map("lessons")
@@ -824,8 +867,9 @@ model AssessmentQuestion {
   updatedAt    DateTime     @updatedAt
 
   assessment Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  options    QuestionOption[]
-  answers    AssessmentAnswer[]
+  options        QuestionOption[]
+  answers        AssessmentAnswer[]
+  questionTopics AssessmentQuestionTopic[]
 
   @@index([assessmentId, orderIndex])
   @@map("assessment_questions")
@@ -909,6 +953,7 @@ model Competency {
   skillGaps                   SkillGap[]
   recommendations             Recommendation[]
   trainerMatches              TrainerMatch[]
+  topicCompetencies           LearningTopicCompetency[]
 
   @@index([category])
   @@index([code])
@@ -1141,4 +1186,382 @@ model Achievement {
   @@index([userId])
   @@index([type])
   @@map("achievements")
+}
+
+// ==============================================================================
+// 12. ADAPTIVE COMPETENCY-BASED REVISION ENGINE
+// ==============================================================================
+
+model CompetencyGroup {
+  id            String   @id @default(uuid())
+  courseId      String
+  parentGroupId String?
+  name          String
+  description   String?
+  importance    Float    @default(1.0)
+  orderIndex    Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  course                Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  parentGroup           CompetencyGroup?      @relation("GroupHierarchy", fields: [parentGroupId], references: [id], onDelete: SetNull)
+  childGroups           CompetencyGroup[]     @relation("GroupHierarchy")
+  topics                LearningTopic[]
+  userGroupCompetencies UserGroupCompetency[]
+  revisionSessions      RevisionSession[]
+
+  @@index([courseId, orderIndex])
+  @@index([parentGroupId])
+  @@map("competency_groups")
+}
+
+model LearningTopic {
+  id               String   @id @default(uuid())
+  courseId         String
+  groupId          String
+  parentTopicId    String?
+  name             String
+  code             String   @unique
+  description      String?
+  importance       Float    @default(1.0)
+  difficulty       Float    @default(0.5)
+  estimatedMinutes Int      @default(10)
+  orderIndex       Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  course                Course                    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  group                 CompetencyGroup           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  parentTopic           LearningTopic?            @relation("TopicHierarchy", fields: [parentTopicId], references: [id], onDelete: SetNull)
+  childTopics           LearningTopic[]           @relation("TopicHierarchy")
+  prerequisites         TopicPrerequisite[]       @relation("TopicPrerequisites")
+  prerequisiteFor       TopicPrerequisite[]       @relation("PrerequisiteForTopics")
+  competencyMappings    LearningTopicCompetency[]
+  questionMappings      AssessmentQuestionTopic[]
+  lessonMappings        LessonTopic[]
+  learningEvents        LearningEvent[]
+  userTopicCompetencies UserTopicCompetency[]
+  userTopicErrors       UserTopicError[]
+  sessionItems          RevisionSessionItem[]
+  revisionOutcomes      RevisionOutcome[]
+
+  @@index([courseId])
+  @@index([groupId])
+  @@index([parentTopicId])
+  @@index([code])
+  @@map("learning_topics")
+}
+
+model TopicPrerequisite {
+  id                  String   @id @default(uuid())
+  prerequisiteTopicId String
+  dependentTopicId    String
+  edgeWeight          Float    @default(1.0)
+  dependencyType      String   @default("DIRECT")
+  createdAt           DateTime @default(now())
+
+  prerequisiteTopic LearningTopic @relation("PrerequisiteForTopics", fields: [prerequisiteTopicId], references: [id], onDelete: Cascade)
+  dependentTopic    LearningTopic @relation("TopicPrerequisites", fields: [dependentTopicId], references: [id], onDelete: Cascade)
+
+  @@unique([prerequisiteTopicId, dependentTopicId])
+  @@index([prerequisiteTopicId])
+  @@index([dependentTopicId])
+  @@map("topic_prerequisites")
+}
+
+model LearningTopicCompetency {
+  id           String   @id @default(uuid())
+  topicId      String
+  competencyId String
+  weight       Float    @default(1.0)
+  createdAt    DateTime @default(now())
+
+  topic      LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  competency Competency    @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, competencyId])
+  @@index([topicId])
+  @@index([competencyId])
+  @@map("learning_topic_competencies")
+}
+
+model AssessmentQuestionTopic {
+  id         String   @id @default(uuid())
+  questionId String
+  topicId    String
+  weight     Float    @default(1.0)
+  createdAt  DateTime @default(now())
+
+  question AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    LearningTopic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, topicId])
+  @@index([questionId])
+  @@index([topicId])
+  @@map("assessment_question_topics")
+}
+
+model LessonTopic {
+  id        String   @id @default(uuid())
+  lessonId  String
+  topicId   String
+  createdAt DateTime @default(now())
+
+  lesson Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  topic  LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, topicId])
+  @@index([lessonId])
+  @@index([topicId])
+  @@map("lesson_topics")
+}
+
+model LearningEvent {
+  id                    String            @id @default(uuid())
+  userId                String
+  courseId              String?
+  groupId               String?
+  topicId               String
+  eventType             LearningEventType
+  source                String
+  assessmentAttemptId   String?
+  questionId            String?
+  revisionSessionId     String?
+  lessonId              String?
+  correct               Boolean?
+  responseTimeMs        Int?
+  hintsUsed             Int?              @default(0)
+  confidenceRating      Float?
+  difficulty            Float?
+  rawScore              Float?
+  normalizedPerformance Float?
+  previousCompetency    Float?
+  newCompetency         Float?
+  metadata              Json?
+  occurredAt            DateTime          @default(now())
+  createdAt             DateTime          @default(now())
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([userId, topicId])
+  @@index([topicId])
+  @@index([eventType])
+  @@index([occurredAt])
+  @@map("learning_events")
+}
+
+model UserTopicCompetency {
+  id                     String    @id @default(uuid())
+  userId                 String
+  topicId                String
+  competencyScore        Float     @default(50.0)
+  confidenceScore        Float     @default(0.1)
+  accuracyScore          Float     @default(50.0)
+  speedScore             Float     @default(50.0)
+  hintScore              Float     @default(100.0)
+  confidenceRatingScore  Float     @default(50.0)
+  independenceScore      Float     @default(100.0)
+  attemptCount           Int       @default(0)
+  meaningfulAttemptCount Int       @default(0)
+  consecutiveFailures    Int       @default(0)
+  consecutiveSuccesses   Int       @default(0)
+  stability              Float     @default(1.0)
+  retention              Float     @default(1.0)
+  forgettingRisk         Float     @default(0.0)
+  lastReviewedAt         DateTime?
+  lastAssessedAt         DateTime?
+  nextReviewAt           DateTime?
+  priorityScore          Float     @default(50.0)
+  algorithmVersion       String    @default("v1.0.0")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([userId])
+  @@index([topicId])
+  @@index([userId, priorityScore])
+  @@index([topicId, priorityScore])
+  @@index([nextReviewAt])
+  @@map("user_topic_competencies")
+}
+
+model UserGroupCompetency {
+  id                    String    @id @default(uuid())
+  userId                String
+  groupId               String
+  groupCompetency       Float     @default(50.0)
+  groupConfidence       Float     @default(0.1)
+  groupWeakness         Float     @default(50.0)
+  groupForgettingRisk   Float     @default(0.0)
+  groupImportance       Float     @default(1.0)
+  groupDependencyImpact Float     @default(0.0)
+  groupUncertainty      Float     @default(90.0)
+  groupRecency          Float     @default(0.0)
+  groupPriority         Float     @default(50.0)
+  weakTopicCount        Int       @default(0)
+  criticalTopicCount    Int       @default(0)
+  lastRevisionAt        DateTime?
+  lastAssessmentAt      DateTime?
+  algorithmVersion      String    @default("v1.0.0")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group CompetencyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([userId, groupPriority])
+  @@map("user_group_competencies")
+}
+
+model UserTopicError {
+  id                String    @id @default(uuid())
+  userId            String
+  topicId           String
+  errorType         String
+  errorCode         String?
+  description       String?
+  errorCount        Int       @default(1)
+  severity          Float     @default(20.0)
+  firstDetectedAt   DateTime  @default(now())
+  lastDetectedAt    DateTime  @default(now())
+  resolvedAt        DateTime?
+  exampleQuestionId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId, errorType])
+  @@index([userId])
+  @@index([topicId])
+  @@index([severity])
+  @@map("user_topic_errors")
+}
+
+model RevisionAlgorithmConfig {
+  id                            String    @id @default(uuid())
+  version                       String    @unique
+  topicWeaknessWeight           Float     @default(0.35)
+  topicForgettingWeight         Float     @default(0.18)
+  topicImportanceWeight         Float     @default(0.12)
+  topicDependencyWeight         Float     @default(0.12)
+  topicErrorWeight              Float     @default(0.10)
+  topicUncertaintyWeight        Float     @default(0.08)
+  topicRecencyWeight            Float     @default(0.05)
+  groupWeaknessWeight           Float     @default(0.40)
+  groupForgettingWeight         Float     @default(0.20)
+  groupImportanceWeight         Float     @default(0.15)
+  groupDependencyWeight         Float     @default(0.15)
+  groupUncertaintyWeight        Float     @default(0.10)
+  cooldownHours                 Int       @default(24)
+  masteryThreshold              Float     @default(85.0)
+  diagnosticConfidenceThreshold Float     @default(0.40)
+  maxTopicsPerSession           Int       @default(6)
+  maxGroupConcentration         Float     @default(0.80)
+  primaryGroupAllocation        Float     @default(0.70)
+  prerequisiteAllocation        Float     @default(0.20)
+  retentionAllocation           Float     @default(0.10)
+  isActive                      Boolean   @default(true)
+  createdAt                     DateTime  @default(now())
+  activatedAt                   DateTime  @default(now())
+  deactivatedAt                 DateTime?
+
+  @@map("revision_algorithm_configs")
+}
+
+model RevisionSession {
+  id               String                @id @default(uuid())
+  userId           String
+  courseId         String
+  availableMinutes Int
+  focusGroupId     String?
+  sessionType      String                @default("ADAPTIVE_COMPETENCY")
+  status           RevisionSessionStatus @default(GENERATED)
+  algorithmVersion String                @default("v1.0.0")
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  focusGroup CompetencyGroup?      @relation(fields: [focusGroupId], references: [id], onDelete: SetNull)
+  items      RevisionSessionItem[]
+  outcomes   RevisionOutcome[]
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+  @@map("revision_sessions")
+}
+
+model RevisionSessionItem {
+  id                    String          @id @default(uuid())
+  sessionId             String
+  topicId               String
+  sequenceNumber        Int
+  priorityScore         Float
+  groupPriorityScore    Float
+  weaknessScore         Float
+  forgettingRiskScore   Float
+  importanceScore       Float
+  dependencyImpactScore Float
+  errorSeverityScore    Float
+  uncertaintyScore      Float
+  recencyScore          Float
+  reason                Json
+  reasonCodes           String[]
+  revisionMode          RevisionMode
+  allocatedMinutes      Int
+  status                String          @default("PENDING")
+  preCompetency         Float?
+  postCompetency        Float?
+  educationalContent    Json?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  session RevisionSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  topic   LearningTopic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  outcome RevisionOutcome?
+
+  @@index([sessionId, sequenceNumber])
+  @@index([topicId])
+  @@map("revision_session_items")
+}
+
+model RevisionOutcome {
+  id                 String   @id @default(uuid())
+  sessionId          String
+  sessionItemId      String   @unique
+  userId             String
+  topicId            String
+  preScore           Float
+  postScore          Float
+  questionsPresented Int      @default(0)
+  questionsAnswered  Int      @default(0)
+  correctAnswers     Int      @default(0)
+  timeSpentSeconds   Int      @default(0)
+  retrievalScore     Float?
+  completed          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  session     RevisionSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionItem RevisionSessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic       LearningTopic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([topicId])
+  @@map("revision_outcomes")
 }

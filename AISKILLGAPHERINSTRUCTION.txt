@@ -1,0 +1,971 @@
+The important distinction is:
+
+Skill Gap Analyzer = determines what the learner is missing and why.
+Revision Engine = determines what the learner should revise now and in what sequence.
+
+They should work together, but they should not be the same algorithm.
+
+Your Capacity Connect proposal already identifies AI Skill Analyzer → skill-gap identification, while the revision design establishes a deterministic learner model based on evidence, competency, confidence, dependencies and learning history.
+
+Below is the architecture I recommend, followed by a full implementation prompt you can give to your coding agent.
+
+1. What the AI Skill Gap Analyzer should actually do
+
+Don't build:
+
+LLM reads user profile
+        ↓
+LLM says:
+"You have a skill gap in X"
+
+That will be unreliable.
+
+Build:
+
+                    LEARNER
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+ Assessment       Learning       Profile /
+ Results           Events        Experience
+        │              │              │
+        └──────────────┼──────────────┘
+                       ▼
+                EVIDENCE ENGINE
+                       │
+                       ▼
+              COMPETENCY STATE
+                       │
+                       ▼
+             REQUIRED SKILL MODEL
+                       │
+                       ▼
+                GAP ANALYZER
+                       │
+       ┌───────────────┼────────────────┐
+       ▼               ▼                ▼
+   Missing Skill   Weak Skill      At-Risk Skill
+       │               │                │
+       └───────────────┼────────────────┘
+                       ▼
+                GAP SEVERITY
+                       │
+                       ▼
+             ROOT-CAUSE ANALYSIS
+                       │
+                       ▼
+              LLM INTERPRETATION
+                       │
+                       ▼
+          PERSONALIZED GAP REPORT
+                       │
+        ┌──────────────┼───────────────┐
+        ▼              ▼               ▼
+     Revision      Course Path      Trainer
+      Engine       Recommendation   Dashboard
+
+The LLM is therefore the interpretation/recommendation layer, not the source of truth.
+
+2. The central concept: Required vs Current
+
+The skill-gap engine should fundamentally compare:
+
+REQUIRED COMPETENCY
+        -
+CURRENT COMPETENCY
+        =
+SKILL GAP
+
+But don't use only one score.
+
+For each skill/topic:
+
+Required level
+Current competency
+Confidence
+Evidence strength
+Gap severity
+Gap type
+Importance
+Prerequisite impact
+Recency
+
+Example:
+
+Skill: Statistical Analysis
+
+Required level:     80
+Current competency: 42
+Confidence:         0.82
+
+Gap:
+80 - 42 = 38
+
+Importance:         90
+Dependency impact:   85
+Evidence strength:   High
+
+Classification:
+CRITICAL GAP
+3. Skill gap types
+
+I recommend these categories.
+
+MISSING
+
+The learner has little or no evidence of competency.
+
+required = 70
+current = 20
+WEAK
+
+The learner has evidence but is below the required level.
+
+required = 80
+current = 48
+AT_RISK
+
+The learner currently performs adequately but memory/retention is deteriorating.
+
+required = 70
+current = 73
+forgettingRisk = high
+UNCERTAIN
+
+The learner appears capable but there is insufficient evidence.
+
+required = 80
+current = 78
+confidence = 0.25
+
+This is important because high score ≠ proven mastery. Your revision architecture already explicitly separates competency and confidence for this reason.
+
+MEETS_REQUIREMENT
+current >= required
+confidence >= threshold
+EXCEEDS_REQUIREMENT
+current significantly > required
+confidence high
+
+These skills should generally not appear as gaps.
+
+4. The most important database concept
+
+You need to distinguish:
+
+What the course/job requires
+
+from:
+
+What the learner currently has
+
+So create:
+
+RequiredSkill
+
+or, preferably in your existing competency architecture:
+
+CompetencyRequirement
+
+Relationship:
+
+Course
+   │
+   ▼
+CourseCompetency
+   │
+   ▼
+Required Competency Level
+
+and:
+
+User
+ │
+ ▼
+UserCompetency
+ │
+ ▼
+Current Competency
+
+Then:
+
+                    COURSE
+                       │
+                required skills
+                       │
+                       ▼
+                 GAP ANALYZER
+                       ▲
+                       │
+                learner skills
+                       │
+                      USER
+
+This lets you reuse your existing CourseCompetency, Competency, UserCompetency and SkillGap models instead of replacing them.
+
+The uploaded project proposal already describes competency mapping as mapping trainee courses to required competencies.
+
+5. I recommend a 4-layer skill model
+
+This will make your system much more powerful.
+
+Layer 1
+DOMAIN
+
+       ↓
+
+Layer 2
+COMPETENCY GROUP
+
+       ↓
+
+Layer 3
+COMPETENCY
+
+       ↓
+
+Layer 4
+LEARNING TOPIC / SKILL
+
+Example:
+
+Meteorological Analysis
+        │
+        ├── Observation
+        │     ├── Instrument Interpretation
+        │     └── Observation Quality
+        │
+        ├── Data Analysis
+        │     ├── Statistical Analysis
+        │     ├── Time Series
+        │     └── Data Visualization
+        │
+        └── Forecasting
+              ├── Model Interpretation
+              └── Forecast Evaluation
+
+Then the analyzer can say:
+
+The learner's primary gap is in Data Analysis, specifically Statistical Analysis and Time Series. Statistical Analysis is also a prerequisite for two downstream competencies.
+
+That's much more useful than:
+
+"You have a data analysis skill gap."
+
+6. Skill-gap calculation
+
+I would use this as the core deterministic formula.
+
+First:
+
+RawGap =
+RequiredLevel - CurrentCompetency
+
+Clamp:
+
+Gap = max(0, RequiredLevel - CurrentCompetency)
+
+Normalize:
+
+GapSeverity =
+    Gap / RequiredLevel × 100
+
+Example:
+
+Required = 80
+Current = 40
+
+Gap = 40
+
+GapSeverity =
+40 / 80 × 100
+= 50
+7. But gap severity alone isn't enough
+
+A 40-point gap in an unimportant skill shouldn't necessarily outrank a 20-point gap in a critical prerequisite.
+
+Therefore calculate:
+
+GapPriority =
+    0.35 × GapSeverity
+  + 0.20 × Importance
+  + 0.15 × DependencyImpact
+  + 0.10 × EvidenceUncertainty
+  + 0.10 × ForgettingRisk
+  + 0.10 × ErrorSeverity
+
+This should be configurable.
+
+The revision report already establishes the principle of combining multiple normalized signals instead of using only competency.
+
+8. Add a criticality multiplier
+
+I would also introduce:
+
+CriticalityMultiplier
+
+For example:
+
+Core requirement:
+1.25
+
+Important:
+1.10
+
+Normal:
+1.00
+
+Optional:
+0.80
+
+Then:
+
+FinalGapPriority =
+    GapPriority × CriticalityMultiplier
+
+This prevents an insignificant skill from dominating the learner's development plan.
+
+9. Gap severity classification
+
+Use:
+
+0–10     NO_GAP
+11–25    MINOR
+26–40    MODERATE
+41–60    SIGNIFICANT
+61–80    SEVERE
+81–100   CRITICAL
+
+But don't classify only by percentage.
+
+Also consider:
+
+required level
+confidence
+importance
+dependency
+evidence
+10. Root-cause analysis
+
+This is where the skill-gap engine becomes genuinely intelligent.
+
+Suppose:
+
+Forecast Evaluation
+Current = 35
+Required = 80
+
+Naively:
+
+Gap:
+Forecast Evaluation
+
+But dependency graph says:
+
+Basic Statistics
+      ↓
+Time Series
+      ↓
+Forecast Evaluation
+
+And:
+
+Basic Statistics = 30
+Time Series = 42
+Forecast Evaluation = 35
+
+The analyzer should produce:
+
+PRIMARY GAP
+Forecast Evaluation
+
+ROOT GAPS
+Basic Statistics
+Time Series
+
+Then:
+
+Root cause confidence:
+HIGH
+
+This is directly aligned with the dependency-aware principle in your revision engine, where prerequisite relationships are used to identify root weaknesses rather than repeatedly attacking downstream topics.
+
+11. Skill gap ≠ revision priority
+
+This distinction is very important.
+
+Suppose:
+
+Skill A:
+gap = 70
+importance = 20
+
+Skill B:
+gap = 35
+importance = 95
+dependency = 90
+
+Skill B may be more important operationally.
+
+Therefore:
+
+Skill Gap Analyzer
+        ↓
+What skills are missing?
+
+while:
+
+Revision Engine
+        ↓
+What should be revised NOW?
+
+and:
+
+Recommendation Engine
+        ↓
+What should the learner learn next?
+
+Three different decisions.
+
+12. AI layer
+
+Now we bring in the LLM.
+
+The deterministic engine produces:
+
+{
+  "skill": "Statistical Analysis",
+  "requiredLevel": 80,
+  "currentCompetency": 42,
+  "confidence": 0.81,
+  "gapSeverity": 47.5,
+  "importance": 90,
+  "dependencyImpact": 82,
+  "forgettingRisk": 0.61,
+  "errorSeverity": 70,
+  "classification": "SIGNIFICANT"
+}
+
+The LLM receives that.
+
+It generates:
+
+Skill Gap Explanation
+
+You currently demonstrate foundational understanding
+of statistical analysis, but performance indicates a
+significant gap in applying statistical methods to
+meteorological datasets.
+
+The main areas requiring development are:
+• statistical interpretation
+• selecting appropriate measures
+• applying statistical methods to datasets
+
+Then:
+
+Recommended development:
+1. Review statistical fundamentals
+2. Practice interpretation
+3. Apply methods to domain datasets
+4. Complete competency assessment
+
+The LLM explains the evidence.
+
+It does not invent the evidence.
+
+13. AI skill-gap report
+
+The trainee dashboard could show:
+
+AI Skill Analysis
+
+Overall readiness
+████████░░ 78%
+
+Critical gaps       2
+Significant gaps    4
+Moderate gaps       5
+At-risk skills      3
+
+Primary development area
+
+Data Analysis
+█████░░░░░ 48%
+
+Top gaps
+
+01 Statistical Analysis
+   Current: 42
+   Required: 80
+   Gap: 38
+   Criticality: High
+
+02 Time Series
+   Current: 51
+   Required: 75
+   Gap: 24
+
+03 Data Interpretation
+   Current: 56
+   Required: 80
+   Gap: 24
+
+Then:
+
+Why?
+AI Explanation
+
+Your largest current development gap is Data Analysis.
+The primary contributing areas are Statistical Analysis
+and Time Series.
+
+Statistical Analysis is especially important because
+it is required by several downstream learning competencies.
+14. Trainer view
+
+Trainer should see something much deeper:
+
+Cohort Skill Gap Analysis
+
+              Required     Current     Gap
+------------------------------------------------
+Statistics       80          42        38
+Time Series      75          51        24
+Forecasting      85          63        22
+Visualization    70          68         2
+
+And:
+
+Root Skill Gap
+
+Statistics
+   ↓
+Time Series
+   ↓
+Forecast Evaluation
+
+This helps trainers understand why learners are struggling, rather than merely seeing course scores.
+
+15. AI Skill Gap module structure
+
+I recommend a separate module:
+
+backend/src/modules/skill-gap/
+
+Structure:
+
+skill-gap/
+│
+├── skill-gap.controller.ts
+├── skill-gap.routes.ts
+├── skill-gap.repository.ts
+├── skill-gap.types.ts
+├── skill-gap.constants.ts
+│
+├── services/
+│   ├── skill-gap.service.ts
+│   ├── evidence.service.ts
+│   ├── competency.service.ts
+│   ├── requirement.service.ts
+│   ├── gap-calculation.service.ts
+│   ├── gap-priority.service.ts
+│   ├── root-cause.service.ts
+│   ├── readiness.service.ts
+│   ├── skill-cluster.service.ts
+│   ├── explanation.service.ts
+│   └── report.service.ts
+│
+├── algorithms/
+│   ├── gap.algorithm.ts
+│   ├── priority.algorithm.ts
+│   ├── readiness.algorithm.ts
+│   ├── root-cause.algorithm.ts
+│   └── aggregation.algorithm.ts
+│
+├── ai/
+│   ├── skill-gap-analyzer.ts
+│   ├── skill-gap-prompt.ts
+│   ├── skill-gap-context.ts
+│   └── skill-gap.schema.ts
+│
+├── validators/
+│   └── skill-gap.validation.ts
+│
+└── tests/
+    ├── gap.algorithm.test.ts
+    ├── priority.algorithm.test.ts
+    ├── root-cause.test.ts
+    ├── readiness.test.ts
+    ├── aggregation.test.ts
+    └── integration.test.ts
+16. Database additions
+
+Because your existing schema already has SkillGap, Competency, UserCompetency, and course competency relationships, first reuse them.
+
+Only add missing structures.
+
+I would expect the module to need these concepts:
+
+CompetencyRequirement
+-------------------------
+id
+courseId
+competencyId
+requiredLevel
+importance
+criticality
+weight
+createdAt
+updatedAt
+
+If CourseCompetency already contains these semantics, do not create this table. Extend CourseCompetency instead.
+
+UserSkillAssessment
+
+Optional derived snapshot:
+
+id
+userId
+competencyId
+currentLevel
+confidence
+evidenceCount
+lastAssessedAt
+algorithmVersion
+
+Only create this if existing UserCompetency doesn't already provide the necessary information.
+
+SkillGapAnalysis
+
+This is useful because you need historical analysis.
+
+id
+userId
+courseId
+
+overallReadiness
+criticalGapCount
+significantGapCount
+moderateGapCount
+
+analysisVersion
+
+createdAt
+updatedAt
+SkillGapAnalysisItem
+id
+analysisId
+competencyId
+
+requiredLevel
+currentLevel
+
+rawGap
+gapSeverity
+
+importance
+dependencyImpact
+uncertainty
+forgettingRisk
+errorSeverity
+
+priorityScore
+
+classification
+
+rootCause
+reasonCodes JSON
+
+createdAt
+
+This gives you historical snapshots.
+
+17. Don't overwrite historical AI analyses
+
+Suppose:
+
+September 1:
+
+Statistics
+Gap = 40
+
+Then after training:
+
+September 20:
+
+Statistics
+Gap = 18
+
+You want to show:
+
+Skill Progress
+
+40 gap
+   ↓
+31 gap
+   ↓
+18 gap
+
+This is a fantastic feature for Capacity Connect.
+
+Therefore preserve analysis snapshots.
+
+18. Readiness score
+
+Add a course-level readiness calculation.
+
+Example:
+
+Readiness =
+weighted competency against required competencies
+
+But don't simply average everything.
+
+Use competency importance.
+
+Readiness =
+Σ(currentLevel × requirementWeight)
+-------------------------------------
+Σ(requiredLevel × requirementWeight)
+
+Clamp to 0–100.
+
+Then show:
+
+Course Readiness
+78%
+
+But underneath:
+
+Core competency readiness:
+71%
+
+Critical competency readiness:
+64%
+
+Overall:
+78%
+
+This prevents optional skills from hiding critical gaps.
+
+19. Gap categories
+
+The analyzer should distinguish:
+
+KNOWLEDGE_GAP
+APPLICATION_GAP
+PERFORMANCE_GAP
+RETENTION_GAP
+EVIDENCE_GAP
+PREREQUISITE_GAP
+
+For example:
+
+Knowledge gap
+low assessment accuracy
+Application gap
+knows concept
+but performs poorly in real scenarios
+Performance gap
+correct but extremely slow
+Retention gap
+previously mastered
+but recall has declined
+Evidence gap
+high score
+but insufficient evidence
+Prerequisite gap
+advanced skill weak because foundation is weak
+
+This makes the AI analysis much more actionable.
+
+20. Evidence hierarchy
+
+Not all evidence should have equal weight.
+
+I would define:
+
+Strong evidence
+    ├── Assessment result
+    ├── Retrieval test
+    └── repeated independent practice
+
+Medium evidence
+    ├── Practice
+    └── guided assessment
+
+Weak evidence
+    ├── Lesson completion
+    └── self-reported confidence
+
+Important:
+
+Lesson viewed ≠ competency proven
+
+This prevents bad skill-gap detection.
+
+Your revision design already requires learning events to record correctness, response time, hints, confidence and attempts, which provides the right evidence foundation.
+
+21. The complete skill-gap pipeline
+                  COURSE
+                    │
+                    ▼
+          REQUIRED COMPETENCIES
+                    │
+                    ▼
+             REQUIREMENT MODEL
+                    │
+                    │
+USER ──► LEARNING EVENTS
+                    │
+                    ▼
+             EVIDENCE ENGINE
+                    │
+                    ▼
+           CURRENT COMPETENCY
+                    │
+                    ▼
+              CONFIDENCE
+                    │
+                    ▼
+             MEMORY STATE
+                    │
+                    ▼
+           ERROR PATTERNS
+                    │
+                    ▼
+            DEPENDENCY GRAPH
+                    │
+           ┌────────┴────────┐
+           ▼                 ▼
+       GAP ENGINE       ROOT CAUSE
+           │                 │
+           └────────┬────────┘
+                    ▼
+             GAP PRIORITY
+                    │
+                    ▼
+            GAP CLASSIFICATION
+                    │
+                    ▼
+             READINESS SCORE
+                    │
+                    ▼
+              AI ANALYSIS
+                    │
+                    ▼
+          EXPLANATION + ACTIONS
+                    │
+        ┌───────────┼───────────┐
+        ▼           ▼           ▼
+    Trainee      Trainer     Revision
+    Dashboard    Dashboard    Engine
+
+23. The three AI modules should now work together
+
+This is the architecture I recommend for the whole Capacity Connect intelligence layer:
+
+                         CAPACITY CONNECT
+                                │
+               ┌────────────────┼────────────────┐
+               │                │                │
+               ▼                ▼                ▼
+        LEARNING EVENTS    COURSE MODEL     COMPETENCY MODEL
+               │                │                │
+               └────────────────┼────────────────┘
+                                │
+                                ▼
+                      LEARNER INTELLIGENCE
+                                │
+             ┌──────────────────┼──────────────────┐
+             │                  │                  │
+             ▼                  ▼                  ▼
+       SKILL GAP          REVISION ENGINE     RECOMMENDER
+       ANALYZER
+             │                  │                  │
+             │                  │                  │
+             ▼                  ▼                  ▼
+       WHAT IS MISSING      WHAT TO REVISE     WHAT TO LEARN
+             │              RIGHT NOW            NEXT
+             │                  │                  │
+             └──────────────────┼──────────────────┘
+                                ▼
+                             LLM
+                                │
+                                ▼
+                    PERSONALIZED EXPERIENCE
+The responsibility boundary should be very strict:
+Module	Main question	Source of truth
+Competency Engine	What does the learner know?	Learning evidence
+AI Skill Gap Analyzer	What is the learner missing?	Required vs current competency
+Revision Engine	What should be revised now?	Gap + memory + dependencies + errors
+Recommendation Engine	What should be learned next?	Skill gaps + curriculum
+LLM	How should we teach/explain it?	Deterministic context
+
+This separation will make the system much easier to debug and demonstrate.
+
+24. One particularly powerful feature I'd add
+
+Don't make the Skill Gap Analyzer run only when the trainee clicks "Analyze Skills."
+
+Make it event-driven.
+
+Assessment completed
+       ↓
+Learning events
+       ↓
+Competency update
+       ↓
+Skill gap affected
+       ↓
+Recalculate affected gaps
+       ↓
+Update readiness
+       ↓
+Invalidate cache
+       ↓
+Dashboard reflects new state
+
+So a trainee who improves from:
+
+Statistics
+42 → 58 → 71 → 83
+
+automatically sees:
+
+CRITICAL
+   ↓
+SIGNIFICANT
+   ↓
+MODERATE
+   ↓
+NO GAP
+
+And that same evidence flows into the revision engine.
+
+This is much stronger than treating AI Skill Gap Analyzer, Smart Revision, and Competency Mapping as three disconnected AI features. Your original Capacity Connect proposal already positions competency mapping, AI skill-gap analysis and smart revision as core parts of the same personalized-learning system.
+
+The result is essentially a closed-loop learner intelligence system:
+
+                    LEARN
+                      ↓
+                 COLLECT EVIDENCE
+                      ↓
+              UPDATE COMPETENCY
+                      ↓
+               DETECT SKILL GAPS
+                      ↓
+               FIND ROOT CAUSES
+                      ↓
+              PRIORITIZE DEVELOPMENT
+                      ↓
+                SMART REVISION
+                      ↓
+               ASSESS RETENTION
+                      ↓
+               COLLECT NEW EVIDENCE
+                      │
+                      └───────────────↺
+
+That is the architecture I'd build for Capacity Connect.

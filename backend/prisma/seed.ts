@@ -34,6 +34,20 @@ async function main() {
 
   // 1. Clean existing records in foreign-key dependency order
   console.log('🧹 Cleaning existing data...');
+  await prisma.revisionOutcome.deleteMany();
+  await prisma.revisionSessionItem.deleteMany();
+  await prisma.revisionSession.deleteMany();
+  await prisma.userTopicError.deleteMany();
+  await prisma.userTopicCompetency.deleteMany();
+  await prisma.userGroupCompetency.deleteMany();
+  await prisma.learningEvent.deleteMany();
+  await prisma.lessonTopic.deleteMany();
+  await prisma.assessmentQuestionTopic.deleteMany();
+  await prisma.learningTopicCompetency.deleteMany();
+  await prisma.topicPrerequisite.deleteMany();
+  await prisma.learningTopic.deleteMany();
+  await prisma.competencyGroup.deleteMany();
+  await prisma.revisionAlgorithmConfig.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.announcement.deleteMany();
@@ -1900,6 +1914,264 @@ async function main() {
       entityId: course1.id,
       newValues: { status: CourseStatus.PUBLISHED, title: course1.title },
     },
+  });
+
+  // 15. Adaptive Revision Engine: MoES/IMD Curriculum DAG & Learner Profile
+  console.log('🧠 Seeding Adaptive Revision Engine curriculum and prerequisites...');
+
+  await prisma.revisionAlgorithmConfig.create({
+    data: {
+      version: 'v1.0.0',
+      topicWeaknessWeight: 0.35,
+      topicForgettingWeight: 0.18,
+      topicImportanceWeight: 0.12,
+      topicDependencyWeight: 0.12,
+      topicErrorWeight: 0.10,
+      topicUncertaintyWeight: 0.08,
+      topicRecencyWeight: 0.05,
+      groupWeaknessWeight: 0.40,
+      groupForgettingWeight: 0.20,
+      groupImportanceWeight: 0.15,
+      groupDependencyWeight: 0.15,
+      groupUncertaintyWeight: 0.10,
+      cooldownHours: 2,
+      masteryThreshold: 85.0,
+      diagnosticConfidenceThreshold: 0.40,
+      maxTopicsPerSession: 5,
+      maxGroupConcentration: 0.80,
+      primaryGroupAllocation: 0.70,
+      prerequisiteAllocation: 0.20,
+      retentionAllocation: 0.10,
+      isActive: true,
+    },
+  });
+
+  // Competency Group 1: Atmospheric Dynamics & Thermodynamics
+  const groupDynamics = await prisma.competencyGroup.create({
+    data: {
+      courseId: course1.id,
+      name: 'Atmospheric Dynamics & Thermodynamic Diagnostics',
+      description: 'Foundational atmospheric hydrostatics, lapse rates, sounding analysis, and convective instability.',
+      importance: 4.5,
+      orderIndex: 1,
+      isActive: true,
+    },
+  });
+
+  // Competency Group 2: Radar Meteorology & Severe Storm Nowcasting
+  const groupRadar = await prisma.competencyGroup.create({
+    data: {
+      courseId: course1.id,
+      name: 'Doppler Weather Radar (DWR) Operations & Velocity Analysis',
+      description: 'Radar reflectivity equations, Nyquist dealiasing, radial velocity interpretation, and mesocyclone signatures.',
+      importance: 5.0,
+      orderIndex: 2,
+      isActive: true,
+    },
+  });
+
+  // Competency Group 3: Satellite Meteorology & Cyclones
+  const groupSatellite = await prisma.competencyGroup.create({
+    data: {
+      courseId: course1.id,
+      name: 'Satellite Remote Sensing & Tropical Cyclone Tracking',
+      description: 'INSAT-3D/3DR multispectral analysis, Dvorak technique, and convective cloud-top cooling diagnostics.',
+      importance: 4.8,
+      orderIndex: 3,
+      isActive: true,
+    },
+  });
+
+  // Topics for Group 1
+  const topicHydro = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupDynamics.id,
+      code: 'ATM_HYDRO',
+      name: 'Hydrostatic Balance & Hypsometric Equation',
+      description: 'Vertical pressure gradient force balance against gravity, scale height, and layer thickness computation.',
+      importance: 4.0,
+      difficulty: 0.3,
+      estimatedMinutes: 15,
+      orderIndex: 1,
+      isActive: true,
+    },
+  });
+
+  const topicLapse = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupDynamics.id,
+      code: 'ATM_LAPSE',
+      name: 'Atmospheric Lapse Rates & Sounding Analysis',
+      description: 'Dry adiabatic lapse rate (DALR), saturated adiabatic lapse rate (SALR), environmental lapse rates, and tephigram interpretation.',
+      importance: 4.5,
+      difficulty: 0.5,
+      estimatedMinutes: 20,
+      orderIndex: 2,
+      isActive: true,
+    },
+  });
+
+  const topicInstab = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupDynamics.id,
+      code: 'ATM_INSTAB',
+      name: 'Convective Instability & CAPE Diagnostics',
+      description: 'Convective Available Potential Energy (CAPE), Convective Inhibition (CIN), Lifted Index, and deep moist convection triggers.',
+      importance: 5.0,
+      difficulty: 0.8,
+      estimatedMinutes: 25,
+      orderIndex: 3,
+      isActive: true,
+    },
+  });
+
+  // Topics for Group 2
+  const topicRefl = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupRadar.id,
+      code: 'RAD_REFL',
+      name: 'Radar Reflectivity Factor & Z-R Relations',
+      description: 'Rayleigh scattering, equivalent radar reflectivity factor (Z in dBZ), and Marshall-Palmer Z-R precipitation estimation.',
+      importance: 4.0,
+      difficulty: 0.4,
+      estimatedMinutes: 15,
+      orderIndex: 1,
+      isActive: true,
+    },
+  });
+
+  const topicDopp = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupRadar.id,
+      code: 'RAD_DOPP',
+      name: 'Doppler Velocity Dealiasing & Nyquist Limits',
+      description: 'Pulse Repetition Frequency (PRF), maximum unambiguous velocity, and phase dealiasing algorithms.',
+      importance: 5.0,
+      difficulty: 0.7,
+      estimatedMinutes: 20,
+      orderIndex: 2,
+      isActive: true,
+    },
+  });
+
+  const topicMeso = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupRadar.id,
+      code: 'RAD_MESO',
+      name: 'Mesocyclone Vortex & Tornado Vortex Signatures',
+      description: 'Rankine vortex couplet identification, rotational shear thresholds, and severe convective warning issuance.',
+      importance: 5.0,
+      difficulty: 0.9,
+      estimatedMinutes: 25,
+      orderIndex: 3,
+      isActive: true,
+    },
+  });
+
+  // Topics for Group 3
+  const topicRad = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupSatellite.id,
+      code: 'SAT_RAD',
+      name: 'Radiative Transfer & Thermal IR Brightness',
+      description: 'Planck radiation law, Planck inversion, atmospheric window channels, and thermal emission principles.',
+      importance: 4.0,
+      difficulty: 0.4,
+      estimatedMinutes: 15,
+      orderIndex: 1,
+      isActive: true,
+    },
+  });
+
+  const topicIR = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupSatellite.id,
+      code: 'SAT_IR',
+      name: 'INSAT-3D/3DR Multispectral Imaging & Convection',
+      description: 'Thermal IR and Water Vapor channel analysis, cloud top brightness temperatures, and rapid scan diagnostics.',
+      importance: 4.8,
+      difficulty: 0.6,
+      estimatedMinutes: 20,
+      orderIndex: 2,
+      isActive: true,
+    },
+  });
+
+  const topicCyclone = await prisma.learningTopic.create({
+    data: {
+      courseId: course1.id,
+      groupId: groupSatellite.id,
+      code: 'SAT_CYCLONE',
+      name: 'Dvorak Tropical Cyclone Intensity Estimation',
+      description: 'Curved band pattern, embedded center, CDO pattern, and T-number / Current Intensity (CI) determination.',
+      importance: 5.0,
+      difficulty: 0.9,
+      estimatedMinutes: 30,
+      orderIndex: 3,
+      isActive: true,
+    },
+  });
+
+  // Strict Pedagogical Prerequisites (The Curriculum DAG)
+  await prisma.topicPrerequisite.createMany({
+    data: [
+      { prerequisiteTopicId: topicHydro.id, dependentTopicId: topicLapse.id, edgeWeight: 1.0, dependencyType: 'STRICT' },
+      { prerequisiteTopicId: topicLapse.id, dependentTopicId: topicInstab.id, edgeWeight: 1.0, dependencyType: 'STRICT' },
+      { prerequisiteTopicId: topicRefl.id, dependentTopicId: topicDopp.id, edgeWeight: 1.0, dependencyType: 'STRICT' },
+      { prerequisiteTopicId: topicDopp.id, dependentTopicId: topicMeso.id, edgeWeight: 1.0, dependencyType: 'STRICT' },
+      { prerequisiteTopicId: topicRad.id, dependentTopicId: topicIR.id, edgeWeight: 1.0, dependencyType: 'STRICT' },
+      { prerequisiteTopicId: topicIR.id, dependentTopicId: topicCyclone.id, edgeWeight: 1.0, dependencyType: 'STRICT' },
+    ],
+  });
+
+  // Seed sample learner profile for Jane Doe (user@enterprise.com)
+  // Demonstrates: Radar group is weakest, with RAD_REFL as weak root prerequisite!
+  await prisma.userTopicCompetency.createMany({
+    data: [
+      // Atmospheric Dynamics: moderately mastered
+      { userId: jane.id, topicId: topicHydro.id, competencyScore: 82.0, confidenceScore: 0.85, stability: 14.0, retention: 0.88, forgettingRisk: 12.0 },
+      { userId: jane.id, topicId: topicLapse.id, competencyScore: 78.0, confidenceScore: 0.75, stability: 10.0, retention: 0.80, forgettingRisk: 20.0 },
+      { userId: jane.id, topicId: topicInstab.id, competencyScore: 70.0, confidenceScore: 0.65, stability: 7.0, retention: 0.72, forgettingRisk: 28.0 },
+      // Radar Meteorology: PRIMARY WEAK GROUP with RAD_REFL as ROOT WEAKNESS
+      { userId: jane.id, topicId: topicRefl.id, competencyScore: 35.0, confidenceScore: 0.35, stability: 1.5, retention: 0.30, forgettingRisk: 70.0 },
+      { userId: jane.id, topicId: topicDopp.id, competencyScore: 28.0, confidenceScore: 0.25, stability: 1.0, retention: 0.25, forgettingRisk: 75.0 },
+      { userId: jane.id, topicId: topicMeso.id, competencyScore: 20.0, confidenceScore: 0.20, stability: 0.8, retention: 0.20, forgettingRisk: 80.0 },
+      // Satellite Meteorology: high forgetting risk
+      { userId: jane.id, topicId: topicRad.id, competencyScore: 75.0, confidenceScore: 0.70, stability: 3.0, retention: 0.35, forgettingRisk: 65.0 },
+      { userId: jane.id, topicId: topicIR.id, competencyScore: 72.0, confidenceScore: 0.65, stability: 2.5, retention: 0.30, forgettingRisk: 70.0 },
+      { userId: jane.id, topicId: topicCyclone.id, competencyScore: 68.0, confidenceScore: 0.60, stability: 2.0, retention: 0.25, forgettingRisk: 75.0 },
+    ],
+  });
+
+  // Seed error record for Jane on radar dealiasing
+  await prisma.userTopicError.create({
+    data: {
+      userId: jane.id,
+      topicId: topicDopp.id,
+      errorType: 'NYQUIST_VELOCITY_ALIASING_CONFUSION',
+      description: 'Confusing inbound velocity foldover with outbound environmental shear during squall line analysis',
+      errorCount: 3,
+      severity: 70.0,
+      firstDetectedAt: new Date(Date.now() - 3 * 86400000),
+      lastDetectedAt: new Date(),
+    },
+  });
+
+  // Seed group aggregated competencies
+  await prisma.userGroupCompetency.createMany({
+    data: [
+      { userId: jane.id, groupId: groupDynamics.id, groupCompetency: 76.7, groupConfidence: 0.75, groupWeakness: 23.3, groupForgettingRisk: 20.0, groupImportance: 4.5, groupDependencyImpact: 35.0, groupPriority: 25.0, weakTopicCount: 0, criticalTopicCount: 2 },
+      { userId: jane.id, groupId: groupRadar.id, groupCompetency: 27.7, groupConfidence: 0.27, groupWeakness: 72.3, groupForgettingRisk: 75.0, groupImportance: 5.0, groupDependencyImpact: 85.0, groupPriority: 82.5, weakTopicCount: 3, criticalTopicCount: 3 },
+      { userId: jane.id, groupId: groupSatellite.id, groupCompetency: 71.7, groupConfidence: 0.65, groupWeakness: 28.3, groupForgettingRisk: 70.0, groupImportance: 4.8, groupDependencyImpact: 40.0, groupPriority: 45.0, weakTopicCount: 1, criticalTopicCount: 2 },
+    ],
   });
 
   console.log('✅ MoES / IMD database seeding finished successfully!');

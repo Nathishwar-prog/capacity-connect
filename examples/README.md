@@ -15,4 +15,4 @@ For example:
 | Trainer (Instructor) | Elena Rostova | elena.trainer@enterprise.com | Password123! | /dashboard/trainer |
 | Trainee (Learner) | Jane Doe | user@enterprise.com | Password123! | /dashboard/trainee |
 | Trainee (Learner) | Mark Zucker | mark.trainee@enterprise.com | Password123! | /dashboard/trainee |
-Trainee (Learner)	David Kim	david.trainee@enterprise.com	Password123!	/dashboard/trainee
+Trainee (Learner)	David Kim	david.trainee@enterprise.com	Password123! /dashboard/trainee
