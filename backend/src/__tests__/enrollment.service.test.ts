@@ -194,13 +194,17 @@ describe('EnrollmentService (M3 Development 3: Enrollment & Progress Management)
             findById: jest.fn(),
             findByEmail: jest.fn(),
             findAll: jest.fn(),
+            findPaginatedUsers: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
+            updateUserStatus: jest.fn(),
+            updateUserRole: jest.fn(),
             delete: jest.fn(),
             saveRefreshToken: jest.fn(),
             findRefreshToken: jest.fn(),
             revokeRefreshToken: jest.fn(),
             revokeUserRefreshTokens: jest.fn(),
+            createAuditLog: jest.fn(),
         };
 
         enrollmentService = new EnrollmentService(

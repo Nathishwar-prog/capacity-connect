@@ -72,10 +72,14 @@ const mockUserRepo: jest.Mocked<IUserRepository> = {
     update: jest.fn(),
     delete: jest.fn(),
     findAll: jest.fn(),
+    findPaginatedUsers: jest.fn(),
+    updateUserStatus: jest.fn(),
+    updateUserRole: jest.fn(),
     saveRefreshToken: jest.fn(),
     findRefreshToken: jest.fn(),
     revokeRefreshToken: jest.fn(),
     revokeUserRefreshTokens: jest.fn(),
+    createAuditLog: jest.fn(),
 };
 
 // ─── Test Suite ──────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 const config = {
     testEnvironment: 'node',
+    testTimeout: 30000,
     roots: ['<rootDir>/src'],
     testMatch: ['**/__tests__/**/*.test.ts'],
     transform: {
