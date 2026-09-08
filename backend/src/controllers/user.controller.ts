@@ -52,8 +52,11 @@ export class UserController {
       throw new BadRequestError('Refresh token is required');
     }
 
-    const { accessToken, newRefreshToken } =
-      await this.userService.refreshAccessToken(refreshToken, ipAddress, userAgent);
+    const { accessToken, newRefreshToken } = await this.userService.refreshAccessToken(
+      refreshToken,
+      ipAddress,
+      userAgent,
+    );
     TokenUtils.setRefreshCookie(res, newRefreshToken);
 
     return ResponseHelper.success({

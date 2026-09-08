@@ -9,6 +9,12 @@ export interface TokenPayload {
   permissions: string[];
 }
 
+export interface EmailVerificationPayload {
+  userId: string;
+  email: string;
+  type: 'email_verification';
+}
+
 export class TokenUtils {
   /**
    * Generates a signed Access JWT
@@ -31,6 +37,20 @@ export class TokenUtils {
   }
 
   /**
+   * Generates a signed Email Verification JWT (valid for 24 hours)
+   */
+  public static generateEmailVerificationToken(payload: { userId: string; email: string }): string {
+    const tokenPayload: EmailVerificationPayload = {
+      userId: payload.userId,
+      email: payload.email.toLowerCase(),
+      type: 'email_verification',
+    };
+    return jwt.sign(tokenPayload, config.JWT_SECRET, {
+      expiresIn: '24h',
+    });
+  }
+
+  /**
    * Verifies an Access JWT
    */
   public static verifyAccessToken(token: string): TokenPayload {
@@ -42,6 +62,17 @@ export class TokenUtils {
    */
   public static verifyRefreshToken(token: string): Omit<TokenPayload, 'permissions'> {
     return jwt.verify(token, config.JWT_REFRESH_SECRET) as Omit<TokenPayload, 'permissions'>;
+  }
+
+  /**
+   * Verifies an Email Verification JWT
+   */
+  public static verifyEmailVerificationToken(token: string): EmailVerificationPayload {
+    const decoded = jwt.verify(token, config.JWT_SECRET) as EmailVerificationPayload;
+    if (decoded.type !== 'email_verification') {
+      throw new Error('Invalid verification token type');
+    }
+    return decoded;
   }
 
   /**

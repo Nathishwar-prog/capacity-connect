@@ -2,11 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import { authApi } from '../api/authApi';
-import { RegisterInput, AuthResponse, ApiErrorResponse } from '../types/auth.types';
+import { RegisterInput, RegisterResponse, ApiErrorResponse } from '../types/auth.types';
 import useAuthStore from '@/store/auth';
 
 interface UseRegisterOptions {
-  onSuccess?: (data: AuthResponse) => void;
+  onSuccess?: (data: RegisterResponse) => void;
   onError?: (error: AxiosError<ApiErrorResponse> | Error) => void;
 }
 
@@ -15,36 +15,14 @@ export const useRegister = (options?: UseRegisterOptions) => {
   const router = useRouter();
   const { setCredentials } = useAuthStore();
 
-  return useMutation<AuthResponse, AxiosError<ApiErrorResponse> | Error, RegisterInput>({
+  return useMutation<RegisterResponse, AxiosError<ApiErrorResponse> | Error, RegisterInput>({
     mutationFn: (userData: RegisterInput) => authApi.register(userData),
     onSuccess: (data) => {
-      // Set credentials in Zustand store
-      setCredentials(
-        {
-          id: data.user.id,
-          organizationId: data.user.organizationId,
-          organizationName: data.user.organizationName,
-          departmentId: data.user.departmentId,
-          departmentName: data.user.departmentName,
-          email: data.user.email,
-          firstName: data.user.firstName,
-          lastName: data.user.lastName,
-          role: data.user.role,
-          status: data.user.status,
-          permissions: data.user.permissions,
-          traineeProfile: data.user.traineeProfile,
-          trainerProfile: data.user.trainerProfile,
-        },
-        data.accessToken,
-      );
-
-      // Seed current user cache
-      queryClient.setQueryData(['currentUser'], data.user);
-
+      // Registration sets account to PENDING status awaiting Admin Approval
       if (options?.onSuccess) {
         options.onSuccess(data);
       } else {
-        router.push('/');
+        router.push('/login?pending=true');
       }
     },
     onError: (error) => {

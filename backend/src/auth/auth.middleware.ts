@@ -1,4 +1,3 @@
-/// <reference path="../types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import { Role } from '@prisma/client';
 import { UnauthorizedError, ForbiddenError } from '../errors/app-error';
@@ -114,7 +113,9 @@ export const requireSelfOrRole = (
       return next();
     }
 
-    const targetUserId = getTargetUserId ? getTargetUserId(req) : req.params.id || req.params.userId;
+    const targetUserId = getTargetUserId
+      ? getTargetUserId(req)
+      : req.params.id || req.params.userId;
 
     // Allow if operating on own identity
     if (targetUserId && targetUserId === authenticatedUserId) {
@@ -126,9 +127,13 @@ export const requireSelfOrRole = (
       return next();
     }
 
-    return next(new ForbiddenError('You can only access or modify your own profile and resources.'));
+    return next(
+      new ForbiddenError('You can only access or modify your own profile and resources.'),
+    );
   };
 };
+
+export { hasPermission, Permissions, SOURCE_PERMISSIONS } from '../permissions';
 
 export default {
   authenticate,

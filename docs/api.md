@@ -364,10 +364,12 @@ All dashboard endpoints require authentication (`Bearer <token>`) and enforce st
   ```
 
 ### 3.3 Admin Institutional Dashboard Summary
-- **Route**: `GET /api/v1/dashboard/admin`
-- **Access**: `ADMIN`, `SUPER_ADMIN`
-- **Description**: Aggregates institutional capacity-building metrics across the department, including user distribution by role, pending approvals, published courses count, competencies count, and security audit activity.
-- **Response (200 OK)**:
+- **METHOD**: `GET`
+- **URL**: `/api/v1/dashboard/admin`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `analytics:view` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
   ```json
   {
     "success": true,
@@ -397,8 +399,11 @@ All dashboard endpoints require authentication (`Bearer <token>`) and enforce st
     }
   }
   ```
-- **Error Codes**:
-  - `403 Forbidden`: User lacks administrative role
+- **ERRORS**:
+  - `401 Unauthorized`: Authentication credentials missing or invalid
+  - `403 Forbidden`: User lacks `analytics:view` permission or administrative role
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
 
 ---
 
@@ -407,20 +412,27 @@ All dashboard endpoints require authentication (`Bearer <token>`) and enforce st
 All user management endpoints require authentication (`Bearer <token>`).
 
 ### 4.1 List Users Directory
-- **Route**: `GET /api/v1/users`
-- **Access**: `ADMIN` or `SUPER_ADMIN`
-- **Query Parameters**:
-  - `page` (optional, default: 1)
-  - `limit` (optional, default: 20)
-  - `search` (optional, searches name and email)
-  - `role` (optional: `SUPER_ADMIN`, `ADMIN`, `TRAINER`, `TRAINEE`)
-  - `status` (optional: `PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`)
-- **Response (200 OK)**:
+- **METHOD**: `GET`
+- **URL**: `/api/v1/users`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:read` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (Query parameters only)
+- **RESPONSE (200 OK)**:
   ```json
   {
     "success": true,
     "message": "Users retrieved successfully",
-    "data": [ ... ],
+    "data": [
+      {
+        "id": "user-uuid-1",
+        "email": "user@enterprise.com",
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "role": "TRAINEE",
+        "status": "APPROVED",
+        "emailVerified": true
+      }
+    ],
     "meta": {
       "page": 1,
       "limit": 20,
@@ -429,6 +441,11 @@ All user management endpoints require authentication (`Bearer <token>`).
     }
   }
   ```
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or malformed token
+  - `403 Forbidden`: Missing required permission: `user:read`
+- **PAGINATION**: Supported via query parameters (`page`, `limit`)
+- **FILTERS**: Supported via `search`, `role`, `status`
 
 ### 4.2 Create New User (Administrative Provisioning)
 - **Route**: `POST /api/v1/users`
@@ -484,7 +501,998 @@ All user management endpoints require authentication (`Bearer <token>`).
 
 ---
 
-## 5. Standard Error Handling & Response Codes
+## 5. Trainer Protected Operations (`/api/v1/trainer/*`)
+
+All trainer operations require authenticated identity and role enforcement (`TRAINER`, `ADMIN`, `SUPER_ADMIN`) alongside granular source permission checks.
+
+### 5.1 Create Course
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainer/courses`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `course:create` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "title": "Doppler Weather Radar Operations",
+    "description": "Comprehensive operational training on DWR interpretation and nowcasting.",
+    "category": "Radar Meteorology",
+    "difficulty": "INTERMEDIATE"
+  }
+  ```
+- **RESPONSE (201 Created)**: Created course entity
+- **ERRORS**:
+  - `400 Bad Request`: Validation failure on course schema
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `course:create`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 5.2 Update Course
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/trainer/courses/:courseId`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `course:update` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "title": "Advanced Doppler Weather Radar Operations",
+    "difficulty": "ADVANCED"
+  }
+  ```
+- **RESPONSE (200 OK)**: Updated course entity
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `course:update`
+  - `404 Not Found`: Course not found
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 5.3 Create Assessment
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainer/assessments`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `assessment:create` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "title": "Synoptic Weather Chart Diagnostic Quiz",
+    "subject": "Synoptic Meteorology",
+    "passingScore": 60,
+    "durationMinutes": 30
+  }
+  ```
+- **RESPONSE (201 Created)**: Created assessment entity
+- **ERRORS**:
+  - `400 Bad Request`: Validation failure on assessment schema
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `assessment:create`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 5.4 View Trainer Analytics
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainer/analytics`
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `analytics:view` (Roles: `TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Trainer analytics retrieved successfully",
+    "data": {
+      "totalCourses": 2,
+      "totalEnrollments": 14,
+      "completionRate": 85.5
+    }
+  }
+  ```
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Missing required permission: `analytics:view`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+---
+
+## 6. Admin User Management Endpoints (`/api/v1/admin/users/*`)
+
+All Admin User Management endpoints require authentication (`Bearer <token>`) and restrict access to administrative roles (`ADMIN`, `SUPER_ADMIN`) with specific source-defined permissions. Endpoints are also aliased at `/admin/users/*` for direct root-path access.
+
+### 6.1 List, Search, Filter, and Paginate Users
+- **METHOD**: `GET`
+- **URL**: `/api/v1/admin/users` (Alias: `/admin/users`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:read` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (Query parameters)
+- **QUERY PARAMETERS**:
+  - `search` (string, optional): Case-insensitive match on `firstName`, `lastName`, or `email`.
+  - `role` (enum, optional): `TRAINEE`, `TRAINER`, `ADMIN`, `SUPER_ADMIN`.
+  - `status` (enum, optional): `PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`, `DEACTIVATED`.
+  - `department` (string, optional): Department name, code, or UUID.
+  - `departmentId` (uuid, optional): Department UUID identifier.
+  - `page` (integer, optional, default: 1): Page number (1-indexed).
+  - `limit` (integer, optional, default: 20, max: 100): Page size limit.
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User directory retrieved successfully",
+    "data": [
+      {
+        "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+        "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+        "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+        "email": "official@imd.gov.in",
+        "firstName": "Ramesh",
+        "lastName": "Sharma",
+        "phone": "+919876543210",
+        "avatarUrl": null,
+        "role": "TRAINEE",
+        "status": "APPROVED",
+        "emailVerified": true,
+        "lastLoginAt": "2026-09-07T12:00:00.000Z",
+        "createdAt": "2026-09-01T08:00:00.000Z",
+        "updatedAt": "2026-09-07T12:00:00.000Z",
+        "permissions": ["courses:read", "assessments:take"]
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 20,
+      "total": 45,
+      "totalPages": 3
+    }
+  }
+  ```
+- **ERRORS**:
+  - `400 Bad Request`: Invalid query parameter format or unsupported filter enum
+  - `401 Unauthorized`: Missing, expired, or invalid credentials
+  - `403 Forbidden`: Caller lacks required administrative role or `user:read` permission
+- **PAGINATION**: Implemented at database level via `page` and `limit`
+- **FILTERS**: Supported via `search`, `role`, `status`, `department`, `departmentId`
+
+### 6.2 Get Safe User Administrative Details by ID
+- **METHOD**: `GET`
+- **URL**: `/api/v1/admin/users/:id` (Alias: `/admin/users/:id`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:read` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User retrieved successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "official@imd.gov.in",
+      "firstName": "Ramesh",
+      "lastName": "Sharma",
+      "phone": "+919876543210",
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "APPROVED",
+      "emailVerified": true,
+      "lastLoginAt": "2026-09-07T12:00:00.000Z",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T12:00:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID v4 parameter
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:read`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.3 Approve User Registration
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/approve` (Alias: `/admin/users/:id/approve`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:approve` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User approved successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "new.user@imd.gov.in",
+      "firstName": "New",
+      "lastName": "Officer",
+      "phone": null,
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "APPROVED",
+      "emailVerified": false,
+      "lastLoginAt": null,
+      "createdAt": "2026-09-07T10:00:00.000Z",
+      "updatedAt": "2026-09-07T14:50:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `USER_APPROVED` event
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID v4 parameter
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:approve`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.4 Reject User Registration
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/reject` (Alias: `/admin/users/:id/reject`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:reject` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST**: None (empty body)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User rejected successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": null,
+      "email": "rejected.applicant@external.org",
+      "firstName": "External",
+      "lastName": "Applicant",
+      "phone": null,
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "REJECTED",
+      "emailVerified": false,
+      "lastLoginAt": null,
+      "createdAt": "2026-09-07T10:00:00.000Z",
+      "updatedAt": "2026-09-07T14:50:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `USER_REJECTED` event
+- **SESSION EFFECT**: Revokes any active refresh tokens for the target user
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID v4 parameter
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:reject`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.5 Update User Status
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/status` (Alias: `/admin/users/:id/status`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:approve` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST BODY**:
+  ```json
+  {
+    "status": "SUSPENDED"
+  }
+  ```
+- **ALLOWED STATUS VALUES**: `PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`, `DEACTIVATED`
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User status updated successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "official@imd.gov.in",
+      "firstName": "Ramesh",
+      "lastName": "Sharma",
+      "phone": "+919876543210",
+      "avatarUrl": null,
+      "role": "TRAINEE",
+      "status": "SUSPENDED",
+      "emailVerified": true,
+      "lastLoginAt": "2026-09-07T12:00:00.000Z",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T14:55:00.000Z",
+      "permissions": ["courses:read", "assessments:take"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `ACCOUNT_SUSPENDED` (for suspension), `USER_APPROVED`, `USER_REJECTED`, or `USER_STATUS_UPDATED`
+- **SESSION EFFECT**: When status changes to `SUSPENDED`, `DEACTIVATED`, or `REJECTED`, all active refresh tokens for the user are immediately revoked
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID format or unsupported status string
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required administrative permission
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.6 Update User Role
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/admin/users/:id/role` (Alias: `/admin/users/:id/role`)
+- **AUTHORIZATION**: Authenticated user (`Bearer <token>`)
+- **PERMISSION**: `user:role:update` (Roles: `ADMIN`, `SUPER_ADMIN`)
+- **PATH PARAMETERS**:
+  - `id` (uuid, required): Target user UUID
+- **REQUEST BODY**:
+  ```json
+  {
+    "role": "TRAINER"
+  }
+  ```
+- **ALLOWED ROLE VALUES**: `TRAINEE`, `TRAINER`, `ADMIN`
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "User role updated successfully",
+    "data": {
+      "id": "c1f72927-ff62-4217-a068-d05cbfa857c7",
+      "organizationId": "5895fb97-8cbe-4aa7-a160-f1b212f86c22",
+      "departmentId": "4dae2d5c-fbf4-498c-8f9f-6fa10339d375",
+      "email": "promoted.instructor@imd.gov.in",
+      "firstName": "Dr. Sunita",
+      "lastName": "Patel",
+      "phone": "+919876543211",
+      "avatarUrl": null,
+      "role": "TRAINER",
+      "status": "APPROVED",
+      "emailVerified": true,
+      "lastLoginAt": "2026-09-07T12:00:00.000Z",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T14:55:00.000Z",
+      "permissions": ["course:create", "course:update", "assessment:create", "resource:upload", "analytics:view"]
+    }
+  }
+  ```
+- **AUDIT LOG**: Emits `ROLE_CHANGED` event
+- **SESSION EFFECT**: Revokes active refresh tokens immediately to force token rotation with updated role claims
+- **ERRORS**:
+  - `400 Bad Request`: Invalid UUID format or unsupported role enum
+  - `401 Unauthorized`: Missing or invalid credentials
+  - `403 Forbidden`: Caller lacks required permission `user:role:update`
+  - `404 Not Found`: User with specified ID does not exist
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 6.7 Query Platform Audit Logs
+## GET /api/v1/admin/audit-logs
+
+Method:
+GET
+
+URL:
+/api/v1/admin/audit-logs
+
+Authorization:
+Bearer <token> (Roles: ADMIN, SUPER_ADMIN; Permission: user:read)
+
+Request:
+Query parameters:
+- `page` (integer, default: 1): Page number
+- `limit` (integer, default: 20, max: 100): Page limit
+- `action` (string, optional): Filter by audit action (`USER_APPROVED`, `USER_REJECTED`, `ROLE_CHANGED`, `ACCOUNT_SUSPENDED`, `COURSE_APPROVAL`, `CERTIFICATE_VERIFICATION`)
+- `entityType` (string, optional): Filter by entity type (e.g. `USER`, `COURSE`, `CERTIFICATE`)
+- `entityId` (string, optional): Filter by target entity ID
+- `userId` (uuid, optional): Filter by actor user UUID
+- `startDate` (ISO 8601 string, optional): Earliest creation timestamp
+- `endDate` (ISO 8601 string, optional): Latest creation timestamp
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Audit logs retrieved successfully",
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "organizationId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "userId": "095bec5d-572d-479a-9106-105a78f89273",
+      "action": "USER_APPROVED",
+      "entityType": "USER",
+      "entityId": "95399184-63b2-42b8-8fe1-6faf1f118a9a",
+      "oldValues": {
+        "status": "PENDING"
+      },
+      "newValues": {
+        "status": "APPROVED"
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0",
+      "createdAt": "2026-09-07T12:00:00.000Z",
+      "user": {
+        "id": "095bec5d-572d-479a-9106-105a78f89273",
+        "firstName": "Super",
+        "lastName": "Admin",
+        "email": "admin@capacityconnect.io",
+        "role": "ADMIN"
+      },
+      "organization": {
+        "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "name": "India Meteorological Department",
+        "code": "IMD"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 50,
+    "totalPages": 3
+  }
+}
+```
+
+Errors:
+- `401 Unauthorized`: Missing, expired, or invalid credentials
+- `403 Forbidden`: Caller lacks required administrative role or `user:read` permission
+- `422 Unprocessable Entity` / `400 Bad Request`: Invalid query parameter format
+
+Pagination:
+Implemented at database level via `page` and `limit` (max 100)
+
+Filters:
+Supported via `action`, `entityType`, `entityId`, `userId`, `startDate`, `endDate`, and organization isolation (`organizationId`)
+
+### 6.8 Retrieve Single Audit Log Record by ID
+## GET /api/v1/admin/audit-logs/:id
+
+Method:
+GET
+
+URL:
+/api/v1/admin/audit-logs/:id
+
+Authorization:
+Bearer <token> (Roles: ADMIN, SUPER_ADMIN; Permission: user:read)
+
+Request:
+Path parameter:
+- `id` (uuid, required): Unique AuditLog UUID identifier
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Audit log retrieved successfully",
+  "data": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "organizationId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "userId": "095bec5d-572d-479a-9106-105a78f89273",
+    "action": "USER_APPROVED",
+    "entityType": "USER",
+    "entityId": "95399184-63b2-42b8-8fe1-6faf1f118a9a",
+    "oldValues": {
+      "status": "PENDING"
+    },
+    "newValues": {
+      "status": "APPROVED"
+    },
+    "ipAddress": "127.0.0.1",
+    "userAgent": "Mozilla/5.0",
+    "createdAt": "2026-09-07T12:00:00.000Z",
+    "user": {
+      "id": "095bec5d-572d-479a-9106-105a78f89273",
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "admin@capacityconnect.io",
+      "role": "ADMIN"
+    },
+    "organization": {
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "name": "India Meteorological Department",
+      "code": "IMD"
+    }
+  }
+}
+```
+
+Errors:
+- `400 Bad Request`: Invalid UUID format
+- `401 Unauthorized`: Missing or invalid credentials
+- `403 Forbidden`: Caller lacks required administrative permission
+- `404 Not Found`: Audit log record not found or inaccessible under organization isolation
+
+Pagination:
+Not Applicable
+
+Filters:
+Not Applicable
+
+---
+
+## 7. Trainee Profile Endpoints (`/api/v1/trainee/*`)
+
+Self-service profile and competency portfolio endpoints for authenticated Trainee accounts. Enforces strict user-identity isolation where Trainees operate strictly on their own data.
+
+### 7.1 Retrieve Own Trainee Profile
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainee/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Trainee profile retrieved successfully",
+    "data": {
+      "id": "uuid-trainee-profile",
+      "userId": "uuid-user",
+      "personalInfo": {
+        "firstName": "Ramesh",
+        "lastName": "Sharma",
+        "email": "ramesh.sharma@imd.gov.in",
+        "phone": "+91-9876543210",
+        "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+        "organizationId": "uuid-org",
+        "organizationName": "India Meteorological Department",
+        "departmentId": "uuid-dept",
+        "departmentName": "Numerical Weather Prediction"
+      },
+      "designation": "Scientific Officer",
+      "bio": "Meteorological researcher specializing in numerical forecasting and synoptic analysis.",
+      "interests": ["Radar Meteorology", "Monsoon Dynamics"],
+      "profileCompletion": 85,
+      "qualifications": [],
+      "workExperiences": [],
+      "skills": [],
+      "certificates": [],
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-07T14:55:00.000Z"
+    }
+  }
+  ```
+- **ERRORS**:
+  - `401 Unauthorized`: Missing or invalid Bearer JWT
+  - `403 Forbidden`: Role not authorized
+  - `404 Not Found`: Trainee profile not found
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.2 Update Own Trainee Profile
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/trainee/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "firstName": "Ramesh",
+    "lastName": "Sharma",
+    "phone": "+91-9876543210",
+    "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    "departmentId": "uuid-dept",
+    "designation": "Senior Scientific Officer",
+    "bio": "Updated meteorological research focus on tropical cyclone trajectory tracking.",
+    "interests": ["Radar Meteorology", "Tropical Cyclones", "Climate Modeling"]
+  }
+  ```
+- **RESPONSE (200 OK)**: Full updated TraineeProfileResponseDto with dynamically updated `profileCompletion` score.
+- **ERRORS**:
+  - `400 Bad Request`: Validation failure on input schema
+  - `401 Unauthorized`: Missing or invalid token
+  - `403 Forbidden`: Role not authorized
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.3 List Trainee Skills
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainee/skills`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Skills retrieved successfully",
+    "data": [
+      {
+        "id": "uuid-user-skill",
+        "userId": "uuid-user",
+        "skillId": "uuid-skill",
+        "name": "Doppler Weather Radar",
+        "code": "DWR-TECH",
+        "category": "Observational Systems",
+        "proficiencyLevel": 4,
+        "yearsExperience": 3,
+        "source": "PROFILE",
+        "createdAt": "2026-09-02T10:00:00.000Z",
+        "updatedAt": "2026-09-02T10:00:00.000Z"
+      }
+    ]
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.4 Add Skill to Trainee Profile
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainee/skills`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "skillId": "uuid-skill",
+    "proficiencyLevel": 4,
+    "yearsExperience": 3
+  }
+  ```
+  *(Alternatively, `skillName` may be supplied if `skillId` is unknown)*
+- **RESPONSE (201 Created)**: UserSkillResponseDto
+- **ERRORS**:
+  - `400 Bad Request`: Neither `skillId` nor `skillName` provided, or level out of range (1-5)
+  - `401 Unauthorized`: Missing credentials
+  - `403 Forbidden`: Role unauthorized
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.5 Remove Skill from Trainee Profile
+- **METHOD**: `DELETE`
+- **URL**: `/api/v1/trainee/skills/:skillId`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINEE`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None (skillId in path parameter)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Skill removed from profile successfully"
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 7.6 List Available System Skills Catalog
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainee/skills/available`
+- **AUTHORIZATION**: `Bearer <token>`
+- **REQUEST**: Query parameters: `search` (string), `category` (string), `skip` (number), `take` (number)
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Available skills catalog retrieved successfully",
+    "data": {
+      "skills": [
+        {
+          "id": "uuid-skill",
+          "name": "Doppler Weather Radar",
+          "code": "DWR-TECH",
+          "category": "Observational Systems",
+          "description": "Operation and interpretation of dual-pol radar data"
+        }
+      ],
+      "total": 42
+    }
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`
+- **PAGINATION**: Supported via `skip` and `take` query parameters
+- **FILTERS**: Supported via `search` (name/code) and `category` query parameters
+
+### 7.7 Qualifications Management (`/api/v1/trainee/qualifications`)
+- **GET `/api/v1/trainee/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of QualificationResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainee/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**:
+    ```json
+    {
+      "degree": "M.Sc. Atmospheric Science",
+      "fieldOfStudy": "Meteorology",
+      "institution": "Indian Institute of Technology, Delhi",
+      "startDate": "2018-07-15T00:00:00.000Z",
+      "endDate": "2020-05-30T00:00:00.000Z",
+      "description": "Specialization in numerical weather prediction models."
+    }
+    ```
+  - **RESPONSE (201 Created)**: Created QualificationResponseDto
+  - **ERRORS**: `400 Bad Request` (start date > end date or missing required field), `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainee/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: Partial Qualification update fields
+  - **RESPONSE (200 OK)**: Updated QualificationResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainee/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Qualification deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 7.8 Work Experience Management (`/api/v1/trainee/experience`)
+- **GET `/api/v1/trainee/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of WorkExperienceResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainee/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**:
+    ```json
+    {
+      "companyName": "India Meteorological Department",
+      "jobTitle": "Assistant Meteorologist",
+      "startDate": "2021-01-10T00:00:00.000Z",
+      "endDate": null,
+      "isCurrent": true,
+      "description": "Synoptic chart analysis and local forecast generation."
+    }
+    ```
+  - **RESPONSE (201 Created)**: Created WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainee/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: Partial WorkExperience update fields
+  - **RESPONSE (200 OK)**: Updated WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainee/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Work experience deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 7.9 Certificates Management (`/api/v1/trainee/certificates`)
+- **GET `/api/v1/trainee/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of CertificateResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainee/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**:
+    ```json
+    {
+      "title": "WMO Tropical Cyclone Warning Operations",
+      "issuingOrganization": "World Meteorological Organization",
+      "credentialId": "WMO-TC-2023-1102",
+      "issueDate": "2023-08-15T00:00:00.000Z",
+      "expiryDate": "2026-08-15T00:00:00.000Z",
+      "certificateUrl": "https://credentials.wmo.int/verify/1102"
+    }
+    ```
+  - **RESPONSE (201 Created)**: Created CertificateResponseDto with `verificationStatus = PENDING`
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainee/certificates/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Certificate deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+---
+
+## 8. Trainer Profile Endpoints (`/api/v1/trainer/*`)
+
+Self-service profile and portfolio endpoints for instructors/trainers. Supports Bio, Designation, Total Experience, Subject Expertise, Academic Qualifications, Work History, and Certificates.
+
+### 8.1 Retrieve Own Trainer Profile
+- **METHOD**: `GET`
+- **URL**: `/api/v1/trainer/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Trainer profile retrieved",
+    "data": {
+      "user": {
+        "id": "uuid-trainer",
+        "email": "trainer.name@imd.gov.in",
+        "firstName": "Dr. Sunita",
+        "lastName": "Patel",
+        "phone": "+91-9876543211",
+        "role": "TRAINER",
+        "status": "APPROVED",
+        "organization": { "id": "uuid-org", "name": "India Meteorological Department" },
+        "department": { "id": "uuid-dept", "name": "Monsoon Research" },
+        "trainerProfile": {
+          "id": "uuid-tp",
+          "designation": "Principal Scientific Instructor",
+          "organizationName": "National Meteorological Training Centre (NMTC)",
+          "bio": "Lead researcher in monsoon dynamic models with 14 years instructional experience.",
+          "yearsExperience": 14,
+          "expertise": [
+            {
+              "id": "uuid-exp",
+              "proficiencyLevel": 5,
+              "yearsExperience": 10,
+              "skill": { "id": "uuid-skill", "name": "Numerical Weather Prediction", "code": "NWP-01" }
+            }
+          ]
+        },
+        "qualifications": [],
+        "workExperiences": [],
+        "certificates": []
+      },
+      "stats": {
+        "totalCourses": 6,
+        "publishedCourses": 5,
+        "learnersTrained": 142,
+        "avgCompletionRate": 78.4,
+        "avgAssessmentScore": 84.1,
+        "competenciesCovered": 12
+      }
+    }
+  }
+  ```
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.2 Update Own Trainer Profile
+- **METHOD**: `PATCH`
+- **URL**: `/api/v1/trainer/profile`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "designation": "Chief Scientist & Master Instructor",
+    "organizationName": "National Meteorological Training Centre",
+    "bio": "Specialized instructor for advanced atmospheric physics and radar remote sensing.",
+    "yearsExperience": 16
+  }
+  ```
+- **RESPONSE (200 OK)**: Updated TrainerProfile record
+- **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.3 Add Trainer Expertise Skill
+- **METHOD**: `POST`
+- **URL**: `/api/v1/trainer/expertise`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**:
+  ```json
+  {
+    "skillId": "uuid-skill",
+    "proficiencyLevel": 5,
+    "yearsExperience": 12
+  }
+  ```
+- **RESPONSE (201 Created)**: TrainerExpertise record including Skill relation
+- **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.4 Remove Trainer Expertise Skill
+- **METHOD**: `DELETE`
+- **URL**: `/api/v1/trainer/expertise/:skillId`
+- **AUTHORIZATION**: `Bearer <token>` (`TRAINER`, `ADMIN`, `SUPER_ADMIN`)
+- **REQUEST**: None
+- **RESPONSE (200 OK)**: `{ "success": true, "message": "Expertise skill removed successfully" }`
+- **ERRORS**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
+- **PAGINATION**: Not applicable
+- **FILTERS**: Not applicable
+
+### 8.5 Trainer Qualifications Management (`/api/v1/trainer/qualifications`)
+- **GET `/api/v1/trainer/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of QualificationResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/qualifications`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: CreateQualificationRequest
+  - **RESPONSE (201 Created)**: Created QualificationResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainer/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: UpdateQualificationRequest
+  - **RESPONSE (200 OK)**: Updated QualificationResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/qualifications/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Qualification deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 8.6 Trainer Work Experience Management (`/api/v1/trainer/experience`)
+- **GET `/api/v1/trainer/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of WorkExperienceResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/experience`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: CreateWorkExperienceRequest
+  - **RESPONSE (201 Created)**: Created WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **PUT `/api/v1/trainer/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: UpdateWorkExperienceRequest
+  - **RESPONSE (200 OK)**: Updated WorkExperienceResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/experience/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Work experience deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 8.7 Trainer Skills Management (`/api/v1/trainer/skills`)
+- **GET `/api/v1/trainer/skills`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of UserSkillResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/skills`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: AddUserSkillRequest
+  - **RESPONSE (201 Created)**: Created UserSkillResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/skills/:skillId`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Skill removed from profile successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+### 8.8 Trainer Certificates Management (`/api/v1/trainer/certificates`)
+- **GET `/api/v1/trainer/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: Array of CertificateResponseDto
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **POST `/api/v1/trainer/certificates`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **REQUEST**: CreateCertificateRequest
+  - **RESPONSE (201 Created)**: Created CertificateResponseDto
+  - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+- **DELETE `/api/v1/trainer/certificates/:id`**:
+  - **AUTHORIZATION**: `Bearer <token>`
+  - **RESPONSE (200 OK)**: `{ "success": true, "message": "Certificate deleted successfully" }`
+  - **ERRORS**: `401 Unauthorized`, `404 Not Found`
+  - **PAGINATION**: Not applicable
+  - **FILTERS**: Not applicable
+
+---
+
+## 9. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 
@@ -505,3 +1513,4 @@ All error responses strictly follow the uniform JSON format:
 | **409 Conflict** | Duplicate Resource | Email address already registered |
 | **429 Too Many Requests** | Rate Limit Exceeded | Client exceeded sliding-window request threshold |
 | **500 Internal Server Error** | Unexpected Failure | Database or server operational exception |
+

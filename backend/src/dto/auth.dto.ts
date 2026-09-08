@@ -20,6 +20,14 @@ export interface RefreshTokenDto {
   refreshToken?: string;
 }
 
+export interface VerifyEmailDto {
+  token: string;
+}
+
+export interface ResendVerificationDto {
+  email: string;
+}
+
 export interface AuthUserDto {
   id: string;
   organizationId: string;
@@ -52,6 +60,12 @@ export interface AuthUserDto {
     bio: string;
     yearsExperience: number;
   } | null;
+}
+
+export interface RegisterResponseDto {
+  message: string;
+  requiresApproval: boolean;
+  user: AuthUserDto;
 }
 
 export interface AuthResponseDto {

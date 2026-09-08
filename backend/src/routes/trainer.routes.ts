@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Role } from '@prisma/client';
 import { TrainerController } from '../controllers/trainer.controller';
-import { authenticate, requireRole } from '../auth/auth.middleware';
+import { authenticate, requireRole, requirePermission, Permissions } from '../auth/auth.middleware';
 import { asyncHandler } from '../errors/async.handler';
 import { validate } from '../validators/validate.middleware';
 import {
@@ -25,14 +25,29 @@ import {
   assessmentIdParamSchema,
 } from '../validators/trainer.validation';
 
+import { ProfileController } from '../controllers/profile.controller';
+import {
+  createQualificationSchema,
+  updateQualificationSchema,
+  qualificationIdParamSchema,
+  createWorkExperienceSchema,
+  updateWorkExperienceSchema,
+  experienceIdParamSchema,
+  addUserSkillSchema,
+  skillIdParamSchema,
+  createCertificateSchema,
+  certificateIdParamSchema,
+} from '../validators/profile.validation';
+
 const router = Router();
 const trainerController = new TrainerController();
+const profileController = new ProfileController();
 
 // All trainer endpoints require valid JWT authentication and TRAINER / ADMIN / SUPER_ADMIN roles
 router.use(authenticate);
 router.use(requireRole([Role.TRAINER, Role.ADMIN, Role.SUPER_ADMIN]));
 
-// --- 1. Profile & Expertise ---
+// --- 1. Profile, Expertise & Professional History ---
 router.get('/profile', asyncHandler(trainerController.getProfile));
 router.patch(
   '/profile',
@@ -46,6 +61,68 @@ router.post(
 );
 router.delete('/expertise/:skillId', asyncHandler(trainerController.removeExpertise));
 
+// Qualifications
+router.get('/qualifications', asyncHandler(profileController.getQualifications));
+router.post(
+  '/qualifications',
+  validate({ body: createQualificationSchema }),
+  asyncHandler(profileController.addQualification),
+);
+router.put(
+  '/qualifications/:id',
+  validate({ params: qualificationIdParamSchema, body: updateQualificationSchema }),
+  asyncHandler(profileController.updateQualification),
+);
+router.delete(
+  '/qualifications/:id',
+  validate({ params: qualificationIdParamSchema }),
+  asyncHandler(profileController.deleteQualification),
+);
+
+// Work Experience
+router.get('/experience', asyncHandler(profileController.getWorkExperiences));
+router.post(
+  '/experience',
+  validate({ body: createWorkExperienceSchema }),
+  asyncHandler(profileController.addWorkExperience),
+);
+router.put(
+  '/experience/:id',
+  validate({ params: experienceIdParamSchema, body: updateWorkExperienceSchema }),
+  asyncHandler(profileController.updateWorkExperience),
+);
+router.delete(
+  '/experience/:id',
+  validate({ params: experienceIdParamSchema }),
+  asyncHandler(profileController.deleteWorkExperience),
+);
+
+// Skills
+router.get('/skills', asyncHandler(profileController.getUserSkills));
+router.post(
+  '/skills',
+  validate({ body: addUserSkillSchema }),
+  asyncHandler(profileController.addUserSkill),
+);
+router.delete(
+  '/skills/:skillId',
+  validate({ params: skillIdParamSchema }),
+  asyncHandler(profileController.removeUserSkill),
+);
+
+// Certificates
+router.get('/certificates', asyncHandler(profileController.getCertificates));
+router.post(
+  '/certificates',
+  validate({ body: createCertificateSchema }),
+  asyncHandler(profileController.addCertificate),
+);
+router.delete(
+  '/certificates/:id',
+  validate({ params: certificateIdParamSchema }),
+  asyncHandler(profileController.deleteCertificate),
+);
+
 // --- 2. Dashboard ---
 router.get('/dashboard', asyncHandler(trainerController.getDashboard));
 
@@ -53,6 +130,7 @@ router.get('/dashboard', asyncHandler(trainerController.getDashboard));
 router.get('/courses', asyncHandler(trainerController.getCourses));
 router.post(
   '/courses',
+  requirePermission(Permissions.COURSE_CREATE),
   validate({ body: createCourseSchema }),
   asyncHandler(trainerController.createCourse),
 );
@@ -63,6 +141,7 @@ router.get(
 );
 router.patch(
   '/courses/:courseId',
+  requirePermission(Permissions.COURSE_UPDATE),
   validate({ params: courseIdParamSchema, body: updateCourseSchema }),
   asyncHandler(trainerController.updateCourse),
 );
@@ -153,6 +232,7 @@ router.get(
 router.get('/assessments', asyncHandler(trainerController.getAssessments));
 router.post(
   '/assessments',
+  requirePermission(Permissions.ASSESSMENT_CREATE),
   validate({ body: createAssessmentSchema }),
   asyncHandler(trainerController.createAssessment),
 );
@@ -168,7 +248,11 @@ router.get(
 );
 
 // --- 8. Analytics & Feedback ---
-router.get('/analytics', asyncHandler(trainerController.getAnalytics));
+router.get(
+  '/analytics',
+  requirePermission(Permissions.ANALYTICS_VIEW),
+  asyncHandler(trainerController.getAnalytics),
+);
 router.get('/feedback', asyncHandler(trainerController.getFeedback));
 
 export default router;

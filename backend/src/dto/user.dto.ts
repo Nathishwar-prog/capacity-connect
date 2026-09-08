@@ -78,4 +78,3 @@ export class UserDtoMapper {
     return users.map((user) => this.toResponse(user));
   }
 }
-

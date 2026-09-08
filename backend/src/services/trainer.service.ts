@@ -1,11 +1,7 @@
 import { TrainerRepository } from '../repositories/trainer.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { CourseStatus, Role } from '@prisma/client';
-import {
-  NotFoundError,
-  ForbiddenError,
-  BadRequestError,
-} from '../errors/app-error';
+import { NotFoundError, ForbiddenError, BadRequestError } from '../errors/app-error';
 
 export class TrainerService {
   private trainerRepository: TrainerRepository;
@@ -20,11 +16,7 @@ export class TrainerService {
    * Ownership Guard: Verifies that the course belongs to the authenticated trainer
    * or the user has administrative privileges.
    */
-  private async assertCourseOwnership(
-    courseId: string,
-    trainerId: string,
-    userRole: string,
-  ) {
+  private async assertCourseOwnership(courseId: string, trainerId: string, userRole: string) {
     const course = await this.trainerRepository.getCourseById(courseId);
     if (!course) {
       throw new NotFoundError(`Course with ID '${courseId}' was not found`);
@@ -35,9 +27,7 @@ export class TrainerService {
     }
 
     if (course.trainerId !== trainerId) {
-      throw new ForbiddenError(
-        'Access denied: You do not have permission to manage this course',
-      );
+      throw new ForbiddenError('Access denied: You do not have permission to manage this course');
     }
 
     return course;
@@ -119,10 +109,7 @@ export class TrainerService {
       throw new NotFoundError('Trainer profile does not exist');
     }
 
-    return this.trainerRepository.removeTrainerExpertise(
-      profile.trainerProfile.id,
-      skillId,
-    );
+    return this.trainerRepository.removeTrainerExpertise(profile.trainerProfile.id, skillId);
   }
 
   /**
@@ -143,7 +130,14 @@ export class TrainerService {
     const recentActivity = await this.trainerRepository.getRecentActivity(userId);
 
     // 1. Identify Action Required items
-    const actionRequired: Array<{ id: string; priority: 'CRITICAL' | 'WARNING' | 'INFO'; title: string; message: string; link: string; actionLabel: string }> = [];
+    const actionRequired: Array<{
+      id: string;
+      priority: 'CRITICAL' | 'WARNING' | 'INFO';
+      title: string;
+      message: string;
+      link: string;
+      actionLabel: string;
+    }> = [];
 
     const draftCourses = courses.filter((c: any) => c.status === CourseStatus.DRAFT);
     draftCourses.forEach((dc: any) => {
@@ -151,7 +145,8 @@ export class TrainerService {
         id: `draft-${dc.id}`,
         priority: 'WARNING',
         title: `Draft Course: ${dc.title}`,
-        message: 'Course curriculum is in draft state. Complete modules and submit for institutional review.',
+        message:
+          'Course curriculum is in draft state. Complete modules and submit for institutional review.',
         link: `/trainer/courses/${dc.id}/builder`,
         actionLabel: 'Open Builder',
       });
@@ -174,16 +169,37 @@ export class TrainerService {
     // 2. Trainee Health Distribution
     const totalEnrollments = enrollments.length;
     const completedCount = enrollments.filter((e: any) => e.status === 'COMPLETED').length;
-    const onTrackCount = enrollments.filter((e: any) => e.status === 'IN_PROGRESS' && e.progressPercentage >= 70).length;
-    const needsAttentionCount = enrollments.filter((e: any) => e.status === 'IN_PROGRESS' && e.progressPercentage >= 30 && e.progressPercentage < 70).length;
-    const atRiskCount = enrollments.filter((e: any) => e.status === 'IN_PROGRESS' && e.progressPercentage < 30).length;
+    const onTrackCount = enrollments.filter(
+      (e: any) => e.status === 'IN_PROGRESS' && e.progressPercentage >= 70,
+    ).length;
+    const needsAttentionCount = enrollments.filter(
+      (e: any) =>
+        e.status === 'IN_PROGRESS' && e.progressPercentage >= 30 && e.progressPercentage < 70,
+    ).length;
+    const atRiskCount = enrollments.filter(
+      (e: any) => e.status === 'IN_PROGRESS' && e.progressPercentage < 30,
+    ).length;
 
     const traineeHealth = {
       total: totalEnrollments,
-      onTrack: { count: onTrackCount, percentage: totalEnrollments > 0 ? Math.round((onTrackCount / totalEnrollments) * 100) : 0 },
-      needsAttention: { count: needsAttentionCount, percentage: totalEnrollments > 0 ? Math.round((needsAttentionCount / totalEnrollments) * 100) : 0 },
-      atRisk: { count: atRiskCount, percentage: totalEnrollments > 0 ? Math.round((atRiskCount / totalEnrollments) * 100) : 0 },
-      completed: { count: completedCount, percentage: totalEnrollments > 0 ? Math.round((completedCount / totalEnrollments) * 100) : 0 },
+      onTrack: {
+        count: onTrackCount,
+        percentage: totalEnrollments > 0 ? Math.round((onTrackCount / totalEnrollments) * 100) : 0,
+      },
+      needsAttention: {
+        count: needsAttentionCount,
+        percentage:
+          totalEnrollments > 0 ? Math.round((needsAttentionCount / totalEnrollments) * 100) : 0,
+      },
+      atRisk: {
+        count: atRiskCount,
+        percentage: totalEnrollments > 0 ? Math.round((atRiskCount / totalEnrollments) * 100) : 0,
+      },
+      completed: {
+        count: completedCount,
+        percentage:
+          totalEnrollments > 0 ? Math.round((completedCount / totalEnrollments) * 100) : 0,
+      },
     };
 
     // 3. Trainees Needing Attention (Top 5-8 lagging learners)
@@ -203,10 +219,26 @@ export class TrainerService {
 
     // 4. Learning Performance trend points
     const performanceTrend = [
-      { label: 'Week 1', activeLearners: Math.max(1, Math.round(totalEnrollments * 0.4)), avgProgress: 24 },
-      { label: 'Week 2', activeLearners: Math.max(1, Math.round(totalEnrollments * 0.6)), avgProgress: 42 },
-      { label: 'Week 3', activeLearners: Math.max(1, Math.round(totalEnrollments * 0.8)), avgProgress: 58 },
-      { label: 'Week 4', activeLearners: totalEnrollments, avgProgress: analytics.kpis.avgProgress || 72 },
+      {
+        label: 'Week 1',
+        activeLearners: Math.max(1, Math.round(totalEnrollments * 0.4)),
+        avgProgress: 24,
+      },
+      {
+        label: 'Week 2',
+        activeLearners: Math.max(1, Math.round(totalEnrollments * 0.6)),
+        avgProgress: 42,
+      },
+      {
+        label: 'Week 3',
+        activeLearners: Math.max(1, Math.round(totalEnrollments * 0.8)),
+        avgProgress: 58,
+      },
+      {
+        label: 'Week 4',
+        activeLearners: totalEnrollments,
+        avgProgress: analytics.kpis.avgProgress || 72,
+      },
     ];
 
     // 5. Competency Snapshot
@@ -223,10 +255,18 @@ export class TrainerService {
 
     // 6. Profile Completion
     let profileScore = 0;
-    if (profile?.trainerProfile?.designation) profileScore += 25;
-    if (profile?.trainerProfile?.bio && profile.trainerProfile.bio.length > 20) profileScore += 25;
-    if (profile?.trainerProfile?.yearsExperience && profile.trainerProfile.yearsExperience > 0) profileScore += 25;
-    if (profile?.trainerProfile?.expertise && profile.trainerProfile.expertise.length > 0) profileScore += 25;
+    if (profile?.trainerProfile?.designation) {
+      profileScore += 25;
+    }
+    if (profile?.trainerProfile?.bio && profile.trainerProfile.bio.length > 20) {
+      profileScore += 25;
+    }
+    if (profile?.trainerProfile?.yearsExperience && profile.trainerProfile.yearsExperience > 0) {
+      profileScore += 25;
+    }
+    if (profile?.trainerProfile?.expertise && profile.trainerProfile.expertise.length > 0) {
+      profileScore += 25;
+    }
 
     return {
       kpis: analytics.kpis,
@@ -401,12 +441,7 @@ export class TrainerService {
     return course;
   }
 
-  public async updateCourse(
-    courseId: string,
-    userId: string,
-    userRole: string,
-    data: any,
-  ) {
+  public async updateCourse(courseId: string, userId: string, userRole: string, data: any) {
     const course = await this.assertCourseOwnership(courseId, userId, userRole);
 
     if (
@@ -442,7 +477,9 @@ export class TrainerService {
       userRole !== Role.ADMIN &&
       userRole !== Role.SUPER_ADMIN
     ) {
-      throw new BadRequestError('Published courses cannot be deleted by trainers. Request archival instead.');
+      throw new BadRequestError(
+        'Published courses cannot be deleted by trainers. Request archival instead.',
+      );
     }
 
     await this.trainerRepository.deleteCourse(courseId);
@@ -463,11 +500,7 @@ export class TrainerService {
    * Submit Course for Admin Approval
    * Enforces structural validation rules.
    */
-  public async submitCourseForApproval(
-    courseId: string,
-    userId: string,
-    userRole: string,
-  ) {
+  public async submitCourseForApproval(courseId: string, userId: string, userRole: string) {
     const course = await this.assertCourseOwnership(courseId, userId, userRole);
 
     if (course.status !== CourseStatus.DRAFT && course.status !== CourseStatus.REJECTED) {
@@ -542,12 +575,7 @@ export class TrainerService {
     return this.trainerRepository.updateModule(moduleId, data);
   }
 
-  public async deleteModule(
-    courseId: string,
-    moduleId: string,
-    userId: string,
-    userRole: string,
-  ) {
+  public async deleteModule(courseId: string, moduleId: string, userId: string, userRole: string) {
     await this.assertCourseOwnership(courseId, userId, userRole);
     return this.trainerRepository.deleteModule(moduleId);
   }
@@ -596,12 +624,7 @@ export class TrainerService {
     return this.trainerRepository.deleteLesson(lessonId);
   }
 
-  public async reorderCourse(
-    courseId: string,
-    userId: string,
-    userRole: string,
-    modules: any[],
-  ) {
+  public async reorderCourse(courseId: string, userId: string, userRole: string, modules: any[]) {
     await this.assertCourseOwnership(courseId, userId, userRole);
     return this.trainerRepository.reorderCourse(courseId, modules);
   }
@@ -665,10 +688,7 @@ export class TrainerService {
       progressMax?: number;
     },
   ) {
-    const { total, enrollments } = await this.trainerRepository.getTrainerTrainees(
-      userId,
-      filters,
-    );
+    const { total, enrollments } = await this.trainerRepository.getTrainerTrainees(userId, filters);
 
     const page = filters.page || 1;
     const pageSize = filters.pageSize || 10;
