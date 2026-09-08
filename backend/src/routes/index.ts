@@ -6,6 +6,7 @@ import { dashboardRouter } from './dashboard.routes';
 import { trainerRouter } from './trainer.routes';
 import { traineeRouter } from './trainee.routes';
 import { courseDiscoveryRouter } from './course-discovery.routes';
+import { learningExperienceRouter } from './learning-experience.routes';
 
 const router = Router();
 
@@ -47,6 +48,12 @@ router.get('/', (_req, res) => {
         enroll: 'POST /api/v1/courses/:courseId/enroll',
         filters: 'GET /api/v1/courses/meta/filters',
       },
+      learning: {
+        overview: 'GET /api/v1/learning/courses/:courseId',
+        progress: 'GET /api/v1/learning/courses/:courseId/progress',
+        lesson: 'GET /api/v1/learning/lessons/:lessonId',
+        completeLesson: 'POST /api/v1/learning/lessons/:lessonId/complete',
+      },
     },
   });
 });
@@ -61,6 +68,7 @@ router.use('/dashboard', dashboardRouter);
 router.use('/trainer', trainerRouter);
 router.use('/trainee', traineeRouter);
 router.use('/courses', courseDiscoveryRouter);
+router.use('/learning', learningExperienceRouter);
 
 export default router;
 
