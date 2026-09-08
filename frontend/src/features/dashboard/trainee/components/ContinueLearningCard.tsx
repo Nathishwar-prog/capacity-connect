@@ -26,18 +26,25 @@ interface ContinueLearningProps {
 export const ContinueLearningCard: React.FC<ContinueLearningProps> = ({ course }) => {
   if (!course) {
     return (
-      <Card id="continue-learning" className="p-8 text-center bg-white border border-slate-200/90 rounded-3xl space-y-4">
+      <Card
+        id="continue-learning"
+        className="p-8 text-center bg-white border border-slate-200/90 rounded-3xl space-y-4"
+      >
         <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
           <BookOpen className="w-6 h-6" />
         </div>
         <div className="space-y-1">
           <h3 className="text-base font-bold text-slate-900">Ready to Start Learning?</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            You are not currently active in any courses. Browse the MoES / IMD curriculum catalog and enroll in your first meteorological capacity building module.
+            You are not currently active in any courses. Browse the MoES / IMD curriculum catalog
+            and enroll in your first meteorological capacity building module.
           </p>
         </div>
         <Link href="/trainee/courses">
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs">
+          <Button
+            size="sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs"
+          >
             <span>Explore Course Catalog</span>
             <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
           </Button>
@@ -75,7 +82,8 @@ export const ContinueLearningCard: React.FC<ContinueLearningProps> = ({ course }
               {course.courseTitle}
             </h2>
             <p className="text-xs sm:text-sm text-indigo-100/80 font-medium mt-1">
-              {course.currentModuleTitle} • <span className="text-white font-bold">{course.currentLessonTitle}</span>
+              {course.currentModuleTitle} •{' '}
+              <span className="text-white font-bold">{course.currentLessonTitle}</span>
             </p>
           </div>
 

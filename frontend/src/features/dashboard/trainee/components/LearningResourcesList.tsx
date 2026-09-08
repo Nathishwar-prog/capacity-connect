@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
-import { Library, PlayCircle, FileText, ListChecks, File, ExternalLink, ArrowRight } from 'lucide-react';
+import {
+  Library,
+  PlayCircle,
+  FileText,
+  ListChecks,
+  File,
+  ExternalLink,
+  ArrowRight,
+} from 'lucide-react';
 
 interface ResourceItem {
   id: string;
@@ -56,7 +64,11 @@ export const LearningResourcesList: React.FC<LearningResourcesListProps> = ({ re
             <span>Learning Resources</span>
           </CardTitle>
           <Link href="/trainee/resources">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>Library</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -84,9 +96,7 @@ export const LearningResourcesList: React.FC<LearningResourcesListProps> = ({ re
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h5 className="text-xs font-bold text-slate-900 truncate">
-                      {res.title}
-                    </h5>
+                    <h5 className="text-xs font-bold text-slate-900 truncate">{res.title}</h5>
                     <Badge variant="outline" className="text-[9px] uppercase font-bold">
                       {res.type}
                     </Badge>
@@ -99,12 +109,7 @@ export const LearningResourcesList: React.FC<LearningResourcesListProps> = ({ re
                 </div>
               </div>
 
-              <a
-                href={res.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0"
-              >
+              <a href={res.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
                 <Button
                   size="sm"
                   variant="outline"
@@ -120,7 +125,11 @@ export const LearningResourcesList: React.FC<LearningResourcesListProps> = ({ re
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainee/resources">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>Explore All Resources</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

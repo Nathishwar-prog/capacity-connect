@@ -32,7 +32,11 @@ export const AssessmentOverviewCard: React.FC<AssessmentOverviewCardProps> = ({ 
             <span>Assessment Overview</span>
           </CardTitle>
           <Link href="/trainer/assessments">
-            <Button size="sm" variant="ghost" className="text-xs text-indigo-600 font-bold hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs text-indigo-600 font-bold hover:bg-indigo-50"
+            >
               <span>View All</span>
             </Button>
           </Link>
@@ -68,10 +72,10 @@ export const AssessmentOverviewCard: React.FC<AssessmentOverviewCardProps> = ({ 
                 </div>
                 <p className="text-[11px] text-indigo-700 font-medium">{a.courseTitle}</p>
                 <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
-                  <span>{a.questionsCount} questions • {a.attemptsCount} attempts</span>
-                  <span className="font-bold text-emerald-600">
-                    {a.passedCount || 0} passed
+                  <span>
+                    {a.questionsCount} questions • {a.attemptsCount} attempts
                   </span>
+                  <span className="font-bold text-emerald-600">{a.passedCount || 0} passed</span>
                 </div>
               </div>
             ))}
@@ -80,7 +84,11 @@ export const AssessmentOverviewCard: React.FC<AssessmentOverviewCardProps> = ({ 
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainer/assessments">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>Manage Quizzes</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

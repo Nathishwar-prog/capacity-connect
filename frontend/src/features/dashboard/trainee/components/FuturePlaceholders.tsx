@@ -23,7 +23,8 @@ export const FuturePlaceholders: React.FC = () => {
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            AI-powered analytics will identify subtle competency gaps and personalize learning trajectories based on your assessment performance.
+            AI-powered analytics will identify subtle competency gaps and personalize learning
+            trajectories based on your assessment performance.
           </p>
         </CardContent>
       </Card>
@@ -43,7 +44,8 @@ export const FuturePlaceholders: React.FC = () => {
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            Adaptive practice sessions targeted at challenging meteorological concepts where review or reinforcement is recommended.
+            Adaptive practice sessions targeted at challenging meteorological concepts where review
+            or reinforcement is recommended.
           </p>
         </CardContent>
       </Card>
@@ -63,7 +65,8 @@ export const FuturePlaceholders: React.FC = () => {
         </CardHeader>
         <CardContent>
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            Interactive AI assistant capable of answering questions regarding official WMO manuals, cyclone SOPs, and radar physics.
+            Interactive AI assistant capable of answering questions regarding official WMO manuals,
+            cyclone SOPs, and radar physics.
           </p>
         </CardContent>
       </Card>

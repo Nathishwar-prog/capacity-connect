@@ -264,3 +264,4 @@ For in-depth guides, consult the [`docs/`](./docs) folder:
 * 📂 **[Structure Reference](./docs/structure.md)** — Detailed directory reference.
 * 🌐 **[REST API Specifications](./docs/api.md)** — Request/Response schema contracts.
 * 🚢 **[Production Deployment](./docs/deployment.md)** — Docker multi-stage builds and Nginx deployment.
+* 🎓 **[Trainee App Shell](./docs/trainee-app-shell/README.md)** — Layout architecture, responsive navigation, and component design for the MoES/IMD Trainee portal.

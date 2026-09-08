@@ -49,7 +49,11 @@ export const CompetencySnapshotCard: React.FC<CompetencySnapshotProps> = ({ comp
             <span>My Competencies</span>
           </CardTitle>
           <Link href="/trainee/competencies">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View Matrix</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -63,7 +67,8 @@ export const CompetencySnapshotCard: React.FC<CompetencySnapshotProps> = ({ comp
       <CardContent className="space-y-4">
         {competencies.length === 0 ? (
           <div className="p-6 text-center text-xs text-slate-500">
-            No competency information recorded yet. Complete assessments to evaluate proficiency levels.
+            No competency information recorded yet. Complete assessments to evaluate proficiency
+            levels.
           </div>
         ) : (
           <div className="space-y-3.5">
@@ -99,7 +104,11 @@ export const CompetencySnapshotCard: React.FC<CompetencySnapshotProps> = ({ comp
             {competencies.length} framework capabilities tracked
           </span>
           <Link href="/trainee/competencies">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>Full Profile</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

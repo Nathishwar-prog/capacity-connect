@@ -77,7 +77,11 @@ export const FeedbackSnapshotCard: React.FC<FeedbackSnapshotCardProps> = ({ feed
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainer/feedback">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All Feedback</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

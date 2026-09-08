@@ -61,9 +61,7 @@ export const TraineeAttentionList: React.FC<TraineeAttentionListProps> = ({ trai
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {t.designation} • {t.department}
                       </div>
-                      <div className="text-[10px] text-indigo-700 font-medium">
-                        {t.courseTitle}
-                      </div>
+                      <div className="text-[10px] text-indigo-700 font-medium">{t.courseTitle}</div>
                     </div>
                   </div>
 
@@ -101,7 +99,11 @@ export const TraineeAttentionList: React.FC<TraineeAttentionListProps> = ({ trai
 
         <div className="pt-3 border-t border-slate-100 flex justify-end">
           <Link href="/trainer/trainees">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All Trainees</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

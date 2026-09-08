@@ -19,37 +19,51 @@ export const AIInsightsPlaceholder: React.FC = () => {
           </Badge>
         </div>
         <p className="text-xs text-slate-500">
-          Planned predictive analytics and intelligent curriculum diagnostics for MoES / IMD instructors
+          Planned predictive analytics and intelligent curriculum diagnostics for MoES / IMD
+          instructors
         </p>
       </CardHeader>
 
       <CardContent className="space-y-3">
         <p className="text-xs text-slate-600 leading-relaxed">
-          Future capability upgrades will deliver automated pedagogical recommendations to optimize meteorological learning outcomes:
+          Future capability upgrades will deliver automated pedagogical recommendations to optimize
+          meteorological learning outcomes:
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-indigo-100 shadow-2xs">
             <Brain className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
             <div>
-              <span className="text-xs font-bold text-slate-900 block">Predictive Skill-Gap Analysis</span>
-              <span className="text-[11px] text-slate-500">Early identification of trainee competency deficiencies before examinations</span>
+              <span className="text-xs font-bold text-slate-900 block">
+                Predictive Skill-Gap Analysis
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Early identification of trainee competency deficiencies before examinations
+              </span>
             </div>
           </div>
 
           <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-indigo-100 shadow-2xs">
             <Compass className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
             <div>
-              <span className="text-xs font-bold text-slate-900 block">Personalized Interventions</span>
-              <span className="text-[11px] text-slate-500">Automated remedial study plans for lagging observational cadres</span>
+              <span className="text-xs font-bold text-slate-900 block">
+                Personalized Interventions
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Automated remedial study plans for lagging observational cadres
+              </span>
             </div>
           </div>
 
           <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-indigo-100 shadow-2xs">
             <BookCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
             <div>
-              <span className="text-xs font-bold text-slate-900 block">Curriculum Optimization</span>
-              <span className="text-[11px] text-slate-500">Lesson clarity scoring based on trainee assessment drop-off points</span>
+              <span className="text-xs font-bold text-slate-900 block">
+                Curriculum Optimization
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Lesson clarity scoring based on trainee assessment drop-off points
+              </span>
             </div>
           </div>
 
@@ -57,7 +71,9 @@ export const AIInsightsPlaceholder: React.FC = () => {
             <ShieldAlert className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
             <div>
               <span className="text-xs font-bold text-slate-900 block">Trainer Tech Radar</span>
-              <span className="text-[11px] text-slate-500">Emerging atmospheric modeling frameworks recommended for inclusion</span>
+              <span className="text-[11px] text-slate-500">
+                Emerging atmospheric modeling frameworks recommended for inclusion
+              </span>
             </div>
           </div>
         </div>

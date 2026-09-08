@@ -73,7 +73,8 @@ export const SkillGapPanel: React.FC<SkillGapPanelProps> = ({ gaps }) => {
 
                   <div className="flex items-center justify-between text-[11px] text-slate-500">
                     <span>
-                      Current: <strong>Level {gap.currentLevel}</strong> • Required: <strong>Level {gap.requiredLevel}</strong>
+                      Current: <strong>Level {gap.currentLevel}</strong> • Required:{' '}
+                      <strong>Level {gap.requiredLevel}</strong>
                     </span>
                     <span className="text-amber-700 font-bold">
                       Gap: {gap.gapLevel} {gap.gapLevel === 1 ? 'level' : 'levels'}
@@ -100,7 +101,11 @@ export const SkillGapPanel: React.FC<SkillGapPanelProps> = ({ gaps }) => {
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainee/skill-gaps">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All Skill Gaps</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

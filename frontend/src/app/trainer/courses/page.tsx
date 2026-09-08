@@ -54,7 +54,11 @@ function TrainerCoursesContent() {
   const courses = data?.courses || [];
 
   const handleQuickSubmit = async (courseId: string) => {
-    if (confirm('Are you sure you want to submit this course for institutional review? Ensure it has modules, lessons, and competencies.')) {
+    if (
+      confirm(
+        'Are you sure you want to submit this course for institutional review? Ensure it has modules, lessons, and competencies.',
+      )
+    ) {
       try {
         await submitCourseMutation.mutateAsync();
       } catch (err: any) {
@@ -64,7 +68,9 @@ function TrainerCoursesContent() {
   };
 
   const handleDelete = async (courseId: string) => {
-    if (confirm('Are you sure you want to delete this course draft? This action cannot be undone.')) {
+    if (
+      confirm('Are you sure you want to delete this course draft? This action cannot be undone.')
+    ) {
       try {
         await deleteCourseMutation.mutateAsync(courseId);
       } catch (err: any) {
@@ -156,12 +162,18 @@ function TrainerCoursesContent() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {courses.map((course) => (
-            <Card key={course.id} className="hover:border-indigo-300 hover:shadow-xs transition-all flex flex-col justify-between">
+            <Card
+              key={course.id}
+              className="hover:border-indigo-300 hover:shadow-xs transition-all flex flex-col justify-between"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] uppercase font-bold tracking-wider"
+                      >
                         {course.difficulty}
                       </Badge>
                       <Badge
@@ -169,8 +181,8 @@ function TrainerCoursesContent() {
                           course.status === 'PUBLISHED'
                             ? 'success'
                             : course.status === 'PENDING_APPROVAL'
-                            ? 'warning'
-                            : 'secondary'
+                              ? 'warning'
+                              : 'secondary'
                         }
                         className="text-[10px]"
                       >
@@ -185,9 +197,7 @@ function TrainerCoursesContent() {
                     </CardTitle>
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 line-clamp-2 mt-1">
-                  {course.description}
-                </p>
+                <p className="text-xs text-slate-600 line-clamp-2 mt-1">{course.description}</p>
               </CardHeader>
 
               <CardContent className="space-y-4 pt-0">
@@ -226,7 +236,11 @@ function TrainerCoursesContent() {
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex items-center gap-2">
                     <Link href={`/trainer/courses/${course.id}/builder`}>
-                      <Button size="sm" variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold"
+                      >
                         <FileEdit className="w-3.5 h-3.5 mr-1" />
                         <span>Course Builder</span>
                       </Button>

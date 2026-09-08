@@ -3,11 +3,7 @@
 import React, { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AppShell } from '@/components/layout/AppShell';
-import {
-  useTrainerAssessments,
-  useTrainerCourses,
-  useCreateAssessment,
-} from '@/features/trainer';
+import { useTrainerAssessments, useTrainerCourses, useCreateAssessment } from '@/features/trainer';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
@@ -147,7 +143,9 @@ function TrainerAssessmentsContent() {
       {showCreateModal && (
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader>
-            <CardTitle className="text-sm font-bold text-slate-900">Create New Assessment</CardTitle>
+            <CardTitle className="text-sm font-bold text-slate-900">
+              Create New Assessment
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreateAssessment} className="space-y-4">
@@ -164,7 +162,9 @@ function TrainerAssessmentsContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Subject Area *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Subject Area *
+                  </label>
                   <input
                     type="text"
                     value={subject}
@@ -178,7 +178,9 @@ function TrainerAssessmentsContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Linked Course (Optional)</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Linked Course (Optional)
+                  </label>
                   <select
                     value={courseId}
                     onChange={(e) => setCourseId(e.target.value)}
@@ -193,7 +195,9 @@ function TrainerAssessmentsContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Duration (Minutes)</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Duration (Minutes)
+                  </label>
                   <input
                     type="number"
                     min={5}
@@ -204,7 +208,9 @@ function TrainerAssessmentsContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Passing Score (%)</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Passing Score (%)
+                  </label>
                   <input
                     type="number"
                     min={1}
@@ -219,14 +225,25 @@ function TrainerAssessmentsContent() {
               {/* Questions Builder */}
               <div className="space-y-4 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-900">Questions ({questions.length})</h4>
-                  <Button type="button" size="sm" variant="outline" onClick={handleAddQuestion} className="text-xs">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    Questions ({questions.length})
+                  </h4>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddQuestion}
+                    className="text-xs"
+                  >
                     + Add Question
                   </Button>
                 </div>
 
                 {questions.map((q, qIdx) => (
-                  <div key={qIdx} className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+                  <div
+                    key={qIdx}
+                    className="p-4 rounded-xl bg-white border border-slate-200 space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-800">Question {qIdx + 1}</span>
                     </div>
@@ -276,10 +293,21 @@ function TrainerAssessmentsContent() {
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateModal(false)} className="text-xs">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-xs"
+                >
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" disabled={createAssessmentMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={createAssessmentMutation.isPending}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold"
+                >
                   Save Assessment
                 </Button>
               </div>
@@ -300,14 +328,21 @@ function TrainerAssessmentsContent() {
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             Build standardized tests and questionnaires to evaluate trainee competency benchmarks.
           </p>
-          <Button size="sm" onClick={() => setShowCreateModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
+          <Button
+            size="sm"
+            onClick={() => setShowCreateModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold"
+          >
             Create First Assessment
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {assessments?.map((a) => (
-            <Card key={a.id} className="hover:border-indigo-200 transition-all flex flex-col justify-between">
+            <Card
+              key={a.id}
+              className="hover:border-indigo-200 transition-all flex flex-col justify-between"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between mb-1">
                   <Badge variant="outline" className="text-[10px]">

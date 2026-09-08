@@ -46,11 +46,8 @@ export const useUpdateTrainerProfile = () => {
 export const useAddExpertise = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
-      skillId: string;
-      proficiencyLevel: number;
-      yearsExperience?: number;
-    }) => trainerApi.addExpertise(data),
+    mutationFn: (data: { skillId: string; proficiencyLevel: number; yearsExperience?: number }) =>
+      trainerApi.addExpertise(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer', 'profile'] });
     },
@@ -118,7 +115,7 @@ export const useCreateCourse = () => {
 export const useUpdateCourse = (courseId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => trainerApi.updateCourse(courseId, data),
+    mutationFn: (data: Record<string, unknown>) => trainerApi.updateCourse(courseId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
       queryClient.invalidateQueries({ queryKey: ['trainer', 'courses'] });
@@ -189,7 +186,7 @@ export const useDeleteModule = (courseId: string) => {
 export const useCreateLesson = (courseId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ moduleId, data }: { moduleId: string; data: any }) =>
+    mutationFn: ({ moduleId, data }: { moduleId: string; data: Record<string, unknown> }) =>
       trainerApi.createLesson(courseId, moduleId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
@@ -207,7 +204,7 @@ export const useUpdateLesson = (courseId: string) => {
     }: {
       moduleId: string;
       lessonId: string;
-      data: any;
+      data: Record<string, unknown>;
     }) => trainerApi.updateLesson(courseId, moduleId, lessonId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
@@ -229,7 +226,7 @@ export const useDeleteLesson = (courseId: string) => {
 export const useReorderCourse = (courseId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (modules: any[]) => trainerApi.reorderCourse(courseId, modules),
+    mutationFn: (modules: unknown[]) => trainerApi.reorderCourse(courseId, modules),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
     },
@@ -305,7 +302,7 @@ export const useTrainerAssessments = () => {
 export const useCreateAssessment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => trainerApi.createAssessment(data),
+    mutationFn: (data: Record<string, unknown>) => trainerApi.createAssessment(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer', 'assessments'] });
     },

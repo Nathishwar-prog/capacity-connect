@@ -23,9 +23,7 @@ interface AssessmentSnapshotCardProps {
   assessments: AssessmentItem[];
 }
 
-export const AssessmentSnapshotCard: React.FC<AssessmentSnapshotCardProps> = ({
-  assessments,
-}) => {
+export const AssessmentSnapshotCard: React.FC<AssessmentSnapshotCardProps> = ({ assessments }) => {
   return (
     <Card className="flex flex-col justify-between">
       <CardHeader className="pb-3">
@@ -35,7 +33,11 @@ export const AssessmentSnapshotCard: React.FC<AssessmentSnapshotCardProps> = ({
             <span>My Assessments</span>
           </CardTitle>
           <Link href="/trainee/assessments">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -63,16 +65,14 @@ export const AssessmentSnapshotCard: React.FC<AssessmentSnapshotCardProps> = ({
                 >
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h5 className="text-xs font-bold text-slate-900 truncate">
-                        {a.title}
-                      </h5>
+                      <h5 className="text-xs font-bold text-slate-900 truncate">{a.title}</h5>
                       <Badge
                         variant={
                           isPassed
                             ? 'success'
                             : a.status === 'IN_PROGRESS'
-                            ? 'warning'
-                            : 'secondary'
+                              ? 'warning'
+                              : 'secondary'
                         }
                         className="text-[9px] uppercase font-bold"
                       >
@@ -117,7 +117,11 @@ export const AssessmentSnapshotCard: React.FC<AssessmentSnapshotCardProps> = ({
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainee/assessments">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>Assessment History</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

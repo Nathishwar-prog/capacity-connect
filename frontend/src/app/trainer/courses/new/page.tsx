@@ -97,7 +97,8 @@ function NewCourseContent() {
             Create Training Course
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure curriculum metadata. Modules, lessons, and competency frameworks will be added in the Course Builder.
+            Configure curriculum metadata. Modules, lessons, and competency frameworks will be added
+            in the Course Builder.
           </p>
         </div>
       </div>

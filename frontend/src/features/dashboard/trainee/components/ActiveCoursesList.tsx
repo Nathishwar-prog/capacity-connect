@@ -41,7 +41,11 @@ export const ActiveCoursesList: React.FC<ActiveCoursesListProps> = ({ courses })
             </p>
           </div>
           <Link href="/trainee/courses">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -73,9 +77,7 @@ export const ActiveCoursesList: React.FC<ActiveCoursesListProps> = ({ courses })
                       <Badge variant="outline" className="text-[10px] font-bold">
                         {c.difficulty}
                       </Badge>
-                      <span className="text-[11px] text-slate-400 font-medium">
-                        {c.category}
-                      </span>
+                      <span className="text-[11px] text-slate-400 font-medium">{c.category}</span>
                     </div>
 
                     <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
@@ -84,7 +86,9 @@ export const ActiveCoursesList: React.FC<ActiveCoursesListProps> = ({ courses })
 
                     <div className="flex items-center gap-2 text-[11px] text-slate-500">
                       <User className="w-3 h-3 text-slate-400" />
-                      <span>Instructor: <strong className="text-slate-700">{c.trainerName}</strong></span>
+                      <span>
+                        Instructor: <strong className="text-slate-700">{c.trainerName}</strong>
+                      </span>
                     </div>
                   </div>
 

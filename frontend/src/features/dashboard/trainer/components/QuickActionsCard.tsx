@@ -7,10 +7,30 @@ import { PlusCircle, Users, ClipboardList, BarChart3, Upload, Zap } from 'lucide
 
 export const QuickActionsCard: React.FC = () => {
   const actions = [
-    { label: 'Create New Course', href: '/trainer/courses/new', icon: PlusCircle, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
-    { label: 'Monitor Trainees', href: '/trainer/trainees', icon: Users, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    { label: 'Create Assessment', href: '/trainer/assessments', icon: ClipboardList, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-    { label: 'View Analytics', href: '/trainer/analytics', icon: BarChart3, color: 'text-purple-600 bg-purple-50 border-purple-200' },
+    {
+      label: 'Create New Course',
+      href: '/trainer/courses/new',
+      icon: PlusCircle,
+      color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+    },
+    {
+      label: 'Monitor Trainees',
+      href: '/trainer/trainees',
+      icon: Users,
+      color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+    },
+    {
+      label: 'Create Assessment',
+      href: '/trainer/assessments',
+      icon: ClipboardList,
+      color: 'text-amber-600 bg-amber-50 border-amber-200',
+    },
+    {
+      label: 'View Analytics',
+      href: '/trainer/analytics',
+      icon: BarChart3,
+      color: 'text-purple-600 bg-purple-50 border-purple-200',
+    },
   ];
 
   return (
@@ -31,7 +51,9 @@ export const QuickActionsCard: React.FC = () => {
                 href={act.href}
                 className="p-3 rounded-xl border border-slate-200/80 bg-white hover:border-indigo-300 hover:shadow-xs transition-all flex items-center gap-2.5 group"
               >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${act.color}`}>
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${act.color}`}
+                >
                   <Icon className="w-3.5 h-3.5" />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">

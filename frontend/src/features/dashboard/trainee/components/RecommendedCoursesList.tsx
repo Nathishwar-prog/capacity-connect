@@ -38,7 +38,11 @@ export const RecommendedCoursesList: React.FC<RecommendedCoursesListProps> = ({
             </p>
           </div>
           <Link href="/trainee/courses">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All Recommendations</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
@@ -73,15 +77,16 @@ export const RecommendedCoursesList: React.FC<RecommendedCoursesListProps> = ({
                   </h5>
 
                   {rec.reason && (
-                    <p className="text-[11px] text-slate-500 line-clamp-2">
-                      {rec.reason}
-                    </p>
+                    <p className="text-[11px] text-slate-500 line-clamp-2">{rec.reason}</p>
                   )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 flex justify-end">
                   <Link href={`/trainee/courses`}>
-                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">
+                    <Button
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+                    >
                       <span>View Course</span>
                       <ArrowRight className="w-3 h-3 ml-1" />
                     </Button>

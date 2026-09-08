@@ -66,7 +66,11 @@ export const CompetencySnapshotCard: React.FC<CompetencySnapshotCardProps> = ({ 
               <span>{compData.gapsCount} competency areas need attention</span>
             </div>
             <Link href="/trainer/trainees?progressMax=30">
-              <Button size="sm" variant="ghost" className="text-xs font-bold text-amber-800 hover:bg-amber-100/60 p-1 h-auto">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs font-bold text-amber-800 hover:bg-amber-100/60 p-1 h-auto"
+              >
                 Review Gaps
               </Button>
             </Link>
@@ -75,7 +79,11 @@ export const CompetencySnapshotCard: React.FC<CompetencySnapshotCardProps> = ({ 
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainer/analytics">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View Full Analytics</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

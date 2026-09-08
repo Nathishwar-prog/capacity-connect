@@ -79,7 +79,8 @@ export const TraineeDashboard: React.FC = () => {
             Unable to Load Your Learning Cockpit
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Could not retrieve your personalized curriculum progress from the MoES portal. Please check your connection and retry.
+            Could not retrieve your personalized curriculum progress from the MoES portal. Please
+            check your connection and retry.
           </p>
         </div>
         <Button

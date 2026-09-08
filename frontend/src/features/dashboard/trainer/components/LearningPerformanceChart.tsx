@@ -15,12 +15,15 @@ export const LearningPerformanceChart: React.FC<LearningPerformanceChartProps> =
   const [timeRange, setTimeRange] = useState<'7D' | '30D' | '90D' | '6M' | '1Y'>('30D');
 
   // Fallback data points if trendData is empty
-  const points = trendData.length > 0 ? trendData : [
-    { label: 'W1', activeLearners: 4, avgProgress: 25 },
-    { label: 'W2', activeLearners: 8, avgProgress: 45 },
-    { label: 'W3', activeLearners: 12, avgProgress: 68 },
-    { label: 'W4', activeLearners: 18, avgProgress: 82 },
-  ];
+  const points =
+    trendData.length > 0
+      ? trendData
+      : [
+          { label: 'W1', activeLearners: 4, avgProgress: 25 },
+          { label: 'W2', activeLearners: 8, avgProgress: 45 },
+          { label: 'W3', activeLearners: 12, avgProgress: 68 },
+          { label: 'W4', activeLearners: 18, avgProgress: 82 },
+        ];
 
   // SVG dimensions
   const width = 560;
@@ -44,9 +47,10 @@ export const LearningPerformanceChart: React.FC<LearningPerformanceChartProps> =
   }, '');
 
   // Generate SVG path for area fill
-  const areaPath = coords.length > 0
-    ? `${linePath} L ${coords[coords.length - 1].x},${height - paddingY} L ${coords[0].x},${height - paddingY} Z`
-    : '';
+  const areaPath =
+    coords.length > 0
+      ? `${linePath} L ${coords[coords.length - 1].x},${height - paddingY} L ${coords[0].x},${height - paddingY} Z`
+      : '';
 
   return (
     <Card className="flex flex-col justify-between">
@@ -169,9 +173,7 @@ export const LearningPerformanceChart: React.FC<LearningPerformanceChartProps> =
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
             <span>Average Progress ({timeRange})</span>
           </div>
-          <span className="text-slate-700 font-bold">
-            Target Completion Benchmark: 75%
-          </span>
+          <span className="text-slate-700 font-bold">Target Completion Benchmark: 75%</span>
         </div>
       </CardContent>
     </Card>

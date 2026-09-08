@@ -27,7 +27,8 @@ export const TrainerKpiGrid: React.FC<TrainerKpiGridProps> = ({ kpis }) => {
             {kpis.totalEnrollments}
           </div>
           <p className="text-[11px] text-slate-500 mt-1 font-medium">
-            <span className="text-emerald-600 font-bold">{kpis.activeLearners} active</span> • {kpis.completedLearners} completed
+            <span className="text-emerald-600 font-bold">{kpis.activeLearners} active</span> •{' '}
+            {kpis.completedLearners} completed
           </p>
         </div>
       </Card>
@@ -48,7 +49,8 @@ export const TrainerKpiGrid: React.FC<TrainerKpiGridProps> = ({ kpis }) => {
             <span className="text-sm font-semibold text-slate-400 ml-1">/ {kpis.totalCourses}</span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1 font-medium">
-            <span className="font-bold text-amber-600">{kpis.draftCourses} drafts</span> • {kpis.pendingCourses} in review
+            <span className="font-bold text-amber-600">{kpis.draftCourses} drafts</span> •{' '}
+            {kpis.pendingCourses} in review
           </p>
         </div>
       </Card>

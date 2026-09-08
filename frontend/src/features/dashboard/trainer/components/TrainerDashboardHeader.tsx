@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { PlusCircle, Users, Sparkles, Building2 } from 'lucide-react';
+import { PlusCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface TrainerDashboardHeaderProps {
@@ -14,7 +14,7 @@ interface TrainerDashboardHeaderProps {
 export const TrainerDashboardHeader: React.FC<TrainerDashboardHeaderProps> = ({
   trainerName,
   departmentName = 'Meteorological Training Wing (IMD Pune)',
-  organizationName = 'Ministry of Earth Sciences',
+  organizationName: _organizationName,
 }) => {
   // Determine greeting based on local time
   const getGreeting = () => {
@@ -31,9 +31,7 @@ export const TrainerDashboardHeader: React.FC<TrainerDashboardHeaderProps> = ({
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full">
             Training Command Center
           </span>
-          <span className="text-xs text-slate-400 font-medium">
-            {departmentName}
-          </span>
+          <span className="text-xs text-slate-400 font-medium">{departmentName}</span>
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -41,7 +39,8 @@ export const TrainerDashboardHeader: React.FC<TrainerDashboardHeaderProps> = ({
         </h1>
 
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Here is what is happening across your earth science curricula, trainee cohorts, and competency evaluations.
+          Here is what is happening across your earth science curricula, trainee cohorts, and
+          competency evaluations.
         </p>
       </div>
 
@@ -54,7 +53,10 @@ export const TrainerDashboardHeader: React.FC<TrainerDashboardHeaderProps> = ({
         </Link>
 
         <Link href="/trainer/courses/new">
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs">
+          <Button
+            size="sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs"
+          >
             <PlusCircle className="w-4 h-4 mr-1.5" />
             <span>Create Course</span>
           </Button>

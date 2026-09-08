@@ -22,7 +22,6 @@ import {
   Menu,
   X,
   ChevronRight,
-  Sparkle,
   BookOpen,
   Library,
   Target,
@@ -79,7 +78,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }, [isAuthenticated, user]);
 
   const isActive = (path: string) => {
-    if (path === '/dashboard/trainer' && (pathname === '/dashboard/trainer' || pathname === '/trainer/dashboard')) {
+    if (
+      path === '/dashboard/trainer' &&
+      (pathname === '/dashboard/trainer' || pathname === '/trainer/dashboard')
+    ) {
       return true;
     }
     return pathname === path || (path !== '/' && pathname.startsWith(path));
@@ -341,7 +343,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
         {/* Role Badge Bar */}
         <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Workspace</span>
+          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+            Workspace
+          </span>
           <span
             className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border uppercase ${roleMeta.badgeClass}`}
           >

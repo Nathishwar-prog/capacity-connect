@@ -91,9 +91,7 @@ function TrainerAnalyticsContent() {
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Cohort Progress Rate
           </span>
-          <span className="text-2xl font-black text-slate-900 mt-1 block">
-            {kpis.avgProgress}%
-          </span>
+          <span className="text-2xl font-black text-slate-900 mt-1 block">{kpis.avgProgress}%</span>
           <span className="text-[11px] text-slate-400 mt-1 block">Average module completion</span>
         </Card>
 
@@ -101,10 +99,10 @@ function TrainerAnalyticsContent() {
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Average Assessment Score
           </span>
-          <span className="text-2xl font-black text-slate-900 mt-1 block">
-            {kpis.avgScore}%
+          <span className="text-2xl font-black text-slate-900 mt-1 block">{kpis.avgScore}%</span>
+          <span className="text-[11px] text-slate-400 mt-1 block">
+            Across submitted evaluations
           </span>
-          <span className="text-[11px] text-slate-400 mt-1 block">Across submitted evaluations</span>
         </Card>
       </div>
 

@@ -40,9 +40,7 @@ export const AchievementsCard: React.FC<AchievementsCardProps> = ({ achievements
             <Trophy className="w-4 h-4 text-amber-500" />
             <span>Earned Achievements</span>
           </CardTitle>
-          <span className="text-[10px] font-bold text-slate-500">
-            {achievements.length} Badges
-          </span>
+          <span className="text-[10px] font-bold text-slate-500">{achievements.length} Badges</span>
         </div>
         <p className="text-xs text-slate-500 mt-0.5">
           Certified milestones and operational competency achievements
@@ -64,9 +62,7 @@ export const AchievementsCard: React.FC<AchievementsCardProps> = ({ achievements
                 {getAchievementIcon(ach.type)}
               </div>
               <div className="min-w-0 flex-1">
-                <h5 className="text-xs font-bold text-slate-900 truncate">
-                  {ach.title}
-                </h5>
+                <h5 className="text-xs font-bold text-slate-900 truncate">{ach.title}</h5>
                 {ach.description && (
                   <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
                     {ach.description}
@@ -82,7 +78,11 @@ export const AchievementsCard: React.FC<AchievementsCardProps> = ({ achievements
 
         <div className="pt-2 border-t border-slate-100 flex justify-end">
           <Link href="/trainee/achievements">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All Achievements</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

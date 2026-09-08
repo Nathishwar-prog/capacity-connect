@@ -214,7 +214,10 @@ function TraineeDetailContent() {
                           </span>
                           <span className="text-[10px] text-slate-500 block">Score</span>
                         </div>
-                        <Badge variant={a.passed ? 'success' : 'destructive'} className="text-[10px]">
+                        <Badge
+                          variant={a.passed ? 'success' : 'destructive'}
+                          className="text-[10px]"
+                        >
                           {a.passed ? 'PASSED' : 'FAILED'}
                         </Badge>
                       </div>
@@ -241,10 +244,15 @@ function TraineeDetailContent() {
                 <p className="text-xs text-slate-500">No tracked competencies.</p>
               ) : (
                 competencies.map((comp) => (
-                  <div key={comp.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-1">
+                  <div
+                    key={comp.id}
+                    className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-1"
+                  >
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-bold text-slate-900">{comp.name}</span>
-                      <span className="font-bold text-indigo-600">Level {comp.currentLevel} / 5</span>
+                      <span className="font-bold text-indigo-600">
+                        Level {comp.currentLevel} / 5
+                      </span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                       <div
@@ -268,7 +276,9 @@ function TraineeDetailContent() {
             </CardHeader>
             <CardContent className="space-y-3">
               {skillGaps.length === 0 ? (
-                <p className="text-xs text-slate-500">No active skill gaps flagged for this trainee.</p>
+                <p className="text-xs text-slate-500">
+                  No active skill gaps flagged for this trainee.
+                </p>
               ) : (
                 skillGaps.map((gap) => (
                   <div

@@ -2,7 +2,15 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { BookOpen, Layers, PlayCircle, FileCheck2, Award, ChevronRight, Compass } from 'lucide-react';
+import {
+  BookOpen,
+  Layers,
+  PlayCircle,
+  FileCheck2,
+  Award,
+  ChevronRight,
+  Compass,
+} from 'lucide-react';
 
 export const LearningJourneyCard: React.FC = () => {
   const steps = [
@@ -35,8 +43,8 @@ export const LearningJourneyCard: React.FC = () => {
                       isComplete
                         ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                         : isActive
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-white text-slate-400 border border-slate-200'
+                          ? 'bg-indigo-600 text-white shadow-2xs'
+                          : 'bg-white text-slate-400 border border-slate-200'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -46,8 +54,8 @@ export const LearningJourneyCard: React.FC = () => {
                       isActive
                         ? 'text-indigo-900 font-extrabold'
                         : isComplete
-                        ? 'text-slate-800'
-                        : 'text-slate-400'
+                          ? 'text-slate-800'
+                          : 'text-slate-400'
                     }`}
                   >
                     {step.label}

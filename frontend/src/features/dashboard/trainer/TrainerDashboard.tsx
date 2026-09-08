@@ -4,7 +4,7 @@ import React from 'react';
 import { useTrainerDashboard } from '@/features/trainer';
 import useAuthStore from '@/store/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import {
@@ -81,7 +81,8 @@ export const TrainerDashboard: React.FC = () => {
             Unable to Load Training Command Center
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Could not retrieve aggregated metrics from the MoES learning portal. Please check your network connection and retry.
+            Could not retrieve aggregated metrics from the MoES learning portal. Please check your
+            network connection and retry.
           </p>
         </div>
         <Button

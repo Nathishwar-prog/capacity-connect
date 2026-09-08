@@ -42,7 +42,8 @@ export const TraineeDashboardHeader: React.FC<TraineeDashboardHeaderProps> = ({
         </h1>
 
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Continue your learning journey and build your meteorological and earth science competencies.
+          Continue your learning journey and build your meteorological and earth science
+          competencies.
         </p>
       </div>
 

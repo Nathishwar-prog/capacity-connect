@@ -183,7 +183,9 @@ function CourseBuilderContent() {
 
     setValidationErrors([]);
 
-    if (confirm('Submit this course for administrative review? It will enter PENDING_APPROVAL state.')) {
+    if (
+      confirm('Submit this course for administrative review? It will enter PENDING_APPROVAL state.')
+    ) {
       try {
         await submitMutation.mutateAsync();
         setSuccessMessage('Course has been successfully submitted for institutional review.');
@@ -220,8 +222,8 @@ function CourseBuilderContent() {
                   course.status === 'PUBLISHED'
                     ? 'success'
                     : course.status === 'PENDING_APPROVAL'
-                    ? 'warning'
-                    : 'secondary'
+                      ? 'warning'
+                      : 'secondary'
                 }
                 className="text-[10px]"
               >
@@ -234,9 +236,7 @@ function CourseBuilderContent() {
               {course.title}
             </h1>
 
-            <p className="text-xs text-slate-600 max-w-3xl line-clamp-2">
-              {course.description}
-            </p>
+            <p className="text-xs text-slate-600 max-w-3xl line-clamp-2">{course.description}</p>
           </div>
 
           {/* Header Action: Submit */}
@@ -354,7 +354,9 @@ function CourseBuilderContent() {
           {activeModuleForLesson && (
             <Card className="border-indigo-300 bg-indigo-50/40 animate-in fade-in duration-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-xs font-bold text-slate-900">Add Lesson to Module</CardTitle>
+                <CardTitle className="text-xs font-bold text-slate-900">
+                  Add Lesson to Module
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleAddLesson} className="space-y-3">
@@ -533,7 +535,9 @@ function CourseBuilderContent() {
                                 )}
                               </div>
                               <div className="flex items-center gap-3 text-[10px] text-slate-500 mt-0.5">
-                                <span className="uppercase font-semibold">{lesson.contentType}</span>
+                                <span className="uppercase font-semibold">
+                                  {lesson.contentType}
+                                </span>
                                 {lesson.durationMinutes && (
                                   <span>• {lesson.durationMinutes} mins</span>
                                 )}
@@ -582,7 +586,8 @@ function CourseBuilderContent() {
             <CardContent className="space-y-4">
               {course.courseCompetencies.length === 0 ? (
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-                  <strong>Action Required:</strong> Map at least one competency framework to allow institutional approval.
+                  <strong>Action Required:</strong> Map at least one competency framework to allow
+                  institutional approval.
                 </div>
               ) : (
                 <div className="space-y-2.5">

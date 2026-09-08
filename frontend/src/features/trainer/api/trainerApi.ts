@@ -33,7 +33,7 @@ export const trainerApi = {
     bio?: string;
     yearsExperience?: number;
   }) => {
-    const res = await apiClient.patch<ApiResponse<any>>('/trainer/profile', data);
+    const res = await apiClient.patch<ApiResponse<unknown>>('/trainer/profile', data);
     return res.data.data;
   },
 
@@ -42,12 +42,12 @@ export const trainerApi = {
     proficiencyLevel: number;
     yearsExperience?: number;
   }) => {
-    const res = await apiClient.post<ApiResponse<any>>('/trainer/expertise', data);
+    const res = await apiClient.post<ApiResponse<unknown>>('/trainer/expertise', data);
     return res.data.data;
   },
 
   removeExpertise: async (skillId: string) => {
-    const res = await apiClient.delete<ApiResponse<any>>(`/trainer/expertise/${skillId}`);
+    const res = await apiClient.delete<ApiResponse<unknown>>(`/trainer/expertise/${skillId}`);
     return res.data.data;
   },
 
@@ -71,7 +71,9 @@ export const trainerApi = {
   },
 
   getCourseById: async (courseId: string): Promise<TrainerCourseDetail> => {
-    const res = await apiClient.get<ApiResponse<TrainerCourseDetail>>(`/trainer/courses/${courseId}`);
+    const res = await apiClient.get<ApiResponse<TrainerCourseDetail>>(
+      `/trainer/courses/${courseId}`,
+    );
     return res.data.data;
   },
 
@@ -84,22 +86,22 @@ export const trainerApi = {
     durationMinutes?: number;
     thumbnailUrl?: string | null;
   }) => {
-    const res = await apiClient.post<ApiResponse<any>>('/trainer/courses', data);
+    const res = await apiClient.post<ApiResponse<unknown>>('/trainer/courses', data);
     return res.data.data;
   },
 
-  updateCourse: async (courseId: string, data: any) => {
-    const res = await apiClient.patch<ApiResponse<any>>(`/trainer/courses/${courseId}`, data);
+  updateCourse: async (courseId: string, data: Record<string, unknown>) => {
+    const res = await apiClient.patch<ApiResponse<unknown>>(`/trainer/courses/${courseId}`, data);
     return res.data.data;
   },
 
   deleteCourse: async (courseId: string) => {
-    const res = await apiClient.delete<ApiResponse<any>>(`/trainer/courses/${courseId}`);
+    const res = await apiClient.delete<ApiResponse<unknown>>(`/trainer/courses/${courseId}`);
     return res.data.data;
   },
 
   submitCourseForApproval: async (courseId: string) => {
-    const res = await apiClient.post<ApiResponse<any>>(`/trainer/courses/${courseId}/submit`);
+    const res = await apiClient.post<ApiResponse<unknown>>(`/trainer/courses/${courseId}/submit`);
     return res.data.data;
   },
 
@@ -120,7 +122,7 @@ export const trainerApi = {
     moduleId: string,
     data: { title?: string; description?: string | null; orderIndex?: number },
   ) => {
-    const res = await apiClient.patch<ApiResponse<any>>(
+    const res = await apiClient.patch<ApiResponse<unknown>>(
       `/trainer/courses/${courseId}/modules/${moduleId}`,
       data,
     );
@@ -128,7 +130,7 @@ export const trainerApi = {
   },
 
   deleteModule: async (courseId: string, moduleId: string) => {
-    const res = await apiClient.delete<ApiResponse<any>>(
+    const res = await apiClient.delete<ApiResponse<unknown>>(
       `/trainer/courses/${courseId}/modules/${moduleId}`,
     );
     return res.data.data;
@@ -137,7 +139,7 @@ export const trainerApi = {
   createLesson: async (
     courseId: string,
     moduleId: string,
-    data: any,
+    data: Record<string, unknown>,
   ): Promise<LessonItem> => {
     const res = await apiClient.post<ApiResponse<LessonItem>>(
       `/trainer/courses/${courseId}/modules/${moduleId}/lessons`,
@@ -146,8 +148,13 @@ export const trainerApi = {
     return res.data.data;
   },
 
-  updateLesson: async (courseId: string, moduleId: string, lessonId: string, data: any) => {
-    const res = await apiClient.patch<ApiResponse<any>>(
+  updateLesson: async (
+    courseId: string,
+    moduleId: string,
+    lessonId: string,
+    data: Record<string, unknown>,
+  ) => {
+    const res = await apiClient.patch<ApiResponse<unknown>>(
       `/trainer/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
       data,
     );
@@ -155,24 +162,21 @@ export const trainerApi = {
   },
 
   deleteLesson: async (courseId: string, moduleId: string, lessonId: string) => {
-    const res = await apiClient.delete<ApiResponse<any>>(
+    const res = await apiClient.delete<ApiResponse<unknown>>(
       `/trainer/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
     );
     return res.data.data;
   },
 
-  reorderCourse: async (courseId: string, modules: any[]) => {
-    const res = await apiClient.put<ApiResponse<any>>(`/trainer/courses/${courseId}/reorder`, {
+  reorderCourse: async (courseId: string, modules: unknown[]) => {
+    const res = await apiClient.put<ApiResponse<unknown>>(`/trainer/courses/${courseId}/reorder`, {
       modules,
     });
     return res.data.data;
   },
 
-  mapCompetency: async (
-    courseId: string,
-    data: { competencyId: string; targetLevel: number },
-  ) => {
-    const res = await apiClient.post<ApiResponse<any>>(
+  mapCompetency: async (courseId: string, data: { competencyId: string; targetLevel: number }) => {
+    const res = await apiClient.post<ApiResponse<unknown>>(
       `/trainer/courses/${courseId}/competencies`,
       data,
     );
@@ -180,7 +184,7 @@ export const trainerApi = {
   },
 
   unmapCompetency: async (courseId: string, competencyId: string) => {
-    const res = await apiClient.delete<ApiResponse<any>>(
+    const res = await apiClient.delete<ApiResponse<unknown>>(
       `/trainer/courses/${courseId}/competencies/${competencyId}`,
     );
     return res.data.data;
@@ -222,12 +226,12 @@ export const trainerApi = {
   },
 
   getAssessmentById: async (assessmentId: string) => {
-    const res = await apiClient.get<ApiResponse<any>>(`/trainer/assessments/${assessmentId}`);
+    const res = await apiClient.get<ApiResponse<unknown>>(`/trainer/assessments/${assessmentId}`);
     return res.data.data;
   },
 
-  createAssessment: async (data: any) => {
-    const res = await apiClient.post<ApiResponse<any>>('/trainer/assessments', data);
+  createAssessment: async (data: Record<string, unknown>) => {
+    const res = await apiClient.post<ApiResponse<unknown>>('/trainer/assessments', data);
     return res.data.data;
   },
 

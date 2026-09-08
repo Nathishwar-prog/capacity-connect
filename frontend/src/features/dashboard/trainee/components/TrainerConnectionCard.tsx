@@ -36,7 +36,8 @@ export const TrainerConnectionCard: React.FC<TrainerConnectionProps> = ({ traine
       <CardContent className="space-y-4">
         {!trainer ? (
           <div className="p-6 text-center text-xs text-slate-500">
-            No dedicated instructor assigned yet. Trainer matching will occur upon course enrollment.
+            No dedicated instructor assigned yet. Trainer matching will occur upon course
+            enrollment.
           </div>
         ) : (
           <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-3">
@@ -45,9 +46,7 @@ export const TrainerConnectionCard: React.FC<TrainerConnectionProps> = ({ traine
                 {trainer.name.charAt(0)}
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs font-bold text-slate-900 truncate">
-                  {trainer.name}
-                </h4>
+                <h4 className="text-xs font-bold text-slate-900 truncate">{trainer.name}</h4>
                 <p className="text-[11px] text-indigo-700 font-semibold truncate">
                   {trainer.designation}
                 </p>
@@ -59,11 +58,13 @@ export const TrainerConnectionCard: React.FC<TrainerConnectionProps> = ({ traine
             </p>
 
             <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-medium">
-                IMD Senior Faculty
-              </span>
+              <span className="text-[10px] text-slate-400 font-medium">IMD Senior Faculty</span>
               <Link href="/trainee/trainers">
-                <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 p-1 h-auto">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 p-1 h-auto"
+                >
                   <span>View Profile</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1" />
                 </Button>

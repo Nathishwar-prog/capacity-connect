@@ -58,9 +58,7 @@ export const UpNextList: React.FC<UpNextListProps> = ({ items }) => {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h5 className="text-xs font-bold text-slate-900 truncate">
-                          {item.title}
-                        </h5>
+                        <h5 className="text-xs font-bold text-slate-900 truncate">{item.title}</h5>
                         <Badge
                           variant={isQuiz ? 'warning' : 'secondary'}
                           className="text-[9px] uppercase font-bold"

@@ -33,7 +33,9 @@ export default function TrainerTraineesPage() {
 function TrainerTraineesContent() {
   const [search, setSearch] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [progressFilter, setProgressFilter] = useState<'ALL' | 'COMPLETED' | 'ON_TRACK' | 'AT_RISK'>('ALL');
+  const [progressFilter, setProgressFilter] = useState<
+    'ALL' | 'COMPLETED' | 'ON_TRACK' | 'AT_RISK'
+  >('ALL');
 
   let progressMin: number | undefined;
   let progressMax: number | undefined;
@@ -183,8 +185,8 @@ function TrainerTraineesContent() {
                                 t.progress >= 70
                                   ? 'bg-emerald-500'
                                   : t.progress >= 30
-                                  ? 'bg-amber-500'
-                                  : 'bg-rose-500'
+                                    ? 'bg-amber-500'
+                                    : 'bg-rose-500'
                               }`}
                               style={{ width: `${t.progress}%` }}
                             />
@@ -201,7 +203,11 @@ function TrainerTraineesContent() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <Link href={`/trainer/trainees/${t.traineeId}`}>
-                          <Button size="sm" variant="ghost" className="text-xs text-indigo-600 font-bold hover:bg-indigo-50">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-indigo-600 font-bold hover:bg-indigo-50"
+                          >
                             <span>Details</span>
                             <ArrowRight className="w-3 h-3 ml-1" />
                           </Button>

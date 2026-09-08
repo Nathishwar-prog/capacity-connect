@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { TraineeHealthDistribution } from '@/features/trainer';
-import { ShieldCheck, ArrowRight, HeartPulse } from 'lucide-react';
+import { ArrowRight, HeartPulse } from 'lucide-react';
 
 interface TraineeHealthCardProps {
   distribution?: TraineeHealthDistribution;
@@ -21,10 +21,34 @@ export const TraineeHealthCard: React.FC<TraineeHealthCardProps> = ({ distributi
   };
 
   const segments = [
-    { label: 'On Track (≥70%)', count: health.onTrack.count, pct: health.onTrack.percentage, color: 'bg-emerald-500', barBg: 'bg-emerald-100' },
-    { label: 'Needs Attention (30-69%)', count: health.needsAttention.count, pct: health.needsAttention.percentage, color: 'bg-amber-500', barBg: 'bg-amber-100' },
-    { label: 'At Risk (<30%)', count: health.atRisk.count, pct: health.atRisk.percentage, color: 'bg-rose-500', barBg: 'bg-rose-100' },
-    { label: 'Completed', count: health.completed.count, pct: health.completed.percentage, color: 'bg-indigo-600', barBg: 'bg-indigo-100' },
+    {
+      label: 'On Track (≥70%)',
+      count: health.onTrack.count,
+      pct: health.onTrack.percentage,
+      color: 'bg-emerald-500',
+      barBg: 'bg-emerald-100',
+    },
+    {
+      label: 'Needs Attention (30-69%)',
+      count: health.needsAttention.count,
+      pct: health.needsAttention.percentage,
+      color: 'bg-amber-500',
+      barBg: 'bg-amber-100',
+    },
+    {
+      label: 'At Risk (<30%)',
+      count: health.atRisk.count,
+      pct: health.atRisk.percentage,
+      color: 'bg-rose-500',
+      barBg: 'bg-rose-100',
+    },
+    {
+      label: 'Completed',
+      count: health.completed.count,
+      pct: health.completed.percentage,
+      color: 'bg-indigo-600',
+      barBg: 'bg-indigo-100',
+    },
   ];
 
   return (
@@ -95,7 +119,11 @@ export const TraineeHealthCard: React.FC<TraineeHealthCardProps> = ({ distributi
 
         <div className="pt-3 border-t border-slate-100 flex justify-end">
           <Link href="/trainer/trainees">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               <span>View All Trainees</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>

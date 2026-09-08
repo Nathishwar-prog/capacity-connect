@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { AppShell } from '@/components/layout/AppShell';
-import { TraineeDashboard } from '@/features/dashboard';
+import { AppShell } from '@/features/trainee-app-shell';
+import { TraineeDashboard } from '@/features/dashboard/trainee';
 
 export default function TraineeDashboardPage() {
   return (

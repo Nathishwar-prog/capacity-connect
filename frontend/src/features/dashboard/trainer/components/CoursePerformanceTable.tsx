@@ -36,8 +36,7 @@ interface CoursePerformanceTableProps {
 export const CoursePerformanceTable: React.FC<CoursePerformanceTableProps> = ({ courses }) => {
   const [filter, setFilter] = useState<string>('ALL');
 
-  const filteredCourses =
-    filter === 'ALL' ? courses : courses.filter((c) => c.status === filter);
+  const filteredCourses = filter === 'ALL' ? courses : courses.filter((c) => c.status === filter);
 
   const getStatusBadge = (status: CourseStatus) => {
     switch (status) {
@@ -107,8 +106,8 @@ export const CoursePerformanceTable: React.FC<CoursePerformanceTableProps> = ({ 
                 {statusKey === 'ALL'
                   ? 'All'
                   : statusKey === 'PENDING_APPROVAL'
-                  ? 'In Review'
-                  : statusKey.charAt(0) + statusKey.slice(1).toLowerCase()}
+                    ? 'In Review'
+                    : statusKey.charAt(0) + statusKey.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -164,7 +163,11 @@ export const CoursePerformanceTable: React.FC<CoursePerformanceTableProps> = ({ 
                     </td>
                     <td className="py-3 px-3 text-right">
                       <Link href={`/trainer/courses/${c.id}/builder`}>
-                        <Button size="sm" variant="ghost" className="text-xs text-indigo-600 font-bold hover:bg-indigo-50">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-indigo-600 font-bold hover:bg-indigo-50"
+                        >
                           <span>Builder</span>
                           <ExternalLink className="w-3 h-3 ml-1" />
                         </Button>
@@ -182,7 +185,11 @@ export const CoursePerformanceTable: React.FC<CoursePerformanceTableProps> = ({ 
             Showing {filteredCourses.length} of {courses.length} courses
           </span>
           <Link href="/trainer/courses">
-            <Button size="sm" variant="ghost" className="text-xs font-bold text-slate-700 hover:text-indigo-600">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-bold text-slate-700 hover:text-indigo-600"
+            >
               <span>View All Courses</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
