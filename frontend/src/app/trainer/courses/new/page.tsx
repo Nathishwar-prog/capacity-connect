@@ -70,7 +70,7 @@ function NewCourseContent() {
         thumbnailUrl: thumbnailUrl || null,
       });
 
-      router.push(`/trainer/courses/${created.id}/builder`);
+      router.push(`/trainer/courses/${(created as any)?.id}/builder`);
     } catch (err: any) {
       setErrorMessage(
         err?.response?.data?.message || 'Failed to create course. Please review the inputs.',

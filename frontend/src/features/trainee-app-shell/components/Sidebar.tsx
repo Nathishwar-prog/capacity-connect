@@ -21,6 +21,8 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { NavItem } from '../types/trainee-app-shell.types';
+import { useLanguageStore } from '@/store/language';
+import { getTranslation } from '@/features/trainee-dashboard/utils/i18n';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -90,6 +92,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   unreadNotificationsCount = 2,
 }) => {
   const pathname = usePathname();
+  const { language } = useLanguageStore();
+  const t = getTranslation(language);
+
+  const getNavLabel = (href: string, fallback: string) => {
+    switch (href) {
+      case '/trainee/dashboard':
+        return t.navDashboard;
+      case '/trainee/courses':
+        return t.navMyCourses;
+      case '/trainee/explore':
+        return t.navExploreCourses;
+      case '/trainee/progress':
+        return t.navMyProgress;
+      case '/trainee/assessments':
+        return t.navAssessments;
+      case '/trainee/certificates':
+        return t.navCertificates;
+      case '/trainee/notifications':
+        return t.navNotifications;
+      case '/trainee/profile':
+        return t.navProfile;
+      case '/trainee/settings':
+        return t.navSettings;
+      default:
+        return fallback;
+    }
+  };
 
   const isRouteActive = (href: string) => {
     if (href === '/trainee/dashboard') {
@@ -124,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 IMD Portal
               </span>
               <span className="text-[11px] font-semibold text-slate-400 leading-tight">
-                Safer Tomorrow
+                {t.portalSubtitle}
               </span>
             </div>
           )}
@@ -176,7 +205,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               />
 
-              {!isCollapsed && <span className="truncate flex-1 tracking-tight">{item.label}</span>}
+              {!isCollapsed && (
+                <span className="truncate flex-1 tracking-tight">
+                  {getNavLabel(item.href, item.label)}
+                </span>
+              )}
 
               {/* Unread / Status Badge */}
               {badgeValue !== undefined && !isCollapsed && (
@@ -217,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!isCollapsed && (
           <div className="px-3 py-2 text-[11px] text-slate-500 flex items-center gap-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span className="truncate">Help & Knowledge Center</span>
+            <span className="truncate">{t.helpAndKnowledge}</span>
           </div>
         )}
 
@@ -226,8 +259,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           type="button"
           onClick={onLogout}
           disabled={isLoggingOut}
-          title={isCollapsed ? 'Sign Out' : undefined}
-          aria-label="Sign Out"
+          title={isCollapsed ? t.signOut : undefined}
+          aria-label={t.signOut}
           className={`w-full flex items-center gap-2.5 py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50/60 transition-all shadow-2xs disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none ${
             isCollapsed ? 'justify-center px-0' : ''
           }`}
@@ -237,7 +270,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <LogOut className="w-4 h-4 text-slate-500 hover:text-rose-600 shrink-0" />
           )}
-          {!isCollapsed && <span className="truncate">Log Out</span>}
+          {!isCollapsed && <span className="truncate">{t.signOut}</span>}
         </button>
       </div>
     </aside>

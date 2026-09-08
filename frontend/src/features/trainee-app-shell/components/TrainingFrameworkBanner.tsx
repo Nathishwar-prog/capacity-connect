@@ -2,9 +2,13 @@
 
 import React, { useState } from 'react';
 import { ShieldCheck, ChevronDown } from 'lucide-react';
+import { useLanguageStore } from '@/store/language';
+import { getTranslation } from '@/features/trainee-dashboard/utils/i18n';
 
 export const TrainingFrameworkBanner: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { language } = useLanguageStore();
+  const t = getTranslation(language);
 
   return (
     <div className="mb-6 rounded-2xl bg-gradient-to-r from-[#07172C] via-[#0B2447] to-[#143C6D] border border-sky-900/50 p-4 text-white shadow-sm">
@@ -18,15 +22,13 @@ export const TrainingFrameworkBanner: React.FC = () => {
           <div className="space-y-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-extrabold tracking-wider uppercase text-white">
-                IMD METEOROLOGICAL TRAINING FRAMEWORK
+                {t.frameworkTitle}
               </span>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sky-400/20 text-sky-200 border border-sky-400/30 tracking-tight">
-                WMO-258 & MoES Standards
+                {t.frameworkStandard}
               </span>
             </div>
-            <p className="text-[11px] text-slate-300 font-medium truncate">
-              Continuous Competency Transformation Lifecycle & Active Forecaster Evaluation Loop
-            </p>
+            <p className="text-[11px] text-slate-300 font-medium truncate">{t.frameworkSubtitle}</p>
           </div>
         </div>
 
@@ -38,7 +40,7 @@ export const TrainingFrameworkBanner: React.FC = () => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-semibold text-white transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none"
             aria-expanded={isExpanded}
           >
-            <span>View Workflow</span>
+            <span>{t.viewWorkflow}</span>
             <ChevronDown
               className={`w-3.5 h-3.5 transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''

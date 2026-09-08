@@ -1,0 +1,292 @@
+import { TraineeDashboardState } from '../types/trainee-dashboard.types';
+
+export const mockTraineeDashboardData: TraineeDashboardState = {
+  traineeName: 'Yoga S.',
+  designation: 'Met. Observer Trainee',
+  department: 'National Weather Forecasting Centre (NWFC)',
+  organization: 'India Meteorological Department',
+
+  // 1. Profile Completion
+  profileCompletion: {
+    percentage: 85,
+    statusText: 'Profile nearly complete • 9 of 11 fields verified',
+    completedFieldsCount: 9,
+    totalFieldsCount: 11,
+    missingFields: ['Emergency Operational Contact', 'Scientific Specialization Details'],
+  },
+
+  // 2. Active Courses
+  activeCourses: [
+    {
+      id: 'course-1',
+      title: 'Operational Weather Forecasting & Synoptic Analysis',
+      slug: 'weather-forecasting-synoptic-analysis',
+      category: 'Operational Meteorology',
+      trainerName: 'Dr. S. Ramanathan',
+      trainerDesignation: 'Scientist-F, NWFC New Delhi',
+      progressPercentage: 75,
+      status: 'IN_PROGRESS',
+      currentModuleTitle: 'Module 3: Tropical Cyclone Genesis & Tracking',
+      currentLessonTitle: 'Dvorak Technique & Satellite Pattern Matching',
+      lastActivityDate: 'Today at 09:30 AM IST',
+    },
+    {
+      id: 'course-2',
+      title: 'Satellite Meteorology & INSAT-3D/3DR RGB Interpretation',
+      slug: 'satellite-meteorology-insat-rgb',
+      category: 'Remote Sensing',
+      trainerName: 'Dr. P. K. Sharma',
+      trainerDesignation: 'Senior Scientist, Satellite Met. Division',
+      progressPercentage: 40,
+      status: 'IN_PROGRESS',
+      currentModuleTitle: 'Module 2: Water Vapor & Thermal Infrared Channels',
+      currentLessonTitle: 'Deep Convective Cloud Top Temperature Profiling',
+      lastActivityDate: 'Yesterday',
+    },
+    {
+      id: 'course-3',
+      title: 'Doppler Weather Radar (DWR) Echo & Velocity Analysis',
+      slug: 'doppler-weather-radar-echo-velocity',
+      category: 'Radar Meteorology',
+      trainerName: 'Dr. V. K. Rajiv',
+      trainerDesignation: 'Director, Radar Operations Wing',
+      progressPercentage: 20,
+      status: 'IN_PROGRESS',
+      currentModuleTitle: 'Module 1: Reflectivity (Z) and Radial Velocity (V)',
+      currentLessonTitle: 'Mesocyclone Signatures & Hook Echo Identification',
+      lastActivityDate: '3 days ago',
+    },
+  ],
+
+  // 3. Course Progress
+  courseProgress: {
+    overallPercentage: 68,
+    courses: [
+      {
+        courseId: 'course-1',
+        courseTitle: 'Operational Weather Forecasting',
+        category: 'Operational Meteorology',
+        progressPercentage: 75,
+        totalLessons: 16,
+        completedLessons: 12,
+      },
+      {
+        courseId: 'course-2',
+        courseTitle: 'Satellite Meteorology & INSAT-3D',
+        category: 'Remote Sensing',
+        progressPercentage: 40,
+        totalLessons: 15,
+        completedLessons: 6,
+      },
+      {
+        courseId: 'course-4',
+        courseTitle: 'Numerical Weather Prediction (NWP) Modeling',
+        category: 'Atmospheric Dynamics',
+        progressPercentage: 55,
+        totalLessons: 18,
+        completedLessons: 10,
+      },
+      {
+        courseId: 'course-3',
+        courseTitle: 'Doppler Weather Radar Interpretation',
+        category: 'Radar Meteorology',
+        progressPercentage: 20,
+        totalLessons: 10,
+        completedLessons: 2,
+      },
+    ],
+  },
+
+  // 4. Upcoming Assessments
+  upcomingAssessments: [
+    {
+      id: 'assess-1',
+      title: 'Synoptic Forecasting & Severe Weather Assessment — Module 2',
+      courseTitle: 'Operational Weather Forecasting',
+      courseId: 'course-1',
+      dueDate: '10 September 2026',
+      durationMinutes: 45,
+      passingScore: 70,
+      status: 'PENDING',
+      assessmentType: 'SIMULATION',
+    },
+    {
+      id: 'assess-2',
+      title: 'Doppler Radar Echo & Velocity Interpretation Quiz',
+      courseTitle: 'Doppler Weather Radar Interpretation',
+      courseId: 'course-3',
+      dueDate: '14 September 2026',
+      durationMinutes: 30,
+      passingScore: 75,
+      status: 'SCHEDULED',
+      assessmentType: 'QUIZ',
+    },
+    {
+      id: 'assess-3',
+      title: 'NWP Model Output Diagnostics & Verification Test',
+      courseTitle: 'Numerical Weather Prediction (NWP) Modeling',
+      courseId: 'course-4',
+      dueDate: '18 September 2026',
+      durationMinutes: 60,
+      passingScore: 80,
+      status: 'UPCOMING',
+      assessmentType: 'PRACTICAL_EXAM',
+    },
+  ],
+
+  // 5. Competency
+  competency: {
+    overallPercentage: 72,
+    levelLabel: 'Operational Forecaster Level 3',
+    statusText: 'Good Progress • Meeting WMO-258 BIP-M Competency Standards',
+    breakdown: [
+      {
+        id: 'comp-1',
+        name: 'Synoptic Weather Analysis & Charting',
+        category: 'Operational Meteorology',
+        score: 80,
+        targetScore: 85,
+        level: 'Proficient (Level 4)',
+      },
+      {
+        id: 'comp-2',
+        name: 'Severe Weather Early Warning Simulation',
+        category: 'Disaster Early Warning',
+        score: 75,
+        targetScore: 80,
+        level: 'Operational (Level 3)',
+      },
+      {
+        id: 'comp-3',
+        name: 'Aviation Meteorological Terminal Aerodrome Forecast (TAF)',
+        category: 'Aeronautical Met',
+        score: 68,
+        targetScore: 75,
+        level: 'Intermediate (Level 3)',
+      },
+      {
+        id: 'comp-4',
+        name: 'Numerical Weather Prediction (NWP) Interpretation',
+        category: 'Atmospheric Modeling',
+        score: 65,
+        targetScore: 80,
+        level: 'Developing (Level 2)',
+      },
+    ],
+  },
+
+  // 6. Skill Gaps
+  skillGaps: [
+    {
+      id: 'gap-1',
+      skillName: 'Meteorological Big Data & Python Climate Analytics',
+      competencyArea: 'Atmospheric Data Analysis',
+      currentLevel: 2,
+      targetLevel: 4,
+      gapPercentage: 25,
+      priority: 'HIGH',
+      recommendedCourse: 'Meteorological Data Analysis with Python & NetCDF4',
+    },
+    {
+      id: 'gap-2',
+      skillName: 'Numerical Weather Prediction Parameterization',
+      competencyArea: 'NWP Modeling',
+      currentLevel: 2,
+      targetLevel: 4,
+      gapPercentage: 20,
+      priority: 'HIGH',
+      recommendedCourse: 'WRF & Global Forecast System (GFS) Model Dynamics',
+    },
+    {
+      id: 'gap-3',
+      skillName: 'Satellite Water Vapor Channel Multi-Spectral Analysis',
+      competencyArea: 'Satellite Meteorology',
+      currentLevel: 3,
+      targetLevel: 4,
+      gapPercentage: 15,
+      priority: 'MEDIUM',
+      recommendedCourse: 'Advanced INSAT-3D RGB Nighttime Microphysics',
+    },
+    {
+      id: 'gap-4',
+      skillName: 'Hydrometeorological Quantitative Precipitation Estimation',
+      competencyArea: 'Hydrometeorology',
+      currentLevel: 3,
+      targetLevel: 4,
+      gapPercentage: 10,
+      priority: 'MODERATE',
+      recommendedCourse: 'Flash Flood & River Basin QPE Methodologies',
+    },
+  ],
+
+  // 7. Recommendations
+  recommendations: [
+    {
+      id: 'rec-1',
+      courseId: 'course-rec-1',
+      courseTitle: 'Meteorological Data Analysis with Python & NetCDF4',
+      slug: 'meteorological-data-analysis-python',
+      category: 'Data Sciences',
+      reason: 'Directly addresses identified High-Priority Skill Gap in Climate Analytics',
+      targetSkill: 'NetCDF / GRIB2 Processing & Forecaster Plotting',
+      difficulty: 'INTERMEDIATE',
+      estimatedHours: 24,
+    },
+    {
+      id: 'rec-2',
+      courseId: 'course-rec-2',
+      courseTitle: 'WRF & GFS Model Dynamics & Parameterization',
+      slug: 'wrf-gfs-model-dynamics',
+      category: 'Numerical Weather Prediction',
+      reason: 'Required prerequisite to achieve NWP Competency Level 4 certification',
+      targetSkill: 'Mesoscale Model Initialization & Ensembles',
+      difficulty: 'ADVANCED',
+      estimatedHours: 32,
+    },
+    {
+      id: 'rec-3',
+      courseId: 'course-rec-3',
+      courseTitle: 'Flash Flood Early Warning & River Basin Hydrology',
+      slug: 'flash-flood-early-warning-hydrology',
+      category: 'Hydrometeorology',
+      reason: 'Recommended based on upcoming Monsoonal Observation posting rotation',
+      targetSkill: 'QPE / QPF & Radar Hydro-Estimators',
+      difficulty: 'INTERMEDIATE',
+      estimatedHours: 18,
+    },
+  ],
+
+  // 8. Achievements
+  achievements: {
+    coursesCompletedCount: 3,
+    certificatesEarnedCount: 2,
+    assessmentsPassedCount: 5,
+    totalLearningHours: 120,
+    topScorePercentage: 94,
+    badges: [
+      {
+        id: 'badge-1',
+        title: 'WMO-258 BIP-M Induction Certified',
+        category: 'Professional Cadre Induction',
+        dateEarned: '15 June 2026',
+        credentialCode: 'MOES-BIPM-2026-089',
+      },
+      {
+        id: 'badge-2',
+        title: 'Basic Synoptic Surface Observer',
+        category: 'Observational Meteorology',
+        dateEarned: '28 July 2026',
+        credentialCode: 'IMD-SURF-2026-144',
+      },
+      {
+        id: 'badge-3',
+        title: 'Doppler Radar Novice Forecaster',
+        category: 'Radar Meteorology',
+        dateEarned: '12 August 2026',
+        credentialCode: 'IMD-DWR-2026-031',
+      },
+    ],
+  },
+};
+
+export default mockTraineeDashboardData;

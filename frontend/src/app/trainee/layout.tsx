@@ -34,4 +34,3 @@ export default function TraineeLayout({ children }: { children: React.ReactNode 
 
   return <AppShell>{children}</AppShell>;
 }
-
