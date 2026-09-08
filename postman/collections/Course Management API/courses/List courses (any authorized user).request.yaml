@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/courses?take=10&skip=0"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  take: "10"
+  skip: "0"
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/List courses (any authorized user).resources/examples
+order: 3000

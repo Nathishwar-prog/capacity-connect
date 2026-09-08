@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/courses"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "organizationId": "{{organizationId}}",
+      "trainerId": "{{trainerId}}",
+      "title": "Radar Meteorology & Weather Analysis",
+      "slug": "radar-meteorology-weather-analysis",
+      "description": "Comprehensive course covering Doppler radar data processing and storm tracking.",
+      "category": "Atmospheric Sciences",
+      "difficulty": "INTERMEDIATE",
+      "durationMinutes": 180
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+settings: {}
+examples: ./.resources/Create a new course (Trainer).resources/examples
+order: 2000

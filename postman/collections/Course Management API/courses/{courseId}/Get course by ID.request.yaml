@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/courses/:courseId"
+method: GET
+headers:
+  Accept: application/json
+pathVariables:
+  courseId: string
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/Get course by ID.resources/examples
+order: 4000

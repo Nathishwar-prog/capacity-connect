@@ -1,0 +1,412 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Capacity Connect — Assessment Backend Module (M3 Development 5)",
+        "version": "1.0.0",
+        "description": "Postman & OpenAPI testing specification for Backend Assessment Module (MCQ MVP). Enforces RBAC (TRAINER, ADMIN, SUPER_ADMIN, TRAINEE), canonical seed users (alex.trainer@enterprise.com, admin@enterprise.com, user@enterprise.com), correct answer sanitization, course enrollment guards, attempt timer enforcement, and automated server-side scoring."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5000/api/v1",
+            "description": "Local REST API Gateway"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "summary": "1. Authentication — Login Canonical Seed User",
+                "description": "Obtain JWT token for test user. Canonical accounts:\n- TRAINER: alex.trainer@enterprise.com / Password123!\n- ADMIN: admin@enterprise.com / Password123!\n- TRAINEE: user@enterprise.com / Password123!",
+                "security": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "alex.trainer@enterprise.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "Password123!"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successfully authenticated. Returns accessToken."
+                    }
+                }
+            }
+        },
+        "/assessments": {
+            "post": {
+                "summary": "2. Create Assessment (Trainer & Admin)",
+                "description": "Creates a new assessment associated with an optional course. Enforces trainer course ownership.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "courseId": {
+                                        "type": "string",
+                                        "example": "123e4567-e89b-12d3-a456-426614174000"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Atmospheric Physics Mid-Term Assessment"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Comprehensive MCQ test covering tropospheric dynamics."
+                                    },
+                                    "subject": {
+                                        "type": "string",
+                                        "example": "Meteorology"
+                                    },
+                                    "assessmentType": {
+                                        "type": "string",
+                                        "example": "MCQ"
+                                    },
+                                    "durationMinutes": {
+                                        "type": "integer",
+                                        "example": 30
+                                    },
+                                    "passingScore": {
+                                        "type": "number",
+                                        "example": 60.0
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "DRAFT"
+                                    }
+                                },
+                                "required": [
+                                    "title",
+                                    "subject"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Assessment created successfully"
+                    }
+                }
+            },
+            "get": {
+                "summary": "3. List Assessments (Paginated with Role Filters)",
+                "description": "Retrieves assessments. Trainees automatically see only PUBLISHED assessments.",
+                "parameters": [
+                    {
+                        "name": "courseId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assessments retrieved successfully"
+                    }
+                }
+            }
+        },
+        "/assessments/{id}": {
+            "get": {
+                "summary": "4. Get Assessment Details (Sanitized for Trainees)",
+                "description": "Retrieves assessment details with questions and options. Strips isCorrect and explanation for TRAINEE role.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assessment details retrieved"
+                    }
+                }
+            },
+            "patch": {
+                "summary": "5. Update Assessment (Trainer Owner / Admin)",
+                "description": "Updates assessment metadata, schedule, duration, or publishing status.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assessment updated"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "6. Delete Assessment",
+                "description": "Deletes an assessment and associated cascade records.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assessment deleted"
+                    }
+                }
+            }
+        },
+        "/assessments/{assessmentId}/questions": {
+            "post": {
+                "summary": "7. Add Question to Assessment (Trainer & Admin)",
+                "description": "Adds an MCQ question with options, marks, and explanation.",
+                "parameters": [
+                    {
+                        "name": "assessmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "questionText": {
+                                        "type": "string",
+                                        "example": "What is the primary gas in Earth's atmosphere?"
+                                    },
+                                    "questionType": {
+                                        "type": "string",
+                                        "example": "SINGLE_CHOICE"
+                                    },
+                                    "marks": {
+                                        "type": "number",
+                                        "example": 5.0
+                                    },
+                                    "orderIndex": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "explanation": {
+                                        "type": "string",
+                                        "example": "Nitrogen makes up approx 78% of atmosphere."
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "optionText": {
+                                                    "type": "string",
+                                                    "example": "Nitrogen"
+                                                },
+                                                "isCorrect": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Question added"
+                    }
+                }
+            }
+        },
+        "/assessments/{assessmentId}/attempts": {
+            "post": {
+                "summary": "8. Start Trainee Assessment Attempt",
+                "description": "Starts an assessment attempt for an enrolled trainee. Verifies course enrollment, active attempt status, and deadlines.",
+                "parameters": [
+                    {
+                        "name": "assessmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Attempt started successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden — Trainee not enrolled in course"
+                    }
+                }
+            }
+        },
+        "/assessments/{assessmentId}/attempts/{attemptId}/submit": {
+            "post": {
+                "summary": "9. Submit Assessment Attempt & Authoritative Scoring",
+                "description": "Submits answers for an attempt. Server calculates total score, percentage, time taken, and PASS/FAIL state.",
+                "parameters": [
+                    {
+                        "name": "assessmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "answers": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "questionId": {
+                                                    "type": "string"
+                                                },
+                                                "selectedOptionId": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Attempt scored and finalized"
+                    }
+                }
+            }
+        },
+        "/assessments/{assessmentId}/attempts/{attemptId}/result": {
+            "get": {
+                "summary": "10. Get Assessment Result Breakdown",
+                "description": "Returns score, percentage, PASS/FAIL status, and answers breakdown for submitted attempt.",
+                "parameters": [
+                    {
+                        "name": "assessmentId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "attemptId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result details retrieved"
+                    },
+                    "403": {
+                        "description": "Forbidden — Trainee attempting to access another user result (IDOR)"
+                    }
+                }
+            }
+        }
+    }
+}

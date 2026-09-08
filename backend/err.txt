@@ -1,0 +1,4 @@
+[1m[31mError: [39m[22m
+EPERM: operation not permitted, rename 'E:\capacity-connect\backend\node_modules\.prisma\client\query_engine-windows.dll.node.tmp28700' -> 'E:\capacity-connect\backend\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+

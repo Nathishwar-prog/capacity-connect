@@ -38,6 +38,10 @@ export const Permissions = {
   COURSES_UPDATE: 'courses:update',
   COURSES_DELETE: 'courses:delete',
   COURSES_APPROVE: 'courses:approve',
+  COURSES_ARCHIVE: 'courses:archive',
+  COURSES_SUBMIT: 'courses:submit',
+  COURSES_REJECT: 'courses:reject',
+  COURSES_PUBLISH: 'courses:publish',
   COURSES_WRITE: 'courses:write',
   ASSESSMENTS_READ: 'assessments:read',
   ASSESSMENTS_CREATE: 'assessments:create',
@@ -46,6 +50,16 @@ export const Permissions = {
   ASSESSMENTS_EVALUATE: 'assessments:evaluate',
   COMPETENCIES_READ: 'competencies:read',
   COMPETENCIES_MANAGE: 'competencies:manage',
+
+  // Resource Library
+  RESOURCES_READ: 'resources:read',
+  RESOURCES_CREATE: 'resources:create',
+  RESOURCES_UPDATE: 'resources:update',
+  RESOURCES_APPROVE: 'resources:approve',
+  RESOURCES_PUBLISH: 'resources:publish',
+  RESOURCES_DELETE: 'resources:delete',
+
+  // Organization
   ORGANIZATION_MANAGE: 'organization:manage',
 } as const;
 
@@ -95,11 +109,21 @@ export const permissionsMap: Record<Role, string[]> = {
     Permissions.COURSES_CREATE,
     Permissions.COURSES_UPDATE,
     Permissions.COURSES_APPROVE,
+    Permissions.COURSES_ARCHIVE,
+    Permissions.COURSES_SUBMIT,
+    Permissions.COURSES_REJECT,
+    Permissions.COURSES_PUBLISH,
     Permissions.ASSESSMENTS_READ,
     Permissions.ASSESSMENTS_CREATE,
     Permissions.ASSESSMENTS_EVALUATE,
     Permissions.COMPETENCIES_READ,
     Permissions.COMPETENCIES_MANAGE,
+    Permissions.RESOURCES_READ,
+    Permissions.RESOURCES_CREATE,
+    Permissions.RESOURCES_UPDATE,
+    Permissions.RESOURCES_APPROVE,
+    Permissions.RESOURCES_PUBLISH,
+    Permissions.RESOURCES_DELETE,
     Permissions.ANALYTICS_VIEW,
     Permissions.ORGANIZATION_MANAGE,
   ],
@@ -114,11 +138,18 @@ export const permissionsMap: Record<Role, string[]> = {
     Permissions.COURSES_READ,
     Permissions.COURSES_CREATE,
     Permissions.COURSES_UPDATE,
+    Permissions.COURSES_SUBMIT,
+    Permissions.COURSES_ARCHIVE,
     Permissions.ASSESSMENTS_READ,
     Permissions.ASSESSMENTS_CREATE,
     Permissions.ASSESSMENTS_UPDATE,
     Permissions.ASSESSMENTS_EVALUATE,
     Permissions.COMPETENCIES_READ,
+    Permissions.RESOURCES_READ,
+    Permissions.RESOURCES_CREATE,
+    Permissions.RESOURCES_UPDATE,
+    Permissions.RESOURCES_PUBLISH,
+    Permissions.ANALYTICS_VIEW,
   ],
   TRAINEE: [
     // Learners have read-access to course catalog and assessment taking
@@ -126,6 +157,7 @@ export const permissionsMap: Record<Role, string[]> = {
     Permissions.ASSESSMENTS_READ,
     Permissions.ASSESSMENTS_TAKE,
     Permissions.COMPETENCIES_READ,
+    Permissions.RESOURCES_READ,
   ],
 };
 

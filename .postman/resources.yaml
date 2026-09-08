@@ -1,0 +1,15 @@
+# Use this workspace to collaborate
+workspace:
+  id: 68675beb-0dac-497f-bc2d-ca9440613b98
+
+localResources:
+  specs:
+    - ../swagger.json
+    - ../backend/src/docs/openapi.json
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Course Management API: 877a0e3b-d362-4f54-a12b-21ff73743d64
+    ../postman/collections/Course Management API Copy: ae5409dc-55e9-4a2b-9d9a-496c679dc74b

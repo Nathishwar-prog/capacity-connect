@@ -501,6 +501,7 @@ All user management endpoints require authentication (`Bearer <token>`).
 
 ---
 
+<<<<<<< HEAD
 ## 5. Trainer Protected Operations (`/api/v1/trainer/*`)
 
 All trainer operations require authenticated identity and role enforcement (`TRAINER`, `ADMIN`, `SUPER_ADMIN`) alongside granular source permission checks.
@@ -1483,7 +1484,7 @@ Self-service profile and portfolio endpoints for instructors/trainers. Supports 
   - **ERRORS**: `400 Bad Request`, `401 Unauthorized`
   - **PAGINATION**: Not applicable
   - **FILTERS**: Not applicable
-- **DELETE `/api/v1/trainer/certificates/:id`**:
+  - **DELETE `/api/v1/trainer/certificates/:id`**:
   - **AUTHORIZATION**: `Bearer <token>`
   - **RESPONSE (200 OK)**: `{ "success": true, "message": "Certificate deleted successfully" }`
   - **ERRORS**: `401 Unauthorized`, `404 Not Found`
@@ -1492,7 +1493,70 @@ Self-service profile and portfolio endpoints for instructors/trainers. Supports 
 
 ---
 
-## 9. Standard Error Handling & Response Codes
+## 9. Course Management & Course Structure Endpoints (`/api/v1/courses/*`)
+
+All course management & structure endpoints require authentication (`Bearer <token>`) and enforce RBAC permission policies.
+
+### 9.1 Full Course Hierarchy
+- **Route**: `GET /api/v1/courses/:courseId/structure`
+- **Access**: `courses:read` permission (TRAINEE can access only if status is `PUBLISHED`)
+- **Description**: Returns complete hierarchical course tree containing ordered modules, ordered lessons, attached resources, and calculated module duration.
+
+### 9.2 Course Modules
+- **`POST /api/v1/courses/:courseId/modules`**: Create Module (`courses:update` required, course in `DRAFT`/`REJECTED`)
+- **`GET /api/v1/courses/:courseId/modules`**: List Modules ordered by `orderIndex`
+- **`GET /api/v1/courses/:courseId/modules/:moduleId`**: Get Module details
+- **`PATCH /api/v1/courses/:courseId/modules/:moduleId`**: Update Module title/description/orderIndex
+- **`DELETE /api/v1/courses/:courseId/modules/:moduleId`**: Delete Module (cascades lessons)
+- **`PATCH /api/v1/courses/:courseId/modules/reorder`**: Transactional reorder (`moduleOrders: [{ id, orderIndex }]`)
+
+### 9.3 Lessons
+- **`POST /api/v1/courses/:courseId/modules/:moduleId/lessons`**: Create Lesson (`contentType`: VIDEO, PDF, PPT, ARTICLE, QUIZ, LINK, DOCUMENT)
+- **`GET /api/v1/courses/:courseId/modules/:moduleId/lessons`**: List Lessons ordered by `orderIndex`
+- **`GET /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId`**: Get Lesson details with attached resources
+- **`PATCH /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId`**: Update Lesson attributes
+- **`DELETE /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId`**: Delete Lesson
+- **`PATCH /api/v1/courses/:courseId/modules/lessons/reorder`**: Transactional reorder (`lessonOrders: [{ id, orderIndex }]`)
+
+### 9.4 Lesson Resources
+- **`POST /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId/resources`**: Attach resource (`resourceId`)
+- **`DELETE /api/v1/courses/:courseId/modules/:moduleId/lessons/:lessonId/resources/:resourceId`**: Detach resource
+
+---
+
+## 10. Enrollment & Progress Management APIs
+
+### 10.1 Course Enrollment
+- **`POST /api/v1/enrollments`**: Enroll in a published course (`courseId` in body). Requires `PUBLISHED` status & matching `organizationId`. Returns `201 Created` or `409 Conflict` if already enrolled.
+- **`GET /api/v1/enrollments`**: List my enrolled courses (query parameters: `status`, `skip`, `take`).
+- **`GET /api/v1/enrollments/:id`**: View enrollment details, module structure, and lesson completion tree.
+- **`POST /api/v1/enrollments/:id/lessons/:lessonId/progress`**: Update lesson completion (`completed: boolean`, `progressPercentage?: number`). Auto-recalculates course percentage and transitions status (`IN_PROGRESS` or `COMPLETED`).
+- **`POST /api/v1/enrollments/:id/drop`**: Drop course enrollment. Transitions status to `DROPPED`.
+
+---
+
+## 11. Trainer Monitoring APIs (`/api/v1/trainer/monitoring/*`)
+
+All trainer monitoring endpoints require authentication (`Bearer <token>`), RBAC role check (`TRAINER`, `ADMIN`, `SUPER_ADMIN`), and `ANALYTICS_VIEW` permission. IDOR protections are strictly enforced for course ownership.
+
+### 11.1 Monitoring Overview
+- **`GET /api/v1/trainer/monitoring/overview`**: Aggregated monitoring metrics (authorized courses, trainees, average progress %, pass rates) and authorized course list summaries.
+
+### 11.2 Trainees Monitoring List
+- **`GET /api/v1/trainer/monitoring/trainees`**: Paginated list of enrolled trainees with progress breakdown, lesson counts, assessment summary, and completion state. Query filters: `courseId`, `status`, `completionStatus`, `search`, `page`, `limit`.
+
+### 11.3 Course Level Monitoring
+- **`GET /api/v1/trainer/monitoring/courses/:courseId`**: Course metrics and enrolled trainees breakdown for a specific course (IDOR protected).
+
+### 11.4 Trainee Course Detail Monitoring
+- **`GET /api/v1/trainer/monitoring/courses/:courseId/trainees/:traineeId`**: Detailed progress breakdown and assessment participation details for an individual trainee in an authorized course (IDOR protected).
+
+### 11.5 Assessment Monitoring
+- **`GET /api/v1/trainer/monitoring/assessments`**: Query assessment attempt records across authorized courses, including scores, percentages, and PASS/FAIL indicators.
+
+---
+
+## 12. Standard Error Handling & Response Codes
 
 All error responses strictly follow the uniform JSON format:
 
@@ -1506,11 +1570,10 @@ All error responses strictly follow the uniform JSON format:
 
 | HTTP Status | Error Type | Trigger Conditions |
 | :--- | :--- | :--- |
-| **400 Bad Request** | Validation Failure | Request body failed Zod schema checks |
+| **400 Bad Request** | Validation Failure | Request body failed Zod schema checks or invalid reorder payload |
 | **401 Unauthorized** | Authentication Failure | Missing/expired access token or unapproved account |
-| **403 Forbidden** | RBAC Authorization Failure | Insufficient user role for the requested resource |
-| **404 Not Found** | Missing Entity | Resource with requested ID does not exist |
-| **409 Conflict** | Duplicate Resource | Email address already registered |
+| **403 Forbidden** | RBAC Authorization Failure | Insufficient user role or modifying another trainer's course |
+| **404 Not Found** | Missing Entity | Course, Module, Lesson, or Resource ID not found |
+| **409 Conflict** | State Conflict | Modifying structure of course in `PUBLISHED`/`PENDING_APPROVAL` status |
 | **429 Too Many Requests** | Rate Limit Exceeded | Client exceeded sliding-window request threshold |
 | **500 Internal Server Error** | Unexpected Failure | Database or server operational exception |
-

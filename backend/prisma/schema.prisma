@@ -76,6 +76,7 @@ enum LessonContentType {
   QUIZ
   LINK
   DOCUMENT
+  PPT
 }
 
 enum EnrollmentStatus {

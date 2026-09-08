@@ -1,0 +1,62 @@
+﻿
+> enterprise-backend@1.0.0 test
+> jest --forceExit --verbose
+
+node.exe : ts-jest[config] 
+(WARN) 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (ts-jest  
+  [config] (WARN) :String)   
+  [], RemoteException
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+    The "ts-jest" config 
+option "isolatedModules" is 
+deprecated and will be 
+removed in v30.0.0. Please 
+use "isolatedModules: true" 
+in E:/capacity-connect/backen
+d/tsconfig.json instead, see 
+https://www.typescriptlang.or
+g/tsconfig/#isolatedModules
+  
+FAIL src/__tests__/course.ser
+vice.test.ts
+  ΓùÅ Test suite failed to 
+run
+
+    Cannot find module '../..
+/services/course.service' 
+from 'src/__tests__/course.se
+rvice.test.ts'
+
+      at Resolver._throwModNo
+tFoundError (node_modules/jes
+t-resolve/build/index.js:1031
+:11)
+      at Object.<anonymous> (
+src/__tests__/E:/capacity-con
+nect/backend/src/__tests__/co
+urse.service.test.ts:1:1)
+
+Test Suites: 1 failed, 1 
+total
+Tests:       0 total
+Snapshots:   0 total
+Time:        1.033 s
+Ran all test suites.
+Force exiting Jest: Have you 
+considered using 
+`--detectOpenHandles` to 
+detect async operations that 
+kept running after all tests 
+finished?

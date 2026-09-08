@@ -1,0 +1,245 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Capacity Connect - Enrollment & Progress Management API",
+        "description": "API endpoints for course enrollment, progress tracking, lesson completion, and enrollment status management.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5000/api/v1",
+            "description": "Local Development Server"
+        }
+    ],
+    "paths": {
+        "/enrollments": {
+            "post": {
+                "summary": "Enroll in a published course",
+                "operationId": "enrollInCourse",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "courseId"
+                                ],
+                                "properties": {
+                                    "courseId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successfully enrolled in course"
+                    },
+                    "400": {
+                        "description": "Course is not published or invalid input"
+                    },
+                    "403": {
+                        "description": "Organization boundary violation"
+                    },
+                    "409": {
+                        "description": "Already enrolled in course"
+                    }
+                }
+            },
+            "get": {
+                "summary": "List my enrolled courses",
+                "operationId": "getMyEnrollments",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ENROLLED",
+                                "IN_PROGRESS",
+                                "COMPLETED",
+                                "DROPPED"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    },
+                    {
+                        "name": "take",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns array of user enrollments"
+                    }
+                }
+            }
+        },
+        "/enrollments/{id}": {
+            "get": {
+                "summary": "Get enrollment details and full course progress",
+                "operationId": "getEnrollmentDetails",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns enrollment record with course and lesson progress"
+                    },
+                    "403": {
+                        "description": "IDOR protection - Access denied"
+                    },
+                    "404": {
+                        "description": "Enrollment record not found"
+                    }
+                }
+            }
+        },
+        "/enrollments/{id}/lessons/{lessonId}/progress": {
+            "post": {
+                "summary": "Update lesson completion status and recalculate course progress",
+                "operationId": "updateLessonProgress",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "lessonId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "completed"
+                                ],
+                                "properties": {
+                                    "completed": {
+                                        "type": "boolean"
+                                    },
+                                    "progressPercentage": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 100
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lesson progress updated and course percentage recalculated"
+                    },
+                    "400": {
+                        "description": "Cannot update progress on dropped course"
+                    },
+                    "403": {
+                        "description": "IDOR protection - Cannot update progress for another user"
+                    }
+                }
+            }
+        },
+        "/enrollments/{id}/drop": {
+            "post": {
+                "summary": "Drop course enrollment",
+                "operationId": "dropEnrollment",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Enrollment status changed to DROPPED"
+                    },
+                    "400": {
+                        "description": "Cannot drop completed enrollment"
+                    },
+                    "403": {
+                        "description": "Cannot drop another user's enrollment"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}

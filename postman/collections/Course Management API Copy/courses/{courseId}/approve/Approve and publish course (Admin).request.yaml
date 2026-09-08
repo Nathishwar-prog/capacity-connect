@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/courses/:courseId/approve"
+method: POST
+pathVariables:
+  courseId: string
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+settings: {}
+examples: ./.resources/Approve and publish course (Admin).resources/examples
+order: 1000

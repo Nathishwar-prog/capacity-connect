@@ -1,0 +1,18 @@
+$kind: http-example
+name: Course rejected, status -> REJECTED
+request:
+  url: "{{baseUrl}}/courses/:courseId/reject"
+  method: POST
+  headers:
+    - key: Authorization
+      value: Bearer <token>
+      description: "Added as a part of security scheme: bearer"
+  pathVariables:
+    courseId: string
+response:
+  statusCode: 200
+  statusText: OK
+  body:
+    type: text
+    content: ""
+order: 1000

@@ -1,0 +1,4 @@
+$kind: collection
+description: OpenAPI specification for the Course Management Backend used for testing. Email IDs for authorization are fetched from the `user` column in the database, ensuring only stored emails are used.
+variables:
+  baseUrl: http://localhost:5000/api/v1

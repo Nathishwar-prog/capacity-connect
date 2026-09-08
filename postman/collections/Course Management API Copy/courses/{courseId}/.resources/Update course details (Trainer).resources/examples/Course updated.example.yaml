@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/courses/:courseId"
+  method: PATCH
+  headers:
+    - key: Content-Type
+      value: application/json
+    - key: Accept
+      value: application/json
+    - key: Authorization
+      value: Bearer <token>
+      description: "Added as a part of security scheme: bearer"
+  pathVariables:
+    courseId: string
+  body:
+    type: json
+    content: |-
+      {
+        "difficulty": "string",
+        "durationMinutes": 2016
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "title": "Radar Meteorology & Weather Analysis",
+        "description": "Comprehensive course covering Doppler radar data processing and storm tracking.",
+        "category": "Atmospheric Sciences",
+        "difficulty": "INTERMEDIATE",
+        "durationMinutes": 180,
+        "id": "clx12345",
+        "status": "DRAFT"
+      }
+order: 1000

@@ -1,0 +1,12 @@
+$kind: http-request
+name: Archive (delete) a course (Trainer/Admin)
+url: "{{baseUrl}}/courses/:courseId"
+method: DELETE
+pathVariables:
+  courseId: string
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/Archive (delete) a course (Trainer-Admin).resources/examples
+order: 6000

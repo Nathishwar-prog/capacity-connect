@@ -91,6 +91,9 @@ Thumbs.db
 *.env
 !*.env.example
 
+# Virtual Environment
+venv/
+
 # Prisma
 /backend/src/database/migrations/*
 !/backend/src/database/migrations/**/*.sql

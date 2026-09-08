@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "dr.nair.trainer@incois.gov.in",
+      "password": "Password123!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.data) {
+        pm.collectionVariables.set('bearerToken', res.data.accessToken);
+        pm.collectionVariables.set('organizationId', res.data.user.organizationId);
+        pm.collectionVariables.set('trainerId', res.data.user.id);
+        console.log('Auth variables set: bearerToken, organizationId, trainerId');
+      }
+settings: {}
+examples: ./.resources/Login to obtain JWT token.resources/examples
+order: 1000

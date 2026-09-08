@@ -3,11 +3,12 @@ import { Role } from '@prisma/client';
 import { UnauthorizedError, ForbiddenError } from '../errors/app-error';
 import { TokenUtils } from './token.utils';
 import { PermissionKey, hasPermission } from '../permissions';
+import { prisma } from '../database/client';
 
 /**
  * Authentication Middleware: Validates incoming Bearer JWT Access Token
  */
-export const authenticate = (req: Request, _res: Response, next: NextFunction): void => {
+export const authenticate = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -17,8 +18,24 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
     const token = authHeader.split(' ')[1];
     const payload = TokenUtils.verifyAccessToken(token);
 
-    // Attach decoded user information to the request context
-    req.user = payload;
+    // Verify email exists in DB and fetch full user record
+    const dbUser = await prisma.user.findUnique({ where: { email: payload.email } });
+    if (!dbUser) {
+      throw new UnauthorizedError('User not found in database');
+    }
+
+    // Ensure role consistency (optional but recommended)
+    if (payload.role && payload.role !== dbUser.role) {
+      throw new ForbiddenError('Token role does not match database role');
+    }
+
+    // Attach enriched user context to request
+    req.user = {
+      userId: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      permissions: payload.permissions || [],
+    };
     next();
   } catch (error) {
     next(new UnauthorizedError('Invalid or expired authentication credentials'));

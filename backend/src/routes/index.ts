@@ -6,6 +6,11 @@ import { adminRouter } from './admin.routes';
 import { dashboardRouter } from './dashboard.routes';
 import { trainerRouter } from './trainer.routes';
 import { traineeRouter } from './trainee.routes';
+import { courseRouter } from './course.routes';
+import { enrollmentRouter } from './enrollment.routes';
+import resourceRouter from './resource.routes';
+import trainerMonitoringRouter from './trainer-monitoring.routes';
+import assessmentRouter from './assessment.routes';
 
 const router = Router();
 
@@ -93,6 +98,60 @@ router.get('/', (_req, res) => {
         addCertificate: 'POST /api/v1/trainer/certificates',
         deleteCertificate: 'DELETE /api/v1/trainer/certificates/:id',
       },
+      courses: {
+        list: 'GET /api/v1/courses',
+        create: 'POST /api/v1/courses',
+        getById: 'GET /api/v1/courses/:id',
+        updateById: 'PATCH /api/v1/courses/:id',
+        archiveById: 'DELETE /api/v1/courses/:id',
+        submit: 'POST /api/v1/courses/:id/submit',
+        approve: 'POST /api/v1/courses/:id/approve',
+        reject: 'POST /api/v1/courses/:id/reject',
+        publish: 'POST /api/v1/courses/:id/publish'
+      },
+      enrollments: {
+        enroll: 'POST /api/v1/enrollments',
+        myEnrollments: 'GET /api/v1/enrollments',
+        getById: 'GET /api/v1/enrollments/:id',
+        updateProgress: 'POST /api/v1/enrollments/:id/lessons/:lessonId/progress',
+        drop: 'POST /api/v1/enrollments/:id/drop'
+      },
+      resources: {
+        list: 'GET /api/v1/resources',
+        createLink: 'POST /api/v1/resources/link',
+        uploadFile: 'POST /api/v1/resources/upload',
+        getById: 'GET /api/v1/resources/:id',
+        updateMetadata: 'PATCH /api/v1/resources/:id',
+        delete: 'DELETE /api/v1/resources/:id',
+        approve: 'PATCH /api/v1/resources/:id/approve',
+        reject: 'PATCH /api/v1/resources/:id/reject',
+        publish: 'PATCH /api/v1/resources/:id/publish',
+        attachToCourse: 'POST /api/v1/resources/courses/:courseId/attach/:resourceId',
+        detachFromCourse: 'DELETE /api/v1/resources/courses/:courseId/detach/:resourceId',
+        attachToLesson: 'POST /api/v1/resources/lessons/:lessonId/attach/:resourceId',
+        detachFromLesson: 'DELETE /api/v1/resources/lessons/:lessonId/detach/:resourceId',
+      },
+      trainerMonitoring: {
+        overview: 'GET /api/v1/trainer/monitoring/overview',
+        trainees: 'GET /api/v1/trainer/monitoring/trainees',
+        courseMonitoring: 'GET /api/v1/trainer/monitoring/courses/:courseId',
+        traineeCourseDetail: 'GET /api/v1/trainer/monitoring/courses/:courseId/trainees/:traineeId',
+        assessments: 'GET /api/v1/trainer/monitoring/assessments',
+      },
+      assessments: {
+        list: 'GET /api/v1/assessments',
+        create: 'POST /api/v1/assessments',
+        getById: 'GET /api/v1/assessments/:id',
+        updateById: 'PATCH /api/v1/assessments/:id',
+        deleteById: 'DELETE /api/v1/assessments/:id',
+        addQuestion: 'POST /api/v1/assessments/:assessmentId/questions',
+        updateQuestion: 'PATCH /api/v1/assessments/:assessmentId/questions/:questionId',
+        deleteQuestion: 'DELETE /api/v1/assessments/:assessmentId/questions/:questionId',
+        startAttempt: 'POST /api/v1/assessments/:assessmentId/attempts',
+        getAttempt: 'GET /api/v1/assessments/:assessmentId/attempts/:attemptId',
+        submitAttempt: 'POST /api/v1/assessments/:assessmentId/attempts/:attemptId/submit',
+        getResult: 'GET /api/v1/assessments/:assessmentId/attempts/:attemptId/result',
+      },
     },
   });
 });
@@ -105,7 +164,12 @@ router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/admin', adminRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/courses', courseRouter);
+router.use('/enrollments', enrollmentRouter);
+router.use('/resources', resourceRouter);
+router.use('/trainer/monitoring', trainerMonitoringRouter);
 router.use('/trainer', trainerRouter);
 router.use('/trainee', traineeRouter);
+router.use('/assessments', assessmentRouter);
 
 export default router;
