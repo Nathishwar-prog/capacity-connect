@@ -163,4 +163,72 @@ export class RecommendationController {
       message: 'Recommendation outcome metrics retrieved',
     });
   };
+
+  /**
+   * GET /api/v1/recommendations/admin/models
+   * Lists all ML models with offline evaluation metrics.
+   */
+  public listModels = async (_req: Request, res: Response): Promise<Response> => {
+    const { ModelRegistryService } = await import('../ml/model-registry.service');
+    const models = await ModelRegistryService.listModels();
+
+    return ResponseHelper.success({
+      res,
+      data: models,
+      message: 'ML models retrieved successfully',
+    });
+  };
+
+  /**
+   * GET /api/v1/recommendations/admin/models/:version
+   * Retrieves specific ML model metadata.
+   */
+  public getModelDetails = async (req: Request, res: Response): Promise<Response> => {
+    const { ModelRegistryService } = await import('../ml/model-registry.service');
+    const model = await ModelRegistryService.getModelDetails(req.params.version);
+
+    if (!model) {
+      return ResponseHelper.success({
+        res,
+        data: null,
+        message: 'Model not found',
+      });
+    }
+
+    return ResponseHelper.success({
+      res,
+      data: model,
+      message: 'Model details retrieved successfully',
+    });
+  };
+
+  /**
+   * POST /api/v1/recommendations/admin/models/:version/activate
+   * Explicitly activates a model.
+   */
+  public activateModel = async (req: Request, res: Response): Promise<Response> => {
+    const { ModelRegistryService } = await import('../ml/model-registry.service');
+    const model = await ModelRegistryService.activateModel(req.params.version);
+
+    return ResponseHelper.success({
+      res,
+      data: model,
+      message: `Model ${req.params.version} activated successfully`,
+    });
+  };
+
+  /**
+   * POST /api/v1/recommendations/admin/models/:version/retire
+   * Retires a model.
+   */
+  public retireModel = async (req: Request, res: Response): Promise<Response> => {
+    const { ModelRegistryService } = await import('../ml/model-registry.service');
+    const model = await ModelRegistryService.retireModel(req.params.version);
+
+    return ResponseHelper.success({
+      res,
+      data: model,
+      message: `Model ${req.params.version} retired successfully`,
+    });
+  };
 }

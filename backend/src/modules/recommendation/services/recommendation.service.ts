@@ -97,7 +97,7 @@ export class RecommendationService {
     }
 
     // Step 3: Multi-Signal Ranking, MMR Diversity, and Exploration
-    const { ranked, algorithmVersion } = await this.rankingService.rankCandidates(
+    const { ranked, algorithmVersion, modelVersion } = await this.rankingService.rankCandidates(
       finalEligibleCore,
       eligibleExploration,
       {
@@ -153,6 +153,7 @@ export class RecommendationService {
         surface,
         algorithmVersion,
         context: {
+          modelVersion,
           activeCourseId,
           learnerDepartment: user?.department?.name,
           surface,
@@ -181,6 +182,10 @@ export class RecommendationService {
           reasonCodes: item.reasonCodes,
           featureSnapshot: item.featureSnapshot as any,
           reason: exp?.whyRecommended || `Recommended for ${course?.category}`,
+          metadata: {
+            modelVersion,
+            featureVersion: item.featureVersion,
+          },
         },
       });
 

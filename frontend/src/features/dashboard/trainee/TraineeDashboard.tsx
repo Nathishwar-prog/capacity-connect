@@ -24,6 +24,7 @@ import {
   RecentActivityTimeline,
   FuturePlaceholders,
 } from './components';
+import { RecommendationSection } from '@/components/recommendations';
 
 export const TraineeDashboard: React.FC = () => {
   const { user: authUser } = useAuthStore();
@@ -138,8 +139,8 @@ export const TraineeDashboard: React.FC = () => {
         <LearningResourcesList resources={data.resources} />
       </div>
 
-      {/* 8. Recommended Courses */}
-      <RecommendedCoursesList recommendations={data.recommendations} />
+      {/* 8. Intelligent AI Recommendations & Outcome Tracking */}
+      <RecommendationSection surface="DASHBOARD" limit={3} />
 
       {/* 9. Assigned Instructor (1 Col) + Achievements (1 Col) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

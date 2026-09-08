@@ -97,6 +97,9 @@ export interface RankedCandidate {
   rankPosition: number;
   reasonCodes: string[];
   featureSnapshot: RecommendationFeatures;
+  algorithmVersion?: string;
+  modelVersion?: string;
+  featureVersion?: string;
 }
 
 export interface RecommendationRequest {

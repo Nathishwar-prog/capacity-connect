@@ -1,0 +1,16 @@
+{
+  "evaluationDate": "ds-1788851125",
+  "totalEvaluatedQueries": 18,
+  "ndcgAt3": 0.9327,
+  "ndcgAt5": 0.9586,
+  "ndcgAt10": 0.9709,
+  "mapAt10": 0.9047,
+  "mrr": 0.9722,
+  "precisionAt5": 0.7,
+  "recallAt5": 0.9239,
+  "baselineComparison": {
+    "baselineNdcgAt10": 0.9042,
+    "mlNdcgAt10": 0.9709,
+    "improvementPercentage": 7.38
+  }
+}

@@ -6,53 +6,92 @@
  * Where weights are normalized so Σ Weight_i = 1.0.
  */
 
-import { IRanker, RankerInput } from './ranker.interface';
-import { RankedCandidate, RecommendationFeatures } from '../recommendation.types';
+import { IRanker, RankerInput, RankedItem } from './ranker.interface';
+import { RankedCandidate, RecommendationFeatures, FeatureWeights } from '../recommendation.types';
+import { DEFAULT_FEATURE_WEIGHTS } from '../recommendation.constants';
 
 export class WeightedLinearRanker implements IRanker {
-  public rank(input: RankerInput): RankedCandidate[] {
-    const { candidates, featuresMap, weights } = input;
+  public readonly name = 'WEIGHTED_LINEAR';
+  public readonly version = 'v1.0.0';
+  public readonly isML = false;
 
-    // Verify weights sum to 1.0 (or normalize if floating point drift)
+  private extractFeatures(raw: any): RecommendationFeatures {
+    if (!raw) {
+      return {
+        skillRelevanceScore: 50,
+        contentSimilarityScore: 30,
+        behavioralAffinityScore: 20,
+        collaborativeScore: 0,
+        qualityScore: 60,
+        freshnessScore: 60,
+        contextualScore: 40,
+        difficultyAlignmentScore: 70,
+        historicalSuccessRate: 60,
+      };
+    }
+
+    if ('skillRelevanceScore' in raw) {
+      return raw as RecommendationFeatures;
+    }
+
+    // NormalizedFeatureVector adaptation
+    const fm = raw.featureMap || {};
+    return {
+      skillRelevanceScore: Math.round((fm['skill_weightedSkillGap'] ?? 0.5) * 100),
+      contentSimilarityScore: Math.round((fm['semantic_courseUserEmbeddingSimilarity'] ?? 0.5) * 100),
+      behavioralAffinityScore: Math.round((fm['behavior_activityRecency'] ?? 0.5) * 100),
+      collaborativeScore: Math.round((fm['behavior_similarCourseInteractions'] ?? 0) * 100),
+      qualityScore: Math.round((fm['course_qualityScore'] ?? 0.75) * 100),
+      freshnessScore: Math.round((fm['course_freshness'] ?? 0.8) * 100),
+      contextualScore: Math.round((fm['context_departmentMatch'] ?? 0.5) * 100),
+      difficultyAlignmentScore: 70,
+      historicalSuccessRate: Math.round((fm['course_completionRate'] ?? 0.5) * 100),
+    };
+  }
+
+  public rank(input: RankerInput): (RankedCandidate & RankedItem)[] {
+    const { candidates, featuresMap } = input;
+    const weights: FeatureWeights = (input.weights as any) || DEFAULT_FEATURE_WEIGHTS;
+
+    const w = {
+      skillRelevance: weights.skillRelevance ?? 0.25,
+      contentSimilarity: weights.contentSimilarity ?? 0.15,
+      behavioralAffinity: weights.behavioralAffinity ?? 0.15,
+      collaborative: weights.collaborative ?? 0.10,
+      quality: weights.quality ?? 0.10,
+      freshness: weights.freshness ?? 0.05,
+      contextual: weights.contextual ?? 0.08,
+      difficultyAlignment: weights.difficultyAlignment ?? 0.05,
+      historicalSuccess: weights.historicalSuccess ?? 0.07,
+    };
+
     const weightSum =
-      weights.skillRelevance +
-      weights.contentSimilarity +
-      weights.behavioralAffinity +
-      weights.collaborative +
-      weights.quality +
-      weights.freshness +
-      weights.contextual +
-      weights.difficultyAlignment +
-      weights.historicalSuccess;
+      w.skillRelevance +
+      w.contentSimilarity +
+      w.behavioralAffinity +
+      w.collaborative +
+      w.quality +
+      w.freshness +
+      w.contextual +
+      w.difficultyAlignment +
+      w.historicalSuccess;
 
     const normW = {
-      skillRelevance: weights.skillRelevance / (weightSum || 1),
-      contentSimilarity: weights.contentSimilarity / (weightSum || 1),
-      behavioralAffinity: weights.behavioralAffinity / (weightSum || 1),
-      collaborative: weights.collaborative / (weightSum || 1),
-      quality: weights.quality / (weightSum || 1),
-      freshness: weights.freshness / (weightSum || 1),
-      contextual: weights.contextual / (weightSum || 1),
-      difficultyAlignment: weights.difficultyAlignment / (weightSum || 1),
-      historicalSuccess: weights.historicalSuccess / (weightSum || 1),
+      skillRelevance: w.skillRelevance / (weightSum || 1),
+      contentSimilarity: w.contentSimilarity / (weightSum || 1),
+      behavioralAffinity: w.behavioralAffinity / (weightSum || 1),
+      collaborative: w.collaborative / (weightSum || 1),
+      quality: w.quality / (weightSum || 1),
+      freshness: w.freshness / (weightSum || 1),
+      contextual: w.contextual / (weightSum || 1),
+      difficultyAlignment: w.difficultyAlignment / (weightSum || 1),
+      historicalSuccess: w.historicalSuccess / (weightSum || 1),
     };
 
-    const defaultFeatures: RecommendationFeatures = {
-      skillRelevanceScore: 50,
-      contentSimilarityScore: 30,
-      behavioralAffinityScore: 20,
-      collaborativeScore: 0,
-      qualityScore: 60,
-      freshnessScore: 60,
-      contextualScore: 40,
-      difficultyAlignmentScore: 70,
-      historicalSuccessRate: 60,
-    };
-
-    const ranked: RankedCandidate[] = [];
+    const ranked: (RankedCandidate & RankedItem)[] = [];
 
     for (const cand of candidates) {
-      const feat = featuresMap.get(cand.courseId) || defaultFeatures;
+      const feat = this.extractFeatures(featuresMap.get(cand.courseId));
 
       const score =
         feat.skillRelevanceScore * normW.skillRelevance +
@@ -65,16 +104,19 @@ export class WeightedLinearRanker implements IRanker {
         feat.difficultyAlignmentScore * normW.difficultyAlignment +
         feat.historicalSuccessRate * normW.historicalSuccess;
 
-      // Rounded to 2 decimal places [0, 100]
       const finalScore = Math.max(0, Math.min(100, Math.round(score * 100) / 100));
 
       ranked.push({
         courseId: cand.courseId,
         source: cand.source,
+        score: finalScore,
         finalScore,
-        rankPosition: 0, // Will be set after sorting
+        rankPosition: 0,
         reasonCodes: [...cand.reasonCodes],
         featureSnapshot: feat,
+        algorithmVersion: this.name,
+        modelVersion: this.version,
+        featureVersion: 'v1.0.0',
       });
     }
 

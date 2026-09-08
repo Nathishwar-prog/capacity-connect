@@ -203,6 +203,14 @@ enum RecommendationFeedbackType {
   INTERESTING
 }
 
+enum MLModelStatus {
+  TRAINING
+  VALIDATING
+  ACTIVE
+  RETIRED
+  FAILED
+}
+
 enum MatchSource {
   RULE_ENGINE
   AI
@@ -1298,6 +1306,28 @@ model CourseRecommendationProfile {
 
   @@index([courseId])
   @@map("course_recommendation_profiles")
+}
+
+model MLModelRegistry {
+  id                     String        @id @default(uuid())
+  modelVersion           String        @unique
+  algorithm              String        @default("LIGHTGBM_LAMBDAMART")
+  featureVersion         String        @default("v1.0.0")
+  trainingDatasetVersion String
+  trainingStart          DateTime
+  trainingEnd            DateTime
+  metrics                Json
+  hyperparameters        Json?
+  artifactPath           String
+  status                 MLModelStatus @default(TRAINING)
+  activatedAt            DateTime?
+  retiredAt              DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@index([status])
+  @@index([modelVersion])
+  @@map("ml_model_registry")
 }
 
 model TrainerMatch {

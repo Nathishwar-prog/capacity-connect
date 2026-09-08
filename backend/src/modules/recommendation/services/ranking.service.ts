@@ -1,11 +1,14 @@
 /**
- * Ranking Service
+ * Ranking Service — Hybrid ML Learning-to-Rank Architecture
+ * Capacity Connect — Learning-to-Rank Recommendation Engine
  * 
- * Coordinates multi-stage ranking pipeline:
- * 1. Feature snapshot generation across all 9 normalized features
- * 2. Weighted linear ranking
- * 3. MMR diversity re-ranking (Maximal Marginal Relevance)
- * 4. Controlled exploration candidate injection
+ * Pipeline:
+ * 1. Feature snapshot generation (54 normalized features via FeatureBuilder)
+ * 2. Primary ranker: LightGBM MLRanker (native TypeScript Booster evaluation)
+ * 3. Resilient fallback: Deterministic BaselineRanker if model absent or fails
+ * 4. Competency & Prerequisite Educational Safety Re-ranking
+ * 5. MMR Diversity Re-ranking (Category & Trainer caps)
+ * 6. Controlled Exploration Injection (10-20% novel candidates)
  */
 
 import prisma from '../../../database/client';
@@ -14,11 +17,13 @@ import {
   RankedCandidate,
   FeatureWeights,
   RecommendationSurface,
+  RecommendationFeatures,
 } from '../recommendation.types';
-import { RecommendationFeatureBuilder } from '../ranking/feature-builder';
-import { WeightedLinearRanker } from '../ranking/weighted-ranker';
-import { applyMMRDiversity, CandidateWithContentMetadata } from '../algorithms/diversity.algorithm';
-import { injectExploratoryCandidates } from '../algorithms/exploration.algorithm';
+import { FeatureBuilder } from '../features/feature-builder';
+import { ModelLoader } from '../ranking/model-loader';
+import { BaselineRanker } from '../ranking/baseline-ranker';
+import { FinalReranker } from '../reranking/final-reranker';
+import { CourseDiversityMetadata } from '../reranking/diversity-reranker';
 import { DEFAULT_FEATURE_WEIGHTS, RECSYS_DEFAULTS } from '../recommendation.constants';
 import logger from '../../../logger/winston.logger';
 
@@ -33,12 +38,10 @@ export interface RankCandidatesOptions {
 }
 
 export class RankingService {
-  private featureBuilder: RecommendationFeatureBuilder;
-  private ranker: WeightedLinearRanker;
+  private baselineRanker: BaselineRanker;
 
   constructor() {
-    this.featureBuilder = new RecommendationFeatureBuilder();
-    this.ranker = new WeightedLinearRanker();
+    this.baselineRanker = new BaselineRanker();
   }
 
   /**
@@ -78,134 +81,162 @@ export class RankingService {
   }
 
   /**
-   * Ranks eligible candidates through features, weighted ranker, MMR diversity, and exploration injection.
+   * Ranks eligible candidates through features, ML or Baseline ranker, safety re-ranking,
+   * MMR diversity, and controlled exploration injection.
    */
   public async rankCandidates(
     eligibleCandidates: RecommendationCandidate[],
     explorationCandidates: RecommendationCandidate[],
     options: RankCandidatesOptions
-  ): Promise<{ ranked: RankedCandidate[]; algorithmVersion: string }> {
+  ): Promise<{ ranked: RankedCandidate[]; algorithmVersion: string; modelVersion: string }> {
     const { userId, surface = 'DASHBOARD', activeCourseId, limit = RECSYS_DEFAULTS.DEFAULT_LIMIT } = options;
 
     const activeConfig = await this.getActiveWeights();
-    const weights = options.weights || activeConfig.weights;
     const mmrLambda = options.mmrLambda ?? activeConfig.mmrLambda;
     const explorationRatio = options.explorationRatio ?? activeConfig.explorationRatio;
 
     if (eligibleCandidates.length === 0) {
-      return { ranked: [], algorithmVersion: activeConfig.version };
+      return {
+        ranked: [],
+        algorithmVersion: this.baselineRanker.name,
+        modelVersion: this.baselineRanker.version,
+      };
     }
 
-    // 1. Build features for all core candidates
-    const featuresMap = await this.featureBuilder.buildFeaturesForCandidates(
-      eligibleCandidates,
-      { userId, surface, activeCourseId }
-    );
-
-    // 2. Score and rank core candidates
-    const rankedCore = this.ranker.rank({
-      candidates: eligibleCandidates,
-      featuresMap,
-      weights,
-    });
-
-    // 3. Fetch course content metadata for MMR diversity re-ranking
+    // 1. Build comprehensive normalized 54-feature vectors for candidates
     const allCourseIds = Array.from(
       new Set([...eligibleCandidates.map(c => c.courseId), ...explorationCandidates.map(c => c.courseId)])
     );
 
+    const featuresMap = await FeatureBuilder.buildCandidateFeatures(
+      userId,
+      allCourseIds,
+      { surface, activeCourseId }
+    );
+
+    // 2. Select Ranker: Attempt MLRanker via ModelLoader, fallback to BaselineRanker
+    let ranker = await ModelLoader.getActiveRanker();
+    let algorithmName = ranker ? ranker.name : this.baselineRanker.name;
+    let modelVersion = ranker ? ranker.version : this.baselineRanker.version;
+
+    let rawRankedCore: any[] = [];
+    try {
+      if (ranker) {
+        logger.info(`Ranking candidates using active ML model: ${ranker.version}`);
+        rawRankedCore = await ranker.rank({
+          userId,
+          candidates: eligibleCandidates,
+          featuresMap,
+        });
+      } else {
+        logger.info('No active ML model found; using deterministic BaselineRanker.');
+        rawRankedCore = await this.baselineRanker.rank({
+          userId,
+          candidates: eligibleCandidates,
+          featuresMap,
+        });
+      }
+    } catch (err: any) {
+      logger.error(`ML inference failed: ${err.message}. Falling back to BaselineRanker.`);
+      algorithmName = this.baselineRanker.name;
+      modelVersion = this.baselineRanker.version;
+      rawRankedCore = await this.baselineRanker.rank({
+        userId,
+        candidates: eligibleCandidates,
+        featuresMap,
+      });
+    }
+
+    // 3. Score Exploration Candidates if available
+    let rawRankedExplore: any[] = [];
+    if (explorationCandidates.length > 0 && explorationRatio > 0) {
+      try {
+        const activeOrBase = ranker || this.baselineRanker;
+        rawRankedExplore = await activeOrBase.rank({
+          userId,
+          candidates: explorationCandidates,
+          featuresMap,
+        });
+      } catch (err) {
+        rawRankedExplore = await this.baselineRanker.rank({
+          userId,
+          candidates: explorationCandidates,
+          featuresMap,
+        });
+      }
+    }
+
+    // 4. Fetch Course Diversity Metadata (category, trainer)
     const courses = await prisma.course.findMany({
       where: { id: { in: allCourseIds } },
       select: {
         id: true,
         category: true,
-        description: true,
         trainerId: true,
       },
     });
 
-    const courseMetaMap = new Map(
+    const metaMap = new Map<string, CourseDiversityMetadata>(
       courses.map(c => [
         c.id,
         {
+          courseId: c.id,
           category: c.category,
-          topics: [c.category],
-          description: c.description || '',
           trainerId: c.trainerId,
         },
       ])
     );
 
-    // Attach content metadata to ranked core
-    const coreWithMeta: CandidateWithContentMetadata[] = rankedCore.map(rc => {
-      const meta = courseMetaMap.get(rc.courseId) || { category: 'General', topics: [], description: '', trainerId: '' };
+    // 5. Apply Educational Safety, MMR Diversity, and Exploration Re-ranking
+    const finalItems = FinalReranker.rerank(
+      rawRankedCore,
+      rawRankedExplore,
+      featuresMap,
+      metaMap,
+      {
+        limit,
+        mmrLambda,
+        maxSameCategory: activeConfig.weights ? 3 : 3,
+        maxSameTrainer: 2,
+        explorationRatio,
+      }
+    );
+
+    // 6. Map to RankedCandidate response with backward-compatible feature snapshot
+    const ranked: RankedCandidate[] = finalItems.map(item => {
+      const feat = featuresMap.get(item.courseId);
+      const f = feat?.featureMap || {};
+
+      const defaultSnapshot: RecommendationFeatures = {
+        skillRelevanceScore: Math.round((f['skill_weightedSkillGap'] ?? 0.5) * 100),
+        contentSimilarityScore: Math.round((f['semantic_courseUserEmbeddingSimilarity'] ?? 0.5) * 100),
+        behavioralAffinityScore: Math.round((f['behavior_activityRecency'] ?? 0.5) * 100),
+        collaborativeScore: Math.round((f['behavior_similarCourseInteractions'] ?? 0) * 100),
+        qualityScore: Math.round((f['course_qualityScore'] ?? 0.75) * 100),
+        freshnessScore: Math.round((f['course_freshness'] ?? 0.8) * 100),
+        contextualScore: Math.round((f['context_departmentMatch'] ?? 0.5) * 100),
+        difficultyAlignmentScore: Math.round((1.0 - Math.abs((f['skill_levelDifference'] ?? 0.5) - 0.5)) * 100),
+        historicalSuccessRate: Math.round((f['course_completionRate'] ?? 0.5) * 100),
+      };
+
       return {
-        ...rc,
-        contentMetadata: {
-          category: meta.category,
-          topics: meta.topics,
-          description: meta.description,
-        },
-        trainerId: meta.trainerId,
+        courseId: item.courseId,
+        source: item.source,
+        finalScore: item.score,
+        rankPosition: item.rankPosition,
+        reasonCodes: item.reasonCodes,
+        featureSnapshot: defaultSnapshot,
+        algorithmVersion: algorithmName,
+        modelVersion,
+        featureVersion: feat?.featureVersion || 'v1.0.0',
       };
     });
 
-    // 4. Apply MMR Diversity Re-Ranking
-    const diversified = applyMMRDiversity(coreWithMeta, {
-      lambda: mmrLambda,
-      targetCount: limit,
-    });
-
-    // 5. Build features for exploration candidates and inject if available
-    let finalSelection = diversified;
-
-    if (explorationCandidates.length > 0 && explorationRatio > 0) {
-      const exploreFeaturesMap = await this.featureBuilder.buildFeaturesForCandidates(
-        explorationCandidates,
-        { userId, surface, activeCourseId }
-      );
-
-      const rankedExplore = this.ranker.rank({
-        candidates: explorationCandidates,
-        featuresMap: exploreFeaturesMap,
-        weights,
-      });
-
-      const exploreWithMeta: CandidateWithContentMetadata[] = rankedExplore.map(ec => {
-        const meta = courseMetaMap.get(ec.courseId) || { category: 'General', topics: [], description: '', trainerId: '' };
-        return {
-          ...ec,
-          contentMetadata: {
-            category: meta.category,
-            topics: meta.topics,
-            description: meta.description,
-          },
-          trainerId: meta.trainerId,
-        };
-      });
-
-      finalSelection = injectExploratoryCandidates(diversified, exploreWithMeta, {
-        explorationRatio,
-        totalSlots: limit,
-      });
-    }
-
-    // Re-index final rank positions
-    finalSelection.forEach((c, idx) => {
-      c.rankPosition = idx + 1;
-    });
-
-    logger.debug(`Ranked ${finalSelection.length} final candidates using version=${activeConfig.version}`);
+    logger.debug(`Completed ranking: ${ranked.length} items using ${algorithmName} (${modelVersion})`);
     return {
-      ranked: finalSelection.map(f => ({
-        courseId: f.courseId,
-        source: f.source,
-        finalScore: f.finalScore,
-        rankPosition: f.rankPosition,
-        reasonCodes: f.reasonCodes,
-        featureSnapshot: f.featureSnapshot,
-      })),
-      algorithmVersion: activeConfig.version,
+      ranked,
+      algorithmVersion: algorithmName,
+      modelVersion,
     };
   }
 }

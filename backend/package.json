@@ -16,8 +16,11 @@
     "test:coverage": "jest --coverage --forceExit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "recommendation:dataset": "python ml/training/build_dataset.py",
+    "recommendation:train": "python ml/training/train.py",
+    "recommendation:evaluate": "python ml/evaluation/evaluate.py",
+    "recommendation:activate": "ts-node src/modules/recommendation/scripts/activate-model.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

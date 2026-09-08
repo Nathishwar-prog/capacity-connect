@@ -6,7 +6,8 @@
 
 import { Router } from 'express';
 import { RecommendationController } from '../controllers/recommendation.controller';
-import { authenticate } from '../../../auth/auth.middleware';
+import { authenticate, requireRole } from '../../../auth/auth.middleware';
+import { Role } from '@prisma/client';
 import { asyncHandler } from '../../../errors/async.handler';
 
 const router = Router();
@@ -32,5 +33,30 @@ router.post('/feedback', asyncHandler(controller.submitFeedback));
 
 // Aggregate outcome metrics (admin/trainer)
 router.get('/metrics', asyncHandler(controller.getMetrics));
+
+// Admin ML Model Management Routes
+router.get(
+  '/admin/models',
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
+  asyncHandler(controller.listModels)
+);
+
+router.get(
+  '/admin/models/:version',
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
+  asyncHandler(controller.getModelDetails)
+);
+
+router.post(
+  '/admin/models/:version/activate',
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
+  asyncHandler(controller.activateModel)
+);
+
+router.post(
+  '/admin/models/:version/retire',
+  requireRole([Role.ADMIN, Role.SUPER_ADMIN]),
+  asyncHandler(controller.retireModel)
+);
 
 export default router;
