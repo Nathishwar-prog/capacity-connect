@@ -5,6 +5,7 @@ import { userRouter } from './user.routes';
 import { dashboardRouter } from './dashboard.routes';
 import { trainerRouter } from './trainer.routes';
 import { traineeRouter } from './trainee.routes';
+import { courseDiscoveryRouter } from './course-discovery.routes';
 
 const router = Router();
 
@@ -40,6 +41,12 @@ router.get('/', (_req, res) => {
         trainer: 'GET /api/v1/dashboard/trainer',
         admin: 'GET /api/v1/dashboard/admin',
       },
+      courses: {
+        list: 'GET /api/v1/courses',
+        details: 'GET /api/v1/courses/:courseId',
+        enroll: 'POST /api/v1/courses/:courseId/enroll',
+        filters: 'GET /api/v1/courses/meta/filters',
+      },
     },
   });
 });
@@ -53,5 +60,7 @@ router.use('/users', userRouter);
 router.use('/dashboard', dashboardRouter);
 router.use('/trainer', trainerRouter);
 router.use('/trainee', traineeRouter);
+router.use('/courses', courseDiscoveryRouter);
 
 export default router;
+
