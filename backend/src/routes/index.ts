@@ -12,6 +12,7 @@ import resourceRouter from './resource.routes';
 import trainerMonitoringRouter from './trainer-monitoring.routes';
 import assessmentRouter from './assessment.routes';
 import revisionRouter from '../modules/revision/routes/revision.routes';
+import skillGapRouter from '../modules/skill-gap/routes/skill-gap.routes';
 
 const router = Router();
 
@@ -173,5 +174,6 @@ router.use('/trainer', trainerRouter);
 router.use('/trainee', traineeRouter);
 router.use('/assessments', assessmentRouter);
 router.use('/revision', revisionRouter);
+router.use('/skill-gaps', skillGapRouter);
 
 export default router;

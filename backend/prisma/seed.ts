@@ -34,6 +34,10 @@ async function main() {
 
   // 1. Clean existing records in foreign-key dependency order
   console.log('🧹 Cleaning existing data...');
+  await prisma.skillGapAnalysisItem.deleteMany();
+  await prisma.skillGapAnalysis.deleteMany();
+  await prisma.competencyPrerequisite.deleteMany();
+  await prisma.skillGapAlgorithmConfig.deleteMany();
   await prisma.revisionOutcome.deleteMany();
   await prisma.revisionSessionItem.deleteMany();
   await prisma.revisionSession.deleteMany();
@@ -2173,6 +2177,72 @@ async function main() {
       { userId: jane.id, groupId: groupSatellite.id, groupCompetency: 71.7, groupConfidence: 0.65, groupWeakness: 28.3, groupForgettingRisk: 70.0, groupImportance: 4.8, groupDependencyImpact: 40.0, groupPriority: 45.0, weakTopicCount: 1, criticalTopicCount: 2 },
     ],
   });
+
+  // 16. AI Skill Gap Analyzer: Algorithm Config & Competency Prerequisite DAG
+  console.log('🎯 Seeding AI Skill Gap Analyzer configuration & prerequisite DAG...');
+
+  await prisma.skillGapAlgorithmConfig.create({
+    data: {
+      version: 'v1.0.0',
+      severityWeight: 0.35,
+      importanceWeight: 0.20,
+      dependencyWeight: 0.15,
+      uncertaintyWeight: 0.10,
+      forgettingWeight: 0.10,
+      errorSeverityWeight: 0.10,
+      coreMultiplier: 1.25,
+      importantMultiplier: 1.10,
+      normalMultiplier: 1.00,
+      optionalMultiplier: 0.80,
+      readinessThresholdFull: 80.0,
+      readinessThresholdCond: 60.0,
+      isActive: true,
+    },
+  });
+
+  const compSynoptic = compMap.get('COMP-SYNOPTIC-MET')!;
+  const compNwp = compMap.get('COMP-NWP-MODELING')!;
+  const compRadar = compMap.get('COMP-RADAR-MET')!;
+  const compSat = compMap.get('COMP-SAT-MET')!;
+  const compInstr = compMap.get('COMP-INSTRUMENTATION')!;
+  const compOcean = compMap.get('COMP-OCEAN-SCI')!;
+
+  if (compSynoptic && compNwp && compRadar && compSat && compInstr && compOcean) {
+    await prisma.competencyPrerequisite.createMany({
+      data: [
+        {
+          prerequisiteCompetencyId: compSynoptic,
+          dependentCompetencyId: compNwp,
+          edgeWeight: 1.0,
+          dependencyType: 'DIRECT',
+        },
+        {
+          prerequisiteCompetencyId: compInstr,
+          dependentCompetencyId: compRadar,
+          edgeWeight: 1.0,
+          dependencyType: 'DIRECT',
+        },
+        {
+          prerequisiteCompetencyId: compRadar,
+          dependentCompetencyId: compSynoptic,
+          edgeWeight: 0.8,
+          dependencyType: 'DIRECT',
+        },
+        {
+          prerequisiteCompetencyId: compSat,
+          dependentCompetencyId: compSynoptic,
+          edgeWeight: 0.8,
+          dependencyType: 'DIRECT',
+        },
+        {
+          prerequisiteCompetencyId: compSynoptic,
+          dependentCompetencyId: compOcean,
+          edgeWeight: 1.0,
+          dependencyType: 'DIRECT',
+        },
+      ],
+    });
+  }
 
   console.log('✅ MoES / IMD database seeding finished successfully!');
   console.log(`- Organization: ${org.name} (${org.code})`);

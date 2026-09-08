@@ -152,6 +152,13 @@ enum GapStatus {
   RESOLVED
 }
 
+enum RequirementCriticality {
+  CORE
+  IMPORTANT
+  NORMAL
+  OPTIONAL
+}
+
 enum RecommendationType {
   COURSE
   TRAINER
@@ -359,6 +366,9 @@ model User {
   userTopicErrors       UserTopicError[]
   revisionSessions      RevisionSession[]
   revisionOutcomes      RevisionOutcome[]
+
+  // AI Skill Gap Analyzer
+  skillGapAnalyses      SkillGapAnalysis[]
 
   @@index([email])
   @@index([organizationId])
@@ -652,6 +662,10 @@ model Course {
   // Self-referencing Many-to-Many Prerequisites
   prerequisites   CoursePrerequisite[] @relation("CoursePrerequisites")
   prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteForCourses")
+
+  // AI Skill Gap Analyzer
+  courseSkillGaps  SkillGap[]         @relation("CourseSkillGaps")
+  skillGapAnalyses SkillGapAnalysis[]
 
   @@index([organizationId])
   @@index([trainerId])
@@ -955,6 +969,12 @@ model Competency {
   trainerMatches              TrainerMatch[]
   topicCompetencies           LearningTopicCompetency[]
 
+  // AI Skill Gap Analyzer relations
+  prerequisites               CompetencyPrerequisite[]     @relation("CompetencyPrerequisites")
+  prerequisiteFor             CompetencyPrerequisite[]     @relation("PrerequisiteForCompetencies")
+  rootCauseForGaps            SkillGap[]                   @relation("RootCauseCompetency")
+  analysisItems               SkillGapAnalysisItem[]
+
   @@index([category])
   @@index([code])
   @@map("competencies")
@@ -975,11 +995,15 @@ model CompetencyLevel {
 }
 
 model CourseCompetency {
-  id           String   @id @default(uuid())
+  id           String                 @id @default(uuid())
   courseId     String
   competencyId String
-  targetLevel  Int      @default(1)
-  createdAt    DateTime @default(now())
+  targetLevel  Int                    @default(1)
+  importance   Float                  @default(1.0)
+  criticality  RequirementCriticality @default(NORMAL)
+  weight       Float                  @default(1.0)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt @default(now())
 
   course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
@@ -996,7 +1020,13 @@ model UserCompetency {
   competencyId    String
   currentLevel    Int              @default(0)
   confidenceScore Float?
+  competencyScore Float            @default(50.0)
+  evidenceCount   Int              @default(0)
   lastAssessedAt  DateTime?
+  lastActivityAt  DateTime?
+  stability       Float            @default(1.0)
+  retention       Float            @default(1.0)
+  forgettingRisk  Float            @default(0.0)
   source          CompetencySource @default(PROFILE)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -1027,23 +1057,32 @@ model AssessmentCompetencyResult {
 }
 
 model SkillGap {
-  id            String      @id @default(uuid())
-  userId        String
-  competencyId  String
-  currentLevel  Int
-  requiredLevel Int
-  gapLevel      Int
-  priority      GapPriority @default(MEDIUM)
-  status        GapStatus   @default(OPEN)
-  calculatedAt  DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                    String      @id @default(uuid())
+  userId                String
+  competencyId          String
+  courseId              String?
+  currentLevel          Int
+  requiredLevel         Int
+  gapLevel              Int
+  gapSeverity           Float?
+  priorityScore         Float?
+  classification        String?
+  gapType               String?
+  rootCauseCompetencyId String?
+  reasonCodes           String[]    @default([])
+  priority              GapPriority @default(MEDIUM)
+  status                GapStatus   @default(OPEN)
+  calculatedAt          DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competency          Competency  @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+  course              Course?     @relation("CourseSkillGaps", fields: [courseId], references: [id], onDelete: Cascade)
+  rootCauseCompetency Competency? @relation("RootCauseCompetency", fields: [rootCauseCompetencyId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, competencyId])
   @@index([userId])
   @@index([competencyId])
+  @@index([courseId])
   @@index([priority])
   @@index([status])
   @@map("skill_gaps")
@@ -1565,3 +1604,98 @@ model RevisionOutcome {
   @@index([topicId])
   @@map("revision_outcomes")
 }
+
+// ==============================================================================
+// 13. AI SKILL GAP ANALYZER
+// ==============================================================================
+
+model CompetencyPrerequisite {
+  id                       String   @id @default(uuid())
+  prerequisiteCompetencyId String
+  dependentCompetencyId    String
+  edgeWeight               Float    @default(1.0)
+  dependencyType           String   @default("DIRECT")
+  createdAt                DateTime @default(now())
+
+  prerequisiteCompetency Competency @relation("PrerequisiteForCompetencies", fields: [prerequisiteCompetencyId], references: [id], onDelete: Cascade)
+  dependentCompetency    Competency @relation("CompetencyPrerequisites", fields: [dependentCompetencyId], references: [id], onDelete: Cascade)
+
+  @@unique([prerequisiteCompetencyId, dependentCompetencyId])
+  @@index([prerequisiteCompetencyId])
+  @@index([dependentCompetencyId])
+  @@map("competency_prerequisites")
+}
+
+model SkillGapAlgorithmConfig {
+  id                     String    @id @default(uuid())
+  version                String    @unique
+  severityWeight         Float     @default(0.35)
+  importanceWeight       Float     @default(0.20)
+  dependencyWeight       Float     @default(0.15)
+  uncertaintyWeight      Float     @default(0.10)
+  forgettingWeight       Float     @default(0.10)
+  errorSeverityWeight    Float     @default(0.10)
+  coreMultiplier         Float     @default(1.25)
+  importantMultiplier    Float     @default(1.10)
+  normalMultiplier       Float     @default(1.00)
+  optionalMultiplier     Float     @default(0.80)
+  readinessThresholdFull Float     @default(80.0)
+  readinessThresholdCond Float     @default(60.0)
+  isActive               Boolean   @default(true)
+  createdAt              DateTime  @default(now())
+  activatedAt            DateTime  @default(now())
+  deactivatedAt          DateTime?
+
+  @@map("skill_gap_algorithm_configs")
+}
+
+model SkillGapAnalysis {
+  id                String   @id @default(uuid())
+  userId            String
+  courseId          String?
+  algorithmVersion  String   @default("v1.0.0")
+  readinessScore    Float
+  coreReadiness     Float
+  criticalReadiness Float
+  readinessStatus   String   // NOT_READY, CONDITIONAL, GENERALLY_READY, FULLY_READY
+  summary           Json?
+  aiGuidance        Json?
+  createdAt         DateTime @default(now())
+
+  user   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items  SkillGapAnalysisItem[]
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([createdAt])
+  @@map("skill_gap_analyses")
+}
+
+model SkillGapAnalysisItem {
+  id                    String                 @id @default(uuid())
+  analysisId            String
+  competencyId          String
+  currentLevel          Int
+  requiredLevel         Int
+  gapLevel              Int
+  gapSeverity           Float
+  priorityScore         Float
+  classification        String                 // MISSING, WEAK, AT_RISK, UNCERTAIN, MEETS_REQUIREMENT, EXCEEDS_REQUIREMENT
+  gapType               String                 // NO_GAP, LOW, MEDIUM, HIGH, CRITICAL
+  trend                 String                 @default("NEW") // IMPROVING, STABLE, WORSENING, NEW, RESOLVED
+  criticality           RequirementCriticality @default(NORMAL)
+  rootCauseCompetencyId String?
+  contributingPrereqs   String[]               @default([])
+  reasonCodes           String[]               @default([])
+  details               Json?
+  createdAt             DateTime               @default(now())
+
+  analysis   SkillGapAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  competency Competency       @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@index([analysisId])
+  @@index([competencyId])
+  @@map("skill_gap_analysis_items")
+}
+
