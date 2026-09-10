@@ -152,6 +152,13 @@ enum GapStatus {
   RESOLVED
 }
 
+enum RequirementCriticality {
+  CORE
+  IMPORTANT
+  NORMAL
+  OPTIONAL
+}
+
 enum RecommendationType {
   COURSE
   TRAINER
@@ -171,6 +178,37 @@ enum RecommendationStatus {
   ACCEPTED
   DISMISSED
   EXPIRED
+}
+
+enum RecommendationEventType {
+  IMPRESSION
+  VIEW
+  CLICK
+  SAVE
+  DISMISS
+  START
+  ENROLL
+  COMPLETE
+  ABANDON
+  SHARE
+}
+
+enum RecommendationFeedbackType {
+  NOT_RELEVANT
+  ALREADY_KNOW_THIS
+  TOO_DIFFICULT
+  TOO_EASY
+  NOT_NOW
+  WRONG_TOPIC
+  INTERESTING
+}
+
+enum MLModelStatus {
+  TRAINING
+  VALIDATING
+  ACTIVE
+  RETIRED
+  FAILED
 }
 
 enum MatchSource {
@@ -211,12 +249,53 @@ enum NotificationType {
   ANNOUNCEMENT
 }
 
+enum ImportJobStatus {
+  UPLOADED
+  PROCESSING
+  PARSING
+  ANALYZING
+  VALIDATING
+  READY_FOR_REVIEW
+  IMPORTING
+  COMPLETED
+  FAILED
+}
+
 enum AchievementType {
   COURSE_COMPLETION
   ASSESSMENT_EXCELLENCE
   SKILL_MASTERY
   STREAK
   BADGE
+}
+
+enum LearningEventType {
+  LESSON_VIEWED
+  LESSON_COMPLETED
+  QUIZ_ANSWERED
+  PRACTICE_ATTEMPT
+  ASSESSMENT_ANSWERED
+  ASSESSMENT_COMPLETED
+  REVISION_STARTED
+  REVISION_COMPLETED
+  RETRIEVAL_ATTEMPT
+  DIAGNOSTIC_ATTEMPT
+}
+
+enum RevisionSessionStatus {
+  GENERATED
+  STARTED
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+enum RevisionMode {
+  RECOVERY
+  REBUILD
+  STRENGTHEN
+  RETRIEVE
+  MAINTAIN_CHALLENGE
 }
 
 // ==============================================================================
@@ -316,12 +395,33 @@ model User {
   traineeMatches   TrainerMatch[]   @relation("TraineeMatches")
   trainerMatches   TrainerMatch[]   @relation("TrainerMatches")
 
+  // Intelligent Recommendation Engine
+  recommendationBatches   RecommendationBatch[]
+  recommendationEvents    RecommendationEvent[]
+  recommendationFeedbacks RecommendationFeedback[]
+  recommendationProfile   UserRecommendationProfile?
+
   // Social & Engagement
   feedbackGiven        Feedback[]     @relation("FeedbackAuthor")
   feedbackReceived     Feedback[]     @relation("TrainerFeedback")
   createdAnnouncements Announcement[] @relation("AnnouncementAuthor")
   notifications        Notification[]
   achievements         Achievement[]
+
+  // Adaptive Revision Engine
+  learningEvents        LearningEvent[]
+  userTopicCompetencies UserTopicCompetency[]
+  userGroupCompetencies UserGroupCompetency[]
+  userTopicErrors       UserTopicError[]
+  revisionSessions      RevisionSession[]
+  revisionOutcomes      RevisionOutcome[]
+
+  // AI Skill Gap Analyzer
+  skillGapAnalyses      SkillGapAnalysis[]
+
+  // Course Ingestion & Documents
+  uploadedCourseDocuments CourseDocument[]  @relation("UploadedCourseDocuments")
+  trainerImportJobs       CourseImportJob[] @relation("TrainerImportJobs")
 
   @@index([email])
   @@index([organizationId])
@@ -592,6 +692,13 @@ model Course {
   durationMinutes Int              @default(0)
   status          CourseStatus     @default(DRAFT)
   publishedAt     DateTime?
+  overview        String?
+  targetAudience  String?
+  learningOutcomes Json?
+  prerequisitesText String?
+  glossary        Json?
+  references      Json?
+  version         Int              @default(1)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
@@ -607,9 +714,26 @@ model Course {
   recommendations    Recommendation[]
   feedbacks          Feedback[]
 
+  // Adaptive Revision Engine
+  competencyGroups CompetencyGroup[]
+  learningTopics   LearningTopic[]
+  revisionSessions RevisionSession[]
+
   // Self-referencing Many-to-Many Prerequisites
   prerequisites   CoursePrerequisite[] @relation("CoursePrerequisites")
   prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteForCourses")
+
+  // AI Skill Gap Analyzer
+  courseSkillGaps  SkillGap[]         @relation("CourseSkillGaps")
+  skillGapAnalyses SkillGapAnalysis[]
+
+  // Intelligent Recommendation Engine
+  recommendationProfile CourseRecommendationProfile?
+  recommendationEvents  RecommendationEvent[]
+
+  // Course Ingestion & Documents
+  documents  CourseDocument[]
+  importJobs CourseImportJob[]
 
   @@index([organizationId])
   @@index([trainerId])
@@ -630,6 +754,54 @@ model CoursePrerequisite {
   @@index([courseId])
   @@index([prerequisiteCourseId])
   @@map("course_prerequisites")
+}
+
+model CourseDocument {
+  id         String   @id @default(uuid())
+  courseId   String?
+  fileName   String
+  fileType   String   // DOCX or PDF
+  storageKey String
+  fileSize   BigInt?
+  checksum   String?
+  version    Int      @default(1)
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+
+  uploader   User              @relation("UploadedCourseDocuments", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  course     Course?           @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  importJobs CourseImportJob[]
+
+  @@index([courseId])
+  @@index([uploadedBy])
+  @@map("course_documents")
+}
+
+model CourseImportJob {
+  id               String          @id @default(uuid())
+  courseDocumentId String
+  trainerId        String
+  courseId         String?
+  status           ImportJobStatus @default(UPLOADED)
+  progress         Float           @default(0.0)
+  error            String?
+  parserVersion    String          @default("1.0.0")
+  confidenceScore  Float?
+  parsedData       Json?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  document CourseDocument @relation(fields: [courseDocumentId], references: [id], onDelete: Cascade)
+  trainer  User           @relation("TrainerImportJobs", fields: [trainerId], references: [id], onDelete: Restrict)
+  course   Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([courseDocumentId])
+  @@index([trainerId])
+  @@index([courseId])
+  @@index([status])
+  @@map("course_import_jobs")
 }
 
 model CourseModule {
@@ -658,13 +830,17 @@ model Lesson {
   resourceUrl     String?
   durationMinutes Int?
   orderIndex      Int               @default(0)
-  isPreview       Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  isPreview          Boolean           @default(false)
+  learningObjectives Json?
+  keyTakeaways       Json?
+  sourceProvenance   Json?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   module          CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   lessonProgress  LessonProgress[]
   lessonResources LessonResource[]
+  lessonTopics    LessonTopic[]
 
   @@index([moduleId, orderIndex])
   @@map("lessons")
@@ -824,8 +1000,9 @@ model AssessmentQuestion {
   updatedAt    DateTime     @updatedAt
 
   assessment Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  options    QuestionOption[]
-  answers    AssessmentAnswer[]
+  options        QuestionOption[]
+  answers        AssessmentAnswer[]
+  questionTopics AssessmentQuestionTopic[]
 
   @@index([assessmentId, orderIndex])
   @@map("assessment_questions")
@@ -909,6 +1086,13 @@ model Competency {
   skillGaps                   SkillGap[]
   recommendations             Recommendation[]
   trainerMatches              TrainerMatch[]
+  topicCompetencies           LearningTopicCompetency[]
+
+  // AI Skill Gap Analyzer relations
+  prerequisites               CompetencyPrerequisite[]     @relation("CompetencyPrerequisites")
+  prerequisiteFor             CompetencyPrerequisite[]     @relation("PrerequisiteForCompetencies")
+  rootCauseForGaps            SkillGap[]                   @relation("RootCauseCompetency")
+  analysisItems               SkillGapAnalysisItem[]
 
   @@index([category])
   @@index([code])
@@ -930,11 +1114,15 @@ model CompetencyLevel {
 }
 
 model CourseCompetency {
-  id           String   @id @default(uuid())
+  id           String                 @id @default(uuid())
   courseId     String
   competencyId String
-  targetLevel  Int      @default(1)
-  createdAt    DateTime @default(now())
+  targetLevel  Int                    @default(1)
+  importance   Float                  @default(1.0)
+  criticality  RequirementCriticality @default(NORMAL)
+  weight       Float                  @default(1.0)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt @default(now())
 
   course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
@@ -951,7 +1139,13 @@ model UserCompetency {
   competencyId    String
   currentLevel    Int              @default(0)
   confidenceScore Float?
+  competencyScore Float            @default(50.0)
+  evidenceCount   Int              @default(0)
   lastAssessedAt  DateTime?
+  lastActivityAt  DateTime?
+  stability       Float            @default(1.0)
+  retention       Float            @default(1.0)
+  forgettingRisk  Float            @default(0.0)
   source          CompetencySource @default(PROFILE)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -982,23 +1176,32 @@ model AssessmentCompetencyResult {
 }
 
 model SkillGap {
-  id            String      @id @default(uuid())
-  userId        String
-  competencyId  String
-  currentLevel  Int
-  requiredLevel Int
-  gapLevel      Int
-  priority      GapPriority @default(MEDIUM)
-  status        GapStatus   @default(OPEN)
-  calculatedAt  DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                    String      @id @default(uuid())
+  userId                String
+  competencyId          String
+  courseId              String?
+  currentLevel          Int
+  requiredLevel         Int
+  gapLevel              Int
+  gapSeverity           Float?
+  priorityScore         Float?
+  classification        String?
+  gapType               String?
+  rootCauseCompetencyId String?
+  reasonCodes           String[]    @default([])
+  priority              GapPriority @default(MEDIUM)
+  status                GapStatus   @default(OPEN)
+  calculatedAt          DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competency          Competency  @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+  course              Course?     @relation("CourseSkillGaps", fields: [courseId], references: [id], onDelete: Cascade)
+  rootCauseCompetency Competency? @relation("RootCauseCompetency", fields: [rootCauseCompetencyId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, competencyId])
   @@index([userId])
   @@index([competencyId])
+  @@index([courseId])
   @@index([priority])
   @@index([status])
   @@map("skill_gaps")
@@ -1016,6 +1219,16 @@ model Recommendation {
   trainerId          String?
   resourceId         String?
   competencyId       String?
+  batchId            String?
+  rankPosition       Int?
+  algorithmVersion   String               @default("v1.0.0")
+  surface            String               @default("HOME")
+  candidateSource    String?
+  reasonCodes        String[]             @default([])
+  featureSnapshot    Json?
+  shownAt            DateTime?
+  clickedAt          DateTime?
+  actedAt            DateTime?
   score              Float?
   reason             String?
   source             RecommendationSource @default(RULE_ENGINE)
@@ -1024,17 +1237,175 @@ model Recommendation {
   createdAt          DateTime             @default(now())
   expiresAt          DateTime?
 
-  user       User        @relation("UserRecommendations", fields: [userId], references: [id], onDelete: Cascade)
-  course     Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  trainer    User?       @relation("TrainerRecommendations", fields: [trainerId], references: [id], onDelete: SetNull)
-  resource   Resource?   @relation(fields: [resourceId], references: [id], onDelete: SetNull)
-  competency Competency? @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+  user           User                    @relation("UserRecommendations", fields: [userId], references: [id], onDelete: Cascade)
+  course         Course?                 @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  trainer        User?                   @relation("TrainerRecommendations", fields: [trainerId], references: [id], onDelete: SetNull)
+  resource       Resource?               @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  competency     Competency?             @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+  batch          RecommendationBatch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  events         RecommendationEvent[]
+  feedbacks      RecommendationFeedback[]
 
   @@index([userId])
   @@index([recommendationType])
   @@index([status])
+  @@index([batchId])
   @@index([createdAt])
   @@map("recommendations")
+}
+
+model RecommendationBatch {
+  id               String           @id @default(uuid())
+  userId           String
+  surface          String           @default("HOME")
+  context          Json?
+  algorithmVersion String           @default("v1.0.0")
+  createdAt        DateTime         @default(now())
+  expiresAt        DateTime?
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
+  events          RecommendationEvent[]
+
+  @@index([userId])
+  @@index([surface])
+  @@index([createdAt])
+  @@map("recommendation_batches")
+}
+
+model RecommendationEvent {
+  id               String                  @id @default(uuid())
+  userId           String
+  recommendationId String?
+  batchId          String?
+  eventType        RecommendationEventType
+  position         Int?
+  surface          String                  @default("HOME")
+  courseId         String?
+  resourceId       String?
+  trainerId        String?
+  sessionId        String?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendation Recommendation?       @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+  batch          RecommendationBatch?  @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  course         Course?               @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([recommendationId])
+  @@index([batchId])
+  @@index([eventType])
+  @@index([courseId])
+  @@index([createdAt])
+  @@map("recommendation_events")
+}
+
+model RecommendationFeedback {
+  id               String                     @id @default(uuid())
+  userId           String
+  recommendationId String
+  feedbackType     RecommendationFeedbackType
+  reason           String?
+  rating           Int?
+  createdAt        DateTime                   @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([recommendationId])
+  @@index([feedbackType])
+  @@map("recommendation_feedbacks")
+}
+
+model RecommendationAlgorithmConfig {
+  id                    String    @id @default(uuid())
+  version               String    @unique
+  skillWeight           Float     @default(0.25)
+  contentWeight         Float     @default(0.15)
+  behaviorWeight        Float     @default(0.15)
+  collaborativeWeight   Float     @default(0.10)
+  qualityWeight         Float     @default(0.10)
+  contextWeight         Float     @default(0.08)
+  popularityWeight      Float     @default(0.07)
+  freshnessWeight       Float     @default(0.05)
+  explorationWeight     Float     @default(0.05)
+  explorationPercentage Float     @default(0.15)
+  diversityLambda       Float     @default(0.70)
+  maxSameCategory       Int       @default(3)
+  maxSameGroup          Int       @default(2)
+  maxSameTrainer        Int       @default(2)
+  minimumEvidence       Int       @default(3)
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  activatedAt           DateTime  @default(now())
+  deactivatedAt         DateTime?
+
+  @@map("recommendation_algorithm_configs")
+}
+
+model UserRecommendationProfile {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  preferredCategories   String[] @default([])
+  preferredDifficulty   String?
+  preferredContentTypes String[] @default([])
+  interestTopics        String[] @default([])
+  recentTopics          String[] @default([])
+  recentCourses         String[] @default([])
+  engagementScore       Float    @default(50.0)
+  explorationPreference Float    @default(0.15)
+  behaviorVector        Json?
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_recommendation_profiles")
+}
+
+model CourseRecommendationProfile {
+  id               String   @id @default(uuid())
+  courseId         String   @unique
+  skillCoverage    Json?
+  topicCoverage    Json?
+  qualityScore     Float    @default(75.0)
+  completionRate   Float    @default(0.0)
+  averageRating    Float    @default(4.5)
+  ratingCount      Int      @default(0)
+  popularityScore  Float    @default(50.0)
+  freshnessScore   Float    @default(100.0)
+  engagementScore  Float    @default(50.0)
+  updatedAt        DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@map("course_recommendation_profiles")
+}
+
+model MLModelRegistry {
+  id                     String        @id @default(uuid())
+  modelVersion           String        @unique
+  algorithm              String        @default("LIGHTGBM_LAMBDAMART")
+  featureVersion         String        @default("v1.0.0")
+  trainingDatasetVersion String
+  trainingStart          DateTime
+  trainingEnd            DateTime
+  metrics                Json
+  hyperparameters        Json?
+  artifactPath           String
+  status                 MLModelStatus @default(TRAINING)
+  activatedAt            DateTime?
+  retiredAt              DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@index([status])
+  @@index([modelVersion])
+  @@map("ml_model_registry")
 }
 
 model TrainerMatch {
@@ -1142,3 +1513,476 @@ model Achievement {
   @@index([type])
   @@map("achievements")
 }
+
+// ==============================================================================
+// 12. ADAPTIVE COMPETENCY-BASED REVISION ENGINE
+// ==============================================================================
+
+model CompetencyGroup {
+  id            String   @id @default(uuid())
+  courseId      String
+  parentGroupId String?
+  name          String
+  description   String?
+  importance    Float    @default(1.0)
+  orderIndex    Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  course                Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  parentGroup           CompetencyGroup?      @relation("GroupHierarchy", fields: [parentGroupId], references: [id], onDelete: SetNull)
+  childGroups           CompetencyGroup[]     @relation("GroupHierarchy")
+  topics                LearningTopic[]
+  userGroupCompetencies UserGroupCompetency[]
+  revisionSessions      RevisionSession[]
+
+  @@index([courseId, orderIndex])
+  @@index([parentGroupId])
+  @@map("competency_groups")
+}
+
+model LearningTopic {
+  id               String   @id @default(uuid())
+  courseId         String
+  groupId          String
+  parentTopicId    String?
+  name             String
+  code             String   @unique
+  description      String?
+  importance       Float    @default(1.0)
+  difficulty       Float    @default(0.5)
+  estimatedMinutes Int      @default(10)
+  orderIndex       Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  course                Course                    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  group                 CompetencyGroup           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  parentTopic           LearningTopic?            @relation("TopicHierarchy", fields: [parentTopicId], references: [id], onDelete: SetNull)
+  childTopics           LearningTopic[]           @relation("TopicHierarchy")
+  prerequisites         TopicPrerequisite[]       @relation("TopicPrerequisites")
+  prerequisiteFor       TopicPrerequisite[]       @relation("PrerequisiteForTopics")
+  competencyMappings    LearningTopicCompetency[]
+  questionMappings      AssessmentQuestionTopic[]
+  lessonMappings        LessonTopic[]
+  learningEvents        LearningEvent[]
+  userTopicCompetencies UserTopicCompetency[]
+  userTopicErrors       UserTopicError[]
+  sessionItems          RevisionSessionItem[]
+  revisionOutcomes      RevisionOutcome[]
+
+  @@index([courseId])
+  @@index([groupId])
+  @@index([parentTopicId])
+  @@index([code])
+  @@map("learning_topics")
+}
+
+model TopicPrerequisite {
+  id                  String   @id @default(uuid())
+  prerequisiteTopicId String
+  dependentTopicId    String
+  edgeWeight          Float    @default(1.0)
+  dependencyType      String   @default("DIRECT")
+  createdAt           DateTime @default(now())
+
+  prerequisiteTopic LearningTopic @relation("PrerequisiteForTopics", fields: [prerequisiteTopicId], references: [id], onDelete: Cascade)
+  dependentTopic    LearningTopic @relation("TopicPrerequisites", fields: [dependentTopicId], references: [id], onDelete: Cascade)
+
+  @@unique([prerequisiteTopicId, dependentTopicId])
+  @@index([prerequisiteTopicId])
+  @@index([dependentTopicId])
+  @@map("topic_prerequisites")
+}
+
+model LearningTopicCompetency {
+  id           String   @id @default(uuid())
+  topicId      String
+  competencyId String
+  weight       Float    @default(1.0)
+  createdAt    DateTime @default(now())
+
+  topic      LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  competency Competency    @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, competencyId])
+  @@index([topicId])
+  @@index([competencyId])
+  @@map("learning_topic_competencies")
+}
+
+model AssessmentQuestionTopic {
+  id         String   @id @default(uuid())
+  questionId String
+  topicId    String
+  weight     Float    @default(1.0)
+  createdAt  DateTime @default(now())
+
+  question AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    LearningTopic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, topicId])
+  @@index([questionId])
+  @@index([topicId])
+  @@map("assessment_question_topics")
+}
+
+model LessonTopic {
+  id        String   @id @default(uuid())
+  lessonId  String
+  topicId   String
+  createdAt DateTime @default(now())
+
+  lesson Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  topic  LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, topicId])
+  @@index([lessonId])
+  @@index([topicId])
+  @@map("lesson_topics")
+}
+
+model LearningEvent {
+  id                    String            @id @default(uuid())
+  userId                String
+  courseId              String?
+  groupId               String?
+  topicId               String
+  eventType             LearningEventType
+  source                String
+  assessmentAttemptId   String?
+  questionId            String?
+  revisionSessionId     String?
+  lessonId              String?
+  correct               Boolean?
+  responseTimeMs        Int?
+  hintsUsed             Int?              @default(0)
+  confidenceRating      Float?
+  difficulty            Float?
+  rawScore              Float?
+  normalizedPerformance Float?
+  previousCompetency    Float?
+  newCompetency         Float?
+  metadata              Json?
+  occurredAt            DateTime          @default(now())
+  createdAt             DateTime          @default(now())
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([userId, topicId])
+  @@index([topicId])
+  @@index([eventType])
+  @@index([occurredAt])
+  @@map("learning_events")
+}
+
+model UserTopicCompetency {
+  id                     String    @id @default(uuid())
+  userId                 String
+  topicId                String
+  competencyScore        Float     @default(50.0)
+  confidenceScore        Float     @default(0.1)
+  accuracyScore          Float     @default(50.0)
+  speedScore             Float     @default(50.0)
+  hintScore              Float     @default(100.0)
+  confidenceRatingScore  Float     @default(50.0)
+  independenceScore      Float     @default(100.0)
+  attemptCount           Int       @default(0)
+  meaningfulAttemptCount Int       @default(0)
+  consecutiveFailures    Int       @default(0)
+  consecutiveSuccesses   Int       @default(0)
+  stability              Float     @default(1.0)
+  retention              Float     @default(1.0)
+  forgettingRisk         Float     @default(0.0)
+  lastReviewedAt         DateTime?
+  lastAssessedAt         DateTime?
+  nextReviewAt           DateTime?
+  priorityScore          Float     @default(50.0)
+  algorithmVersion       String    @default("v1.0.0")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([userId])
+  @@index([topicId])
+  @@index([userId, priorityScore])
+  @@index([topicId, priorityScore])
+  @@index([nextReviewAt])
+  @@map("user_topic_competencies")
+}
+
+model UserGroupCompetency {
+  id                    String    @id @default(uuid())
+  userId                String
+  groupId               String
+  groupCompetency       Float     @default(50.0)
+  groupConfidence       Float     @default(0.1)
+  groupWeakness         Float     @default(50.0)
+  groupForgettingRisk   Float     @default(0.0)
+  groupImportance       Float     @default(1.0)
+  groupDependencyImpact Float     @default(0.0)
+  groupUncertainty      Float     @default(90.0)
+  groupRecency          Float     @default(0.0)
+  groupPriority         Float     @default(50.0)
+  weakTopicCount        Int       @default(0)
+  criticalTopicCount    Int       @default(0)
+  lastRevisionAt        DateTime?
+  lastAssessmentAt      DateTime?
+  algorithmVersion      String    @default("v1.0.0")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group CompetencyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([userId, groupPriority])
+  @@map("user_group_competencies")
+}
+
+model UserTopicError {
+  id                String    @id @default(uuid())
+  userId            String
+  topicId           String
+  errorType         String
+  errorCode         String?
+  description       String?
+  errorCount        Int       @default(1)
+  severity          Float     @default(20.0)
+  firstDetectedAt   DateTime  @default(now())
+  lastDetectedAt    DateTime  @default(now())
+  resolvedAt        DateTime?
+  exampleQuestionId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic LearningTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId, errorType])
+  @@index([userId])
+  @@index([topicId])
+  @@index([severity])
+  @@map("user_topic_errors")
+}
+
+model RevisionAlgorithmConfig {
+  id                            String    @id @default(uuid())
+  version                       String    @unique
+  topicWeaknessWeight           Float     @default(0.35)
+  topicForgettingWeight         Float     @default(0.18)
+  topicImportanceWeight         Float     @default(0.12)
+  topicDependencyWeight         Float     @default(0.12)
+  topicErrorWeight              Float     @default(0.10)
+  topicUncertaintyWeight        Float     @default(0.08)
+  topicRecencyWeight            Float     @default(0.05)
+  groupWeaknessWeight           Float     @default(0.40)
+  groupForgettingWeight         Float     @default(0.20)
+  groupImportanceWeight         Float     @default(0.15)
+  groupDependencyWeight         Float     @default(0.15)
+  groupUncertaintyWeight        Float     @default(0.10)
+  cooldownHours                 Int       @default(24)
+  masteryThreshold              Float     @default(85.0)
+  diagnosticConfidenceThreshold Float     @default(0.40)
+  maxTopicsPerSession           Int       @default(6)
+  maxGroupConcentration         Float     @default(0.80)
+  primaryGroupAllocation        Float     @default(0.70)
+  prerequisiteAllocation        Float     @default(0.20)
+  retentionAllocation           Float     @default(0.10)
+  isActive                      Boolean   @default(true)
+  createdAt                     DateTime  @default(now())
+  activatedAt                   DateTime  @default(now())
+  deactivatedAt                 DateTime?
+
+  @@map("revision_algorithm_configs")
+}
+
+model RevisionSession {
+  id               String                @id @default(uuid())
+  userId           String
+  courseId         String
+  availableMinutes Int
+  focusGroupId     String?
+  sessionType      String                @default("ADAPTIVE_COMPETENCY")
+  status           RevisionSessionStatus @default(GENERATED)
+  algorithmVersion String                @default("v1.0.0")
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  focusGroup CompetencyGroup?      @relation(fields: [focusGroupId], references: [id], onDelete: SetNull)
+  items      RevisionSessionItem[]
+  outcomes   RevisionOutcome[]
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+  @@map("revision_sessions")
+}
+
+model RevisionSessionItem {
+  id                    String          @id @default(uuid())
+  sessionId             String
+  topicId               String
+  sequenceNumber        Int
+  priorityScore         Float
+  groupPriorityScore    Float
+  weaknessScore         Float
+  forgettingRiskScore   Float
+  importanceScore       Float
+  dependencyImpactScore Float
+  errorSeverityScore    Float
+  uncertaintyScore      Float
+  recencyScore          Float
+  reason                Json
+  reasonCodes           String[]
+  revisionMode          RevisionMode
+  allocatedMinutes      Int
+  status                String          @default("PENDING")
+  preCompetency         Float?
+  postCompetency        Float?
+  educationalContent    Json?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  session RevisionSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  topic   LearningTopic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  outcome RevisionOutcome?
+
+  @@index([sessionId, sequenceNumber])
+  @@index([topicId])
+  @@map("revision_session_items")
+}
+
+model RevisionOutcome {
+  id                 String   @id @default(uuid())
+  sessionId          String
+  sessionItemId      String   @unique
+  userId             String
+  topicId            String
+  preScore           Float
+  postScore          Float
+  questionsPresented Int      @default(0)
+  questionsAnswered  Int      @default(0)
+  correctAnswers     Int      @default(0)
+  timeSpentSeconds   Int      @default(0)
+  retrievalScore     Float?
+  completed          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  session     RevisionSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionItem RevisionSessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic       LearningTopic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([topicId])
+  @@map("revision_outcomes")
+}
+
+// ==============================================================================
+// 13. AI SKILL GAP ANALYZER
+// ==============================================================================
+
+model CompetencyPrerequisite {
+  id                       String   @id @default(uuid())
+  prerequisiteCompetencyId String
+  dependentCompetencyId    String
+  edgeWeight               Float    @default(1.0)
+  dependencyType           String   @default("DIRECT")
+  createdAt                DateTime @default(now())
+
+  prerequisiteCompetency Competency @relation("PrerequisiteForCompetencies", fields: [prerequisiteCompetencyId], references: [id], onDelete: Cascade)
+  dependentCompetency    Competency @relation("CompetencyPrerequisites", fields: [dependentCompetencyId], references: [id], onDelete: Cascade)
+
+  @@unique([prerequisiteCompetencyId, dependentCompetencyId])
+  @@index([prerequisiteCompetencyId])
+  @@index([dependentCompetencyId])
+  @@map("competency_prerequisites")
+}
+
+model SkillGapAlgorithmConfig {
+  id                     String    @id @default(uuid())
+  version                String    @unique
+  severityWeight         Float     @default(0.35)
+  importanceWeight       Float     @default(0.20)
+  dependencyWeight       Float     @default(0.15)
+  uncertaintyWeight      Float     @default(0.10)
+  forgettingWeight       Float     @default(0.10)
+  errorSeverityWeight    Float     @default(0.10)
+  coreMultiplier         Float     @default(1.25)
+  importantMultiplier    Float     @default(1.10)
+  normalMultiplier       Float     @default(1.00)
+  optionalMultiplier     Float     @default(0.80)
+  readinessThresholdFull Float     @default(80.0)
+  readinessThresholdCond Float     @default(60.0)
+  isActive               Boolean   @default(true)
+  createdAt              DateTime  @default(now())
+  activatedAt            DateTime  @default(now())
+  deactivatedAt          DateTime?
+
+  @@map("skill_gap_algorithm_configs")
+}
+
+model SkillGapAnalysis {
+  id                String   @id @default(uuid())
+  userId            String
+  courseId          String?
+  algorithmVersion  String   @default("v1.0.0")
+  readinessScore    Float
+  coreReadiness     Float
+  criticalReadiness Float
+  readinessStatus   String   // NOT_READY, CONDITIONAL, GENERALLY_READY, FULLY_READY
+  summary           Json?
+  aiGuidance        Json?
+  createdAt         DateTime @default(now())
+
+  user   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items  SkillGapAnalysisItem[]
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([createdAt])
+  @@map("skill_gap_analyses")
+}
+
+model SkillGapAnalysisItem {
+  id                    String                 @id @default(uuid())
+  analysisId            String
+  competencyId          String
+  currentLevel          Int
+  requiredLevel         Int
+  gapLevel              Int
+  gapSeverity           Float
+  priorityScore         Float
+  classification        String                 // MISSING, WEAK, AT_RISK, UNCERTAIN, MEETS_REQUIREMENT, EXCEEDS_REQUIREMENT
+  gapType               String                 // NO_GAP, LOW, MEDIUM, HIGH, CRITICAL
+  trend                 String                 @default("NEW") // IMPROVING, STABLE, WORSENING, NEW, RESOLVED
+  criticality           RequirementCriticality @default(NORMAL)
+  rootCauseCompetencyId String?
+  contributingPrereqs   String[]               @default([])
+  reasonCodes           String[]               @default([])
+  details               Json?
+  createdAt             DateTime               @default(now())
+
+  analysis   SkillGapAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  competency Competency       @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@index([analysisId])
+  @@index([competencyId])
+  @@map("skill_gap_analysis_items")
+}
+

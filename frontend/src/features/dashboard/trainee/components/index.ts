@@ -13,3 +13,4 @@ export * from './TrainerConnectionCard';
 export * from './AchievementsCard';
 export * from './RecentActivityTimeline';
 export * from './FuturePlaceholders';
+export * from './TodayLearningPlan';

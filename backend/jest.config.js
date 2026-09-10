@@ -3,7 +3,7 @@ const config = {
     testEnvironment: 'node',
     testTimeout: 30000,
     roots: ['<rootDir>/src'],
-    testMatch: ['**/__tests__/**/*.test.ts'],
+    testMatch: ['**/__tests__/**/*.test.ts', '**/tests/**/*.test.ts'],
     transform: {
         '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
     },

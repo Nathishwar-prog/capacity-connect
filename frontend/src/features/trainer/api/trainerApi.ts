@@ -241,6 +241,62 @@ export const trainerApi = {
     const res = await apiClient.get<ApiResponse<TrainerFeedbackItem[]>>('/trainer/feedback');
     return res.data.data;
   },
+
+  // 8. Document Ingestion & Advanced Course Builder
+  uploadCourseDocument: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post<ApiResponse<{ jobId: string; documentId: string; status: string }>>(
+      '/courses/import',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
+    return res.data.data;
+  },
+
+  getImportJobStatus: async (jobId: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/courses/import/${jobId}`);
+    return res.data.data;
+  },
+
+  getImportJobPreview: async (jobId: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/courses/import/${jobId}/preview`);
+    return res.data.data;
+  },
+
+  approveImportJob: async (jobId: string, approvedStructure?: any) => {
+    const res = await apiClient.post<ApiResponse<any>>(`/courses/import/${jobId}/approve`, {
+      approvedStructure,
+    });
+    return res.data.data;
+  },
+
+  validateCourse: async (courseId: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/courses/${courseId}/validate`);
+    return res.data.data;
+  },
+
+  publishCourse: async (courseId: string) => {
+    const res = await apiClient.post<ApiResponse<any>>(`/courses/${courseId}/publish`);
+    return res.data.data;
+  },
+
+  saveDraft: async (courseId: string, data: any) => {
+    const res = await apiClient.patch<ApiResponse<any>>(`/courses/${courseId}/draft`, data);
+    return res.data.data;
+  },
+
+  getTopicsAndCompetencies: async (courseId: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/courses/${courseId}/topics-competencies`);
+    return res.data.data;
+  },
+
+  updateTopicCompetencyMapping: async (courseId: string, data: any) => {
+    const res = await apiClient.put<ApiResponse<any>>(`/courses/${courseId}/topics-competencies`, data);
+    return res.data.data;
+  },
 };
 
 export default trainerApi;

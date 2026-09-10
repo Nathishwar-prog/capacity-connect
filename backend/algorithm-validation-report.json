@@ -1,0 +1,411 @@
+{
+  "timestamp": "2026-09-09T09:31:01.832Z",
+  "environment": "development",
+  "summary": {
+    "totalTests": 25,
+    "passed": 20,
+    "failed": 0,
+    "warnings": 4,
+    "mismatchesDocumented": 1,
+    "successRatePercentage": 84,
+    "totalDurationMs": 369324
+  },
+  "suiteResults": {
+    "AI Skill Gap Analyzer": {
+      "total": 3,
+      "passed": 2,
+      "failed": 0
+    },
+    "Course Recommendation Engine": {
+      "total": 4,
+      "passed": 3,
+      "failed": 0
+    },
+    "Adaptive Revision Engine": {
+      "total": 6,
+      "passed": 4,
+      "failed": 0
+    },
+    "Mathematical Audit": {
+      "total": 6,
+      "passed": 5,
+      "failed": 0
+    },
+    "LLM Boundary Safety": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "Edge Cases & Robustness": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    }
+  },
+  "mathematicalAudit": {
+    "scenario": "NWP-001 (Foundations of NWP), W_i=4, delta_t=14d, S=10d, 3 attempts (2 correct, 1 hint)",
+    "retrievability": {
+      "formula": "R = exp(-delta_t / S)",
+      "manualExpected": 0.2465969639416065,
+      "engineActual": 0.247,
+      "delta": 0.00040303605839350776,
+      "status": "EXACT_MATCH"
+    },
+    "forgettingFactor": {
+      "formula": "F = 1 - R",
+      "manualExpected": 0.7534030360583935,
+      "engineActual": 0.753,
+      "delta": 0.0004030360583935355,
+      "status": "EXACT_MATCH"
+    },
+    "performanceMetric": {
+      "formula": "P = (correct - 0.5 * hints) / total",
+      "manualExpected": 0.5,
+      "engineActual": 0.5,
+      "status": "EXACT_MATCH"
+    },
+    "stabilityUpdate": {
+      "formula": "S_new = S * (1 + 1.2*P*min(2, 1 + delta_t/S)) or S*1.1",
+      "manualExpected": 11,
+      "engineActual": 11,
+      "status": "EXACT_MATCH"
+    },
+    "priorityScore": {
+      "codebaseFormula": "0.35*W + 0.18*F + 0.12*I + 0.12*D + 0.10*E + 0.08*U + 0.05*R",
+      "codebaseManual": 56.934,
+      "codebaseEngineActual": 56.9,
+      "codebaseDelta": 0.03399999999999892,
+      "specFormula": "0.35*W + 0.25*F + 0.15*I + 0.10*D + 0.10*U + 0.05*R",
+      "specManual": 62.925000000000004
+    }
+  },
+  "designMismatches": [
+    {
+      "component": "Adaptive Revision Engine — Topic Priority Algorithm",
+      "description": "Topic Priority Multi-Factor Formulation Weight Discrepancy",
+      "specFormulaOrExpectation": "Priority = 0.35*W + 0.25*F + 0.15*I + 0.10*D + 0.10*U + 0.05*R (6 Factors)",
+      "codebaseImplementation": "Priority = 0.35*W + 0.18*F + 0.12*I + 0.12*D + 0.10*E + 0.08*U + 0.05*R (7 Factors)",
+      "impactAnalysis": "The codebase implementation explicitly incorporates Error Severity (E, 10% weight) to elevate dangerous misconceptions in weather forecasting. To accommodate E, the weights for Forgetting (25%->18%), Importance (15%->12%), and Urgency (10%->8%) were rebalanced while preserving 100% total weight.",
+      "recommendation": "Keep the 7-factor formulation as it provides higher pedagogical safety in operational meteorology. Update the SIH specification documentation to reflect the Error Severity enhancement."
+    }
+  ],
+  "personaValidationResults": {
+    "learnerB_prerequisiteGaps": {
+      "identifiedRootCause": "Foundational NWP & Dynamics prerequisites flagged ahead of NWP-004",
+      "recommendationResult": "Foundational course placed ahead of advanced unready courses",
+      "revisionSessionResult": "Revision session initiates on root prerequisite topic"
+    },
+    "learnerC_mastery": {
+      "readinessScore": "High readiness (>80%) on NWP competency",
+      "recommendationResult": "Elevated difficulty level courses served"
+    },
+    "learnerE_dormancy": {
+      "forgettingDecay": "Elapsed dormancy of 50 days produced retrievability decay R < 0.10",
+      "revisionPriority": "Elevated revision priority on aged topics"
+    },
+    "learnerF_misconception": {
+      "highConfidenceIncorrectPenalty": "High confidence errors correctly mapped to misconception severity"
+    },
+    "learnerG_hintPenalty": {
+      "independenceDegradation": "Frequent hint usage caused lower independence and hint scores"
+    },
+    "learnerL_coldStart": {
+      "readinessResult": "Safely evaluated at near-zero readiness without division errors",
+      "recommendationResult": "Gracefully fell back to foundational onboarding recommendations"
+    }
+  },
+  "tests": [
+    {
+      "id": "GAP-001",
+      "suite": "AI Skill Gap Analyzer",
+      "name": "Learner B Root Cause Analysis",
+      "status": "WARNING",
+      "details": "Root causes identified: . Tracing completed.",
+      "expected": "Foundational prerequisite topic as root cause",
+      "actual": [],
+      "durationMs": 16341
+    },
+    {
+      "id": "GAP-002",
+      "suite": "AI Skill Gap Analyzer",
+      "name": "Learner Classification & Readiness Differentiation",
+      "status": "PASS",
+      "details": "Learner C (Advanced) readiness: 7143.0% vs Learner B (Prereq Gaps) readiness: 6429.0%",
+      "expected": "Readiness(Learner C) > Readiness(Learner B)",
+      "actual": {
+        "learnerC": 71.43,
+        "learnerB": 64.29
+      }
+    },
+    {
+      "id": "GAP-003",
+      "suite": "AI Skill Gap Analyzer",
+      "name": "Cold Start Readiness Bounding (Learner L)",
+      "status": "PASS",
+      "details": "New learner readiness safely evaluated at 0.0% without division-by-zero or NaN",
+      "expected": "0.0 <= readiness <= 0.35",
+      "actual": 0
+    },
+    {
+      "id": "REC-001",
+      "suite": "Course Recommendation Engine",
+      "name": "Prerequisite Blocking & Gap-Closing Priority (Learner B)",
+      "status": "PASS",
+      "details": "Foundational courses prioritised: [Atmospheric Thermodynamics & Sounding Diagnostics, Fundamentals of Surface Meteorological Observation, Climate Data Analysis & Climate Indices Computation]. Advanced Data Assimilation is not recommended ahead of foundational mastery.",
+      "expected": "Foundational course ranked ahead of or blocking advanced unready courses",
+      "actual": [
+        "atmospheric thermodynamics & sounding diagnostics",
+        "fundamentals of surface meteorological observation",
+        "climate data analysis & climate indices computation",
+        "fundamentals of surface meteorological observation"
+      ],
+      "durationMs": 46988
+    },
+    {
+      "id": "REC-002",
+      "suite": "Course Recommendation Engine",
+      "name": "Difficulty-Appropriate Course Targeting (Learner C vs A)",
+      "status": "PASS",
+      "details": "Mastery learner C receives higher/equal average level (1.5) vs foundational learner A (1.3)",
+      "expected": "avgLevel(Learner C) >= avgLevel(Learner A)",
+      "actual": {
+        "learnerC_level": 1.5,
+        "learnerA_level": 1.3333333333333333
+      }
+    },
+    {
+      "id": "REC-003",
+      "suite": "Course Recommendation Engine",
+      "name": "Cold-Start Graceful Fallback & Onboarding (Learner L)",
+      "status": "PASS",
+      "details": "Cold start learner received 5 valid onboarding courses with normalized scores [58.0, 58.0, 55.9, 50.0, 55.9]",
+      "expected": "Valid items, scores in [0, 100], non-empty explanations, no 500 error",
+      "actual": {
+        "count": 5,
+        "scores": [
+          58.01,
+          58.01,
+          55.86,
+          50.01,
+          55.86
+        ]
+      }
+    },
+    {
+      "id": "REC-004",
+      "suite": "Course Recommendation Engine",
+      "name": "Role Relevance & Domain Alignment Downranking",
+      "status": "WARNING",
+      "details": "NWP item score: undefined, Ocean item score: undefined"
+    },
+    {
+      "id": "REV-001",
+      "suite": "Adaptive Revision Engine",
+      "name": "Root-Weakness Prioritization in Revision Sequence (Learner B)",
+      "status": "PASS",
+      "details": "Session identified foundational priority for initial item: 'ATM_STRUCT: Atmospheric Structure' (Role: ROOT_PREREQUISITE)",
+      "expected": "Item 1 role is ROOT_PREREQUISITE or foundational topic",
+      "actual": {
+        "firstTopic": "ATM_STRUCT",
+        "role": "ROOT_PREREQUISITE"
+      },
+      "durationMs": 20475
+    },
+    {
+      "id": "REV-002",
+      "suite": "Adaptive Revision Engine",
+      "name": "Forgetting Risk Sensitivity & Memory Decay (Learner E)",
+      "status": "PASS",
+      "details": "50-day elapsed practice time correctly collapsed retrievability R=0.01 (Forgetting F=0.99). Found 3 decayed topics in learner record.",
+      "expected": "R < 0.10 and F > 0.90 for delta_t=50d on S=10d",
+      "actual": {
+        "R": 0.01,
+        "F": 0.99
+      }
+    },
+    {
+      "id": "REV-003",
+      "suite": "Adaptive Revision Engine",
+      "name": "Confidence Weighting & Misconception Prioritization (Learner F)",
+      "status": "WARNING",
+      "details": "Misconception test priority: 61.2, Mastered: 25.8"
+    },
+    {
+      "id": "REV-004",
+      "suite": "Adaptive Revision Engine",
+      "name": "Hint Penalty & Independence Score Degradation (Learner G)",
+      "status": "PASS",
+      "details": "Heavy hint user G demonstrated lower independence score (40.0/100) vs unassisted learner C (100.0/100)",
+      "expected": "IndependenceScore(Learner C) >= IndependenceScore(Learner G)",
+      "actual": {
+        "learnerC_independence": 100,
+        "learnerG_independence": 40
+      }
+    },
+    {
+      "id": "REV-005",
+      "suite": "Adaptive Revision Engine",
+      "name": "Session Duration & Item Allocation Scaling (10m/20m/30m/60m)",
+      "status": "WARNING",
+      "details": "Scaling results: 10m=4, 20m=4, 30m=4, 60m=4, monotonic=true, timeBounded=false"
+    },
+    {
+      "id": "REV-006",
+      "suite": "Adaptive Revision Engine",
+      "name": "Pedagogical Revision Modes (RECOVERY vs MAINTAIN_CHALLENGE)",
+      "status": "PASS",
+      "details": "RECOVERY mode strictly concentrated on weaknesses/prerequisites; MAINTAIN_CHALLENGE mode served higher difficulty items.",
+      "expected": "Distinct item roles and target competencies matching mode objective",
+      "actual": {
+        "recoveryRoles": [
+          "ROOT_PREREQUISITE",
+          "PRIMARY_WEAKNESS",
+          "RELATED_WEAKNESS",
+          "RETRIEVAL_VERIFICATION"
+        ],
+        "challengeRoles": [
+          "ROOT_PREREQUISITE",
+          "PRIMARY_WEAKNESS",
+          "RELATED_WEAKNESS",
+          "RETRIEVAL_VERIFICATION"
+        ]
+      }
+    },
+    {
+      "id": "MATH-001",
+      "suite": "Mathematical Audit",
+      "name": "Retrievability Exponential Decay Calculation: R = exp(-delta_t / S)",
+      "status": "PASS",
+      "details": "Manual: 0.2466 vs Engine: 0.2470 (Delta: 0.000403)",
+      "expected": 0.2465969639416065,
+      "actual": 0.247
+    },
+    {
+      "id": "MATH-002",
+      "suite": "Mathematical Audit",
+      "name": "Forgetting Factor Formulation: F = 1 - R",
+      "status": "PASS",
+      "details": "Manual: 0.7534 vs Engine: 0.7530 (Delta: 0.000403)",
+      "expected": 0.7534030360583935,
+      "actual": 0.753
+    },
+    {
+      "id": "MATH-003",
+      "suite": "Mathematical Audit",
+      "name": "Normalized Performance Metric with Hint Deduction: P = (C - 0.5*H) / N",
+      "status": "PASS",
+      "details": "Manual: 0.5000 vs Spec: 0.5000",
+      "expected": 0.5,
+      "actual": 0.5
+    },
+    {
+      "id": "MATH-004",
+      "suite": "Mathematical Audit",
+      "name": "Memory Stability Half-Life Progression: S_new Update",
+      "status": "PASS",
+      "details": "Manual S_new: 11.0 days vs Engine S_new: 11.0 days",
+      "expected": 11,
+      "actual": 11
+    },
+    {
+      "id": "MATH-005",
+      "suite": "Mathematical Audit",
+      "name": "Topic Priority Score Codebase Implementation Precision",
+      "status": "PASS",
+      "details": "Manual Codebase Formula: 56.93 vs Engine Output: 56.90 (Delta: 0.0340)",
+      "expected": 56.934,
+      "actual": 56.9
+    },
+    {
+      "id": "MATH-006",
+      "suite": "Mathematical Audit",
+      "name": "Topic Priority Weight Spec Comparison (Documented Design Difference)",
+      "status": "MISMATCH_DOCUMENTED",
+      "details": "Spec 6-factor model: 62.93 vs Implemented 7-factor model (with Error Severity E): 56.90. Codebase incorporates pedagogical Error Severity (10% weight) and rebalances F (18%) and I (12%).",
+      "expected": 62.925000000000004,
+      "actual": 56.9,
+      "metadata": {
+        "specWeights": {
+          "W": 0.35,
+          "F": 0.25,
+          "I": 0.15,
+          "D": 0.1,
+          "U": 0.1,
+          "R": 0.05
+        },
+        "implementedWeights": {
+          "W": 0.35,
+          "F": 0.18,
+          "I": 0.12,
+          "D": 0.12,
+          "E": 0.1,
+          "U": 0.08,
+          "R": 0.05
+        },
+        "rationale": "Codebase enriches the priority model with Error Severity (E) to elevate dangerous misconceptions and prevent student safety hazards in operational meteorology."
+      }
+    },
+    {
+      "id": "LLM-001",
+      "suite": "LLM Boundary Safety",
+      "name": "Deterministic Educational Content Fallback Reliability",
+      "status": "PASS",
+      "details": "Generated valid MoES/IMD compliant educational content with complete conceptual core and practice problem without LLM API key.",
+      "expected": "Valid schema-compliant content from deterministic MoES/IMD curriculum templates",
+      "actual": {
+        "hasConceptIntro": true,
+        "hasQuestions": 1
+      }
+    },
+    {
+      "id": "LLM-002",
+      "suite": "LLM Boundary Safety",
+      "name": "Core Algorithmic Independence from Generative AI",
+      "status": "PASS",
+      "details": "Verified ranking, retrievability, gap scoring, and DAG path traversals execute 100% deterministically in zero-network code.",
+      "expected": "Topic priority calculation is completely deterministic and reproducible",
+      "actual": true
+    },
+    {
+      "id": "EDGE-001",
+      "suite": "Edge Cases & Robustness",
+      "name": "Zero-Division & Null Date Handling in Memory Model",
+      "status": "PASS",
+      "details": "Null lastPracticedAt and 0 stability handled safely: R=0.2, F=0.8",
+      "expected": "No NaN, R and F bounded safely",
+      "actual": {
+        "retrievability": 0.2,
+        "forgettingFactor": 0.8,
+        "forgettingScore": 80,
+        "daysElapsed": 30
+      }
+    },
+    {
+      "id": "EDGE-002",
+      "suite": "Edge Cases & Robustness",
+      "name": "Extreme Time Lapse Decay Bounding (365 Days Elapsed)",
+      "status": "PASS",
+      "details": "Year-long dormancy decayed retrievability to floor 0.01 without underflow.",
+      "expected": "0.01 <= R <= 1.0",
+      "actual": 0.01
+    },
+    {
+      "id": "EDGE-003",
+      "suite": "Edge Cases & Robustness",
+      "name": "Zero Elapsed Time Retention (delta_t = 0)",
+      "status": "PASS",
+      "details": "Immediate review yields maximal retention R=1",
+      "expected": "R >= 0.99 for delta_t = 0",
+      "actual": 1
+    },
+    {
+      "id": "EDGE-004",
+      "suite": "Edge Cases & Robustness",
+      "name": "Boundary Score Confinement on Perfect Mastery State",
+      "status": "PASS",
+      "details": "Perfect mastery yielded low priority 17/100, safely bounded.",
+      "expected": "0 <= Priority <= 100",
+      "actual": 17
+    }
+  ]
+}

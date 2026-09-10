@@ -1,0 +1,4445 @@
+MASTER IMPLEMENTATION PROMPT
+CAPACITY CONNECT — INTELLIGENT RECOMMENDATION ENGINE
+
+You are the lead recommendation-system architect and senior TypeScript/Node.js/PostgreSQL/Prisma engineer for Capacity Connect.
+
+Build a production-oriented multi-stage recommendation engine for the Capacity Connect LMS.
+
+The system should support Instagram/YouTube/Netflix-style recommendation architecture concepts:
+
+    candidate generation
+    hard filtering
+    multi-signal ranking
+    re-ranking
+    diversity
+    exploration
+    feedback collection
+    outcome measurement
+    continuous improvement
+
+DO NOT copy social-media recommendation behavior blindly.
+
+This is an educational LMS.
+
+The ultimate objective is:
+
+    recommend learning opportunities that are relevant,
+    useful,
+    skill-aligned,
+    prerequisite-safe,
+    diverse,
+    context-aware,
+    and demonstrably helpful to learner competency development.
+
+============================================================
+1. FIRST: AUDIT THE EXISTING PROJECT
+============================================================
+
+Before writing code:
+
+Inspect the entire repository.
+
+Inspect:
+
+backend/prisma/schema.prisma
+existing migrations
+seed files
+Recommendation model
+SkillGap
+Competency
+CourseCompetency
+UserCompetency
+CoursePrerequisite
+Enrollment
+LessonProgress
+Feedback
+UserSkill
+TrainerExpertise
+Resource
+Assessment
+existing AI modules
+existing Redis/cache
+existing vector/embedding infrastructure
+existing API conventions
+existing authentication/RBAC
+existing logging
+existing background jobs
+
+DO NOT create duplicate systems.
+
+The current database already contains:
+
+User
+Skill
+UserSkill
+Course
+CoursePrerequisite
+CourseCompetency
+UserCompetency
+SkillGap
+Recommendation
+Enrollment
+LessonProgress
+Resource
+Feedback
+TrainerExpertise
+
+Reuse and extend them.
+
+============================================================
+2. PRIMARY OBJECTIVE
+============================================================
+
+Build a recommendation platform capable of recommending:
+
+PRIMARY:
+    COURSE
+
+SECONDARY:
+    LEARNING PATH
+    RESOURCE
+
+FUTURE-READY:
+    TRAINER
+    ASSESSMENT
+    REVISION
+
+The architecture must allow new recommendation types without rewriting the ranking engine.
+
+============================================================
+3. RECOMMENDATION DECISION BOUNDARY
+============================================================
+
+Skill Gap Analyzer answers:
+
+    What does the learner lack?
+
+Revision Engine answers:
+
+    What should the learner revise now?
+
+Recommendation Engine answers:
+
+    What should the learner learn/enroll in next?
+
+LLM answers:
+
+    How should the recommendation be explained?
+
+Do not merge these responsibilities.
+
+============================================================
+4. CORE ARCHITECTURE
+============================================================
+
+Implement:
+
+USER STATE
+    ↓
+USER RECOMMENDATION PROFILE
+    ↓
+CANDIDATE GENERATION
+    ↓
+CANDIDATE MERGE + DEDUPLICATION
+    ↓
+HARD ELIGIBILITY FILTER
+    ↓
+FEATURE ENRICHMENT
+    ↓
+FIRST-STAGE RANKING
+    ↓
+TOP-N
+    ↓
+DIVERSITY / NOVELTY RE-RANKING
+    ↓
+EXPLORATION
+    ↓
+FINAL RECOMMENDATION BATCH
+    ↓
+USER
+    ↓
+IMPRESSION
+    ↓
+CLICK / VIEW / SAVE / ENROLL
+    ↓
+COURSE COMPLETION
+    ↓
+COMPETENCY IMPROVEMENT
+    ↓
+OUTCOME EVENT
+    ↓
+UPDATE RECOMMENDATION SIGNALS
+
+============================================================
+5. DATABASE — REUSE EXISTING RECOMMENDATION MODEL
+============================================================
+
+Inspect the current Recommendation model.
+
+Do not replace it.
+
+Extend it where necessary.
+
+Current concepts:
+
+userId
+recommendationType
+courseId
+trainerId
+resourceId
+competencyId
+score
+reason
+source
+status
+metadata
+createdAt
+expiresAt
+
+Add fields only when required.
+
+Potential fields:
+
+batchId
+rankPosition
+algorithmVersion
+surface
+candidateSource
+reasonCodes
+featureSnapshot
+shownAt
+clickedAt
+actedAt
+
+Do not duplicate course/trainer/resource relationships.
+
+============================================================
+6. RECOMMENDATION BATCH
+============================================================
+
+Create:
+
+RecommendationBatch
+
+Fields:
+
+id
+userId
+surface
+context
+algorithmVersion
+createdAt
+expiresAt
+
+Examples of surface:
+
+HOME
+COURSE_DETAIL
+SKILL_GAP
+LEARNING_PATH
+SEARCH
+DASHBOARD
+POST_COMPLETION
+
+Context may contain safe structured metadata.
+
+A batch represents one generated recommendation set.
+
+Example:
+
+Batch:
+HOME
+User:
+X
+Algorithm:
+v1.0
+Generated:
+2026-09-08
+
+Recommendations:
+1...
+2...
+3...
+
+============================================================
+7. RECOMMENDATION EVENTS
+============================================================
+
+Create:
+
+RecommendationEvent
+
+Fields:
+
+id
+userId
+recommendationId
+batchId
+
+eventType
+
+position
+surface
+
+courseId?
+resourceId?
+trainerId?
+
+sessionId?
+
+createdAt
+metadata
+
+Event types:
+
+IMPRESSION
+VIEW
+CLICK
+SAVE
+DISMISS
+START
+ENROLL
+COMPLETE
+ABANDON
+SHARE
+
+The system must track impressions.
+
+Without impressions, recommendation CTR cannot be interpreted correctly.
+
+============================================================
+8. RECOMMENDATION FEEDBACK
+============================================================
+
+Create:
+
+RecommendationFeedback
+
+Fields:
+
+id
+userId
+recommendationId
+feedbackType
+reason?
+rating?
+createdAt
+
+Feedback types:
+
+NOT_RELEVANT
+ALREADY_KNOW_THIS
+TOO_DIFFICULT
+TOO_EASY
+NOT_NOW
+WRONG_TOPIC
+INTERESTING
+
+Feedback is a learning signal.
+
+============================================================
+9. RECOMMENDATION PROFILE
+============================================================
+
+Create a derived UserRecommendationProfile only if equivalent functionality does not already exist.
+
+Fields conceptually:
+
+userId
+preferredCategories
+preferredDifficulty
+preferredContentTypes
+interestTopics
+recentTopics
+recentCourses
+engagementScore
+explorationPreference
+embedding?
+behaviorVector?
+updatedAt
+
+Do not store all important/queryable information only in JSON.
+
+Use normalized relational data where appropriate.
+
+============================================================
+10. COURSE RECOMMENDATION PROFILE
+============================================================
+
+Create a derived CourseRecommendationProfile if required.
+
+Fields:
+
+courseId
+embedding?
+skillCoverage JSON
+topicCoverage JSON
+qualityScore
+completionRate
+averageRating
+popularityScore
+freshnessScore
+engagementScore
+updatedAt
+
+This is derived data.
+
+Course remains source of truth.
+
+============================================================
+11. CANDIDATE GENERATION
+============================================================
+
+NEVER rank every course directly.
+
+Generate candidates from multiple independent sources.
+
+Target architecture:
+
+all published courses
+    ↓
+multiple candidate generators
+    ↓
+merge
+    ↓
+deduplicate
+    ↓
+hard filtering
+    ↓
+ranking
+
+Candidate generators:
+
+1. Skill Gap
+2. Content Similarity
+3. Behavioral
+4. Collaborative
+5. Popularity
+6. Contextual
+7. Exploration
+8. Learning Path
+9. Continue Learning
+
+============================================================
+12. SKILL GAP CANDIDATE GENERATOR
+============================================================
+
+Integrate with the existing SkillGap / AI Skill Gap Analyzer.
+
+For each open/high-priority gap:
+
+Find courses whose CourseCompetency records address the missing competency.
+
+Calculate:
+
+gapSeverity
+competencyCoverage
+requiredLevel
+courseTargetLevel
+importance
+criticality
+
+Generate:
+
+candidateSource = SKILL_GAP
+
+Do not duplicate the Skill Gap calculation.
+
+Use the existing Skill Gap service.
+
+============================================================
+13. CONTENT SIMILARITY GENERATOR
+============================================================
+
+Use course semantic representations.
+
+Candidate input:
+
+course title
+description
+category
+competencies
+topics
+learning objectives
+
+Use the existing vector/embedding infrastructure if available.
+
+Do not introduce a second vector database unnecessarily.
+
+Generate:
+
+candidateSource = CONTENT_SIMILARITY
+
+Similarity must be normalized to 0-100.
+
+Semantic similarity is only one recommendation signal.
+
+It does not replace official competency mapping.
+
+============================================================
+14. BEHAVIORAL GENERATOR
+============================================================
+
+Use learner activity:
+
+course views
+clicks
+starts
+enrollments
+completion
+abandonment
+lesson progress
+resource interaction
+assessment activity
+feedback
+
+Recent behavior must receive more weight than very old behavior.
+
+Use time decay.
+
+Example:
+
+recent activity:
+high weight
+
+old activity:
+lower weight
+
+Repeated successful completion is stronger than a single click.
+
+============================================================
+15. COLLABORATIVE GENERATOR
+============================================================
+
+Implement a pluggable collaborative-filtering interface.
+
+When sufficient data exists:
+
+1. build learner similarity
+2. identify similar learners
+3. find successful courses among similar learners
+4. generate candidates
+
+Similarity can use:
+
+course completion patterns
+competency profiles
+skill profiles
+category interests
+learning behavior
+
+Do NOT rely only on clicks.
+
+Prefer:
+
+start
+completion
+competency improvement
+
+over simple impressions.
+
+For cold-start users, this generator may return zero candidates.
+
+That is acceptable.
+
+Do not fabricate collaborative evidence.
+
+============================================================
+16. POPULARITY GENERATOR
+============================================================
+
+Generate contextual popularity.
+
+Prefer:
+
+same organization
+same department
+same category
+same competency group
+same learner segment
+
+over global popularity.
+
+Global popularity may be fallback only.
+
+Popularity must not dominate critical skill-gap recommendations.
+
+============================================================
+17. CONTEXTUAL GENERATOR
+============================================================
+
+Use:
+
+current enrollment
+recently completed course
+current skill gaps
+current learning path
+department
+designation
+experience
+course category
+
+Example:
+
+User completed:
+
+Observation Fundamentals
+
+Candidate:
+
+Advanced Observation Techniques
+
+Context score should increase.
+
+============================================================
+18. EXPLORATION GENERATOR
+============================================================
+
+Implement controlled exploration.
+
+Do not create a filter bubble.
+
+Recommended initial allocation:
+
+80-90%
+exploitation
+
+10-20%
+exploration
+
+Exploration must still satisfy hard eligibility.
+
+Exploration candidates should be:
+
+related
+useful
+novel
+not already consumed
+not clearly irrelevant
+
+============================================================
+19. CONTINUE LEARNING GENERATOR
+============================================================
+
+If the learner is currently enrolled:
+
+prioritize:
+
+unfinished course
+next course module
+prerequisite
+learning-path continuation
+
+Do not recommend a new unrelated course above an unfinished required learning sequence without a strong reason.
+
+============================================================
+20. HARD ELIGIBILITY FILTER
+============================================================
+
+Before ranking, remove candidates that fail:
+
+course status
+organization access
+role access
+department access if applicable
+prerequisites
+availability dates
+enrollment restrictions
+deleted/archived state
+duplicate consumption
+already completed state where inappropriate
+course eligibility
+content scope
+
+Never recommend:
+
+DRAFT
+REJECTED
+ARCHIVED
+
+courses to normal trainees.
+
+Do not recommend inaccessible content.
+
+Do not bypass existing RBAC.
+
+============================================================
+21. PREREQUISITE FILTER
+============================================================
+
+Reuse existing CoursePrerequisite.
+
+If:
+
+Course A requires Course B
+
+and learner has not completed B:
+
+Course A must either:
+
+1. be filtered out, or
+2. be shown as "locked/future path" only if the product explicitly supports this.
+
+Do not recommend Advanced Course as the immediate next action if its prerequisite is clearly missing.
+
+Instead:
+
+recommend prerequisite course.
+
+============================================================
+22. CONSUMPTION FILTER
+============================================================
+
+Default:
+
+Do not recommend completed courses.
+
+Exceptions:
+
+REFRESHER
+RECERTIFICATION
+SPACED_REVIEW
+UPDATED_CONTENT
+
+Do not blindly exclude previously consumed content.
+
+Use course status/version/update metadata.
+
+============================================================
+23. RANKING FEATURES
+============================================================
+
+Build a feature vector for every candidate.
+
+Features:
+
+skillRelevance
+contentSimilarity
+behavioralAffinity
+collaborativeScore
+courseQuality
+contextRelevance
+popularity
+freshness
+exploration
+prerequisiteAlignment
+completionLikelihood
+gapCriticality
+novelty
+redundancy
+difficultyFit
+durationFit
+
+All features must be normalized.
+
+============================================================
+24. INITIAL RANKING FORMULA
+============================================================
+
+Use configurable starting weights:
+
+FinalScore =
+
+0.25 * SkillRelevance
++
+0.15 * ContentSimilarity
++
+0.15 * BehavioralAffinity
++
+0.10 * CollaborativeScore
++
+0.10 * CourseQuality
++
+0.08 * ContextRelevance
++
+0.07 * Popularity
++
+0.05 * Freshness
++
+0.05 * Exploration
+
+Weights must be stored in configuration.
+
+Validate:
+
+sum(weights) = 1.0
+
+Do not permanently hard-code these weights.
+
+============================================================
+25. EDUCATIONAL OUTCOME SIGNAL
+============================================================
+
+Eventually optimize toward:
+
+learning utility
+
+not only:
+
+CTR.
+
+Track:
+
+click
+enrollment
+start
+completion
+competency improvement
+retention improvement
+
+The strongest long-term recommendation signal should be learning outcome.
+
+Do not optimize solely for engagement.
+
+============================================================
+26. SKILL RELEVANCE
+============================================================
+
+Calculate:
+
+SkillRelevance =
+weighted gap severity
+× competency coverage
+× importance
+× criticality
+
+Normalize to 0-100.
+
+A course addressing a critical skill gap should receive stronger relevance than a course merely similar to the learner's interests.
+
+============================================================
+27. BEHAVIORAL AFFINITY
+============================================================
+
+Use configurable event weights.
+
+Example starting signals:
+
+VIEW
+CLICK
+SAVE
+START
+ENROLL
+COMPLETE
+ABANDON
+DISMISS
+
+Completion should be stronger than click.
+
+Abandonment/dismissal should lower affinity.
+
+Apply time decay.
+
+Do not allow one event to dominate the entire profile.
+
+============================================================
+28. COURSE QUALITY
+============================================================
+
+Compute from:
+
+completion rate
+assessment improvement
+feedback
+rating
+dropout
+trainer quality
+content freshness
+
+Do not let rating alone define quality.
+
+Minimum evidence thresholds must exist.
+
+A course with:
+
+1 rating = 5.0
+
+must not automatically outrank:
+
+500 ratings = 4.6.
+
+============================================================
+29. DIFFICULTY FIT
+============================================================
+
+Match:
+
+course difficulty
+
+with:
+
+learner competency
+
+and:
+
+learning goals.
+
+Avoid:
+
+advanced course
+for learner with severely weak prerequisites.
+
+But allow challenge when competency is sufficiently high.
+
+============================================================
+30. DURATION FIT
+============================================================
+
+Consider:
+
+available time
+learning behavior
+course duration
+
+If the user has short available time:
+
+prefer relevant short courses.
+
+Do not make duration a dominant signal.
+
+============================================================
+31. FRESHNESS
+============================================================
+
+Use freshness for:
+
+recently published
+recently updated
+time-sensitive training
+
+Do not heavily penalize evergreen foundational courses.
+
+Use configurable decay.
+
+============================================================
+32. DIVERSITY RE-RANKING
+============================================================
+
+After initial ranking:
+
+Top 30 candidates
+
+must be re-ranked.
+
+Prevent:
+
+10 almost identical courses
+
+from filling the final recommendation list.
+
+Diversify by:
+
+category
+competency group
+topic
+trainer
+difficulty
+duration
+
+Do not force diversity when there is a critical skill gap that legitimately requires several related courses.
+
+Use a configurable MMR-like approach.
+
+Conceptually:
+
+RerankScore =
+    lambda * relevance
+    -
+    (1-lambda) * similarityToSelected
+
+============================================================
+33. EXPLORATION
+============================================================
+
+After ranking and diversity:
+
+inject a small number of exploration candidates.
+
+Default:
+
+10-20%
+
+Exploration candidates must still pass hard eligibility.
+
+Do not inject random courses.
+
+Exploration should be:
+
+semantically related
+skill-adjacent
+contextually relevant
+novel
+
+============================================================
+34. RECOMMENDATION SURFACES
+============================================================
+
+Support different surfaces.
+
+HOME:
+
+For You
+Continue Learning
+Because You Completed
+Skill Gap
+Explore
+
+SKILL_GAP:
+
+Courses addressing current gaps
+
+COURSE_DETAIL:
+
+Similar / next courses
+
+POST_COMPLETION:
+
+Next recommended learning
+
+LEARNING_PATH:
+
+Next logical learning step
+
+Each surface can use different candidate allocation.
+
+Do not create one universal recommendation list.
+
+============================================================
+35. COLD START
+============================================================
+
+New learner:
+
+No behavioral history.
+
+Use:
+
+profile
+department
+designation
+skills
+course requirements
+skill gaps
+popular contextual courses
+content similarity
+exploration
+
+Do not fabricate collaborative scores.
+
+New course:
+
+No interaction history.
+
+Use:
+
+competencies
+topics
+description
+category
+trainer
+course requirements
+semantic embedding
+
+New user + new course:
+
+Use content + requirement + contextual signals.
+
+============================================================
+36. RECOMMENDATION BATCH
+============================================================
+
+Every recommendation request should produce a batch.
+
+Example:
+
+batchId:
+abc
+
+algorithmVersion:
+v1.0
+
+surface:
+HOME
+
+items:
+
+1
+course
+score
+position
+candidateSource
+reasonCodes
+
+2
+...
+
+Persist the batch.
+
+============================================================
+37. EXPLAINABILITY
+============================================================
+
+Every recommendation must have deterministic reason codes.
+
+Examples:
+
+SKILL_GAP_MATCH
+HIGH_COMPETENCY_COVERAGE
+PREREQUISITE_ALIGNED
+SIMILAR_TO_COMPLETED_COURSE
+POPULAR_IN_DEPARTMENT
+HIGH_COURSE_QUALITY
+RECENTLY_UPDATED
+INTEREST_MATCH
+NEXT_LEARNING_STEP
+EXPLORATION
+DIFFICULTY_FIT
+
+The LLM may convert reason codes into natural language.
+
+It must not invent recommendation reasons.
+
+============================================================
+38. LLM EXPLANATION
+============================================================
+
+The LLM receives:
+
+course
+learner-safe profile
+skill gaps
+course competency coverage
+reason codes
+recommendation context
+
+Example:
+
+{
+  "course": {
+    "name": "Applied Statistical Analysis",
+    "durationMinutes": 240
+  },
+
+  "learner": {
+    "topSkillGap": "Statistical Analysis"
+  },
+
+  "signals": {
+    "skillRelevance": 91,
+    "contentSimilarity": 78,
+    "difficultyFit": 84
+  },
+
+  "reasonCodes": [
+    "SKILL_GAP_MATCH",
+    "HIGH_COMPETENCY_COVERAGE",
+    "DIFFICULTY_FIT"
+  ]
+}
+
+The LLM generates:
+
+"Recommended because this course directly addresses your Statistical Analysis skill gap and matches your current learning level."
+
+The LLM must NOT change:
+
+score
+ranking
+eligibility
+skill gap
+prerequisites
+
+============================================================
+39. RECOMMENDATION EVENT PIPELINE
+============================================================
+
+When recommendation is displayed:
+
+record:
+
+IMPRESSION
+
+When clicked:
+
+record:
+
+CLICK
+
+When enrolled:
+
+record:
+
+ENROLL
+
+When completed:
+
+record:
+
+COMPLETE
+
+When competency improves:
+
+record outcome linkage.
+
+This produces the training data required for future ranking optimization.
+
+============================================================
+40. OUTCOME ATTRIBUTION
+============================================================
+
+Do not claim that every competency improvement came from a recommendation.
+
+Track attribution carefully.
+
+Example:
+
+Recommendation:
+
+Course A
+
+User enrolls
+
+Course completed
+
+Competency improves
+
+Record:
+
+recommendation -> enrollment -> completion -> outcome
+
+Use attribution as evidence, not absolute causality.
+
+============================================================
+41. REDIS / CACHE
+============================================================
+
+If Redis already exists:
+
+Cache:
+
+recommendation:{userId}:{surface}
+recommendation-profile:{userId}
+course-recommendation-profile:{courseId}
+popular:{organizationId}:{segment}
+candidate:{userId}:{surface}
+
+Invalidate when:
+
+skill gap changes
+competency changes
+course status changes
+new course published
+user enrolls
+user completes course
+recommendation feedback changes significantly
+
+PostgreSQL remains authoritative.
+
+============================================================
+42. ASYNC JOBS
+============================================================
+
+Use existing queue/job infrastructure.
+
+Background jobs:
+
+course embedding generation
+course recommendation profile calculation
+user recommendation profile update
+popularity calculation
+behavior aggregation
+collaborative similarity calculation
+recommendation analytics
+model evaluation
+
+Do not make every recommendation request execute expensive batch operations.
+
+============================================================
+43. ML FUTURE-PROOFING
+============================================================
+
+Create an interface:
+
+RecommendationRanker
+
+with:
+
+rank(candidates, context)
+
+Initial implementation:
+
+WeightedRecommendationRanker
+
+Future:
+
+MLRecommendationRanker
+
+Do not couple the API to the weighted formula.
+
+This allows future:
+
+LightGBM
+LambdaMART
+XGBoost
+neural ranking
+two-tower retrieval
+
+without rewriting candidate generation.
+
+============================================================
+44. ALGORITHM CONFIGURATION
+============================================================
+
+Create:
+
+RecommendationAlgorithmConfig
+
+Fields:
+
+version
+
+skillWeight
+contentWeight
+behaviorWeight
+collaborativeWeight
+qualityWeight
+contextWeight
+popularityWeight
+freshnessWeight
+explorationWeight
+
+explorationPercentage
+
+diversityLambda
+
+maxSameCategory
+maxSameGroup
+maxSameTrainer
+
+minimumEvidence
+
+createdAt
+activatedAt
+deactivatedAt
+
+All versions must be reproducible.
+
+============================================================
+45. API
+============================================================
+
+Follow existing API conventions.
+
+Implement:
+
+GET
+/api/v1/users/:userId/recommendations
+
+Query:
+
+surface
+limit
+courseId?
+category?
+
+POST
+/api/v1/users/:userId/recommendations/refresh
+
+GET
+/api/v1/recommendations/:id
+
+POST
+/api/v1/recommendations/:id/event
+
+POST
+/api/v1/recommendations/:id/feedback
+
+GET
+/api/v1/users/:userId/recommendations/history
+
+Trainer/Admin:
+
+GET
+/api/v1/trainer/courses/:courseId/recommendation-performance
+
+GET
+/api/v1/admin/recommendations/analytics
+
+Trainees may only access their own recommendations.
+
+Respect RBAC.
+
+============================================================
+46. API RESPONSE
+============================================================
+
+Return:
+
+{
+  "batchId": "...",
+  "surface": "HOME",
+  "algorithmVersion": "1.0",
+  "recommendations": [
+    {
+      "id": "...",
+      "type": "COURSE",
+      "course": {
+        "id": "...",
+        "title": "...",
+        "thumbnail": "...",
+        "durationMinutes": 120,
+        "difficulty": "INTERMEDIATE"
+      },
+      "score": 84.5,
+      "reason": "...",
+      "reasonCodes": [
+        "SKILL_GAP_MATCH",
+        "DIFFICULTY_FIT"
+      ],
+      "position": 1
+    }
+  ]
+}
+
+Do not expose internal raw feature weights to ordinary trainees.
+
+============================================================
+47. TRAINER ANALYTICS
+============================================================
+
+Create analytics for:
+
+impressions
+click-through rate
+enrollment rate
+completion rate
+dismissal rate
+average recommendation score
+competency improvement
+recommendation conversion
+skill-gap resolution after recommended course
+
+Allow trainer/admin to see:
+
+which courses are recommended
+to whom
+why
+and whether recommendations lead to useful outcomes.
+
+============================================================
+48. EVALUATION METRICS
+============================================================
+
+Implement analytics for:
+
+CTR
+enrollment conversion
+completion conversion
+dismissal rate
+recommendation acceptance
+skill-gap improvement
+competency gain
+retention improvement
+course completion per recommendation
+learning outcome per recommendation
+
+Primary long-term metric:
+
+competency improvement / learner effort
+
+Secondary:
+
+completion
+enrollment
+CTR
+
+Do not optimize only CTR.
+
+============================================================
+49. A/B TESTING
+============================================================
+
+Design for future experiments.
+
+Example:
+
+Experiment A:
+
+Rule-based ranking
+vs
+simple skill-gap ranking
+
+Experiment B:
+
+Skill-gap only
+vs
+hybrid recommendation
+
+Experiment C:
+
+No diversity
+vs
+diversity reranking
+
+Experiment D:
+
+Static weights
+vs
+learned ranking
+
+Experiment E:
+
+No exploration
+vs
+10% exploration
+
+Store:
+
+experimentId
+variant
+algorithmVersion
+
+with recommendation batch.
+
+Do not contaminate historical experiments.
+
+============================================================
+50. SECURITY
+============================================================
+
+Recommendations must respect:
+
+authentication
+RBAC
+organization isolation
+course access
+department permissions
+course visibility
+
+Do not leak:
+
+other learners' identities
+private behavior
+private competency data
+personal recommendation explanations
+
+Do not expose collaborative similarity details such as:
+
+"You are similar to User X."
+
+Instead:
+
+"Popular among learners with similar learning paths."
+
+============================================================
+51. PERFORMANCE
+============================================================
+
+Target architecture:
+
+Candidate generation:
+fast
+
+Hard filtering:
+database optimized
+
+Ranking:
+in-memory for small candidate set
+
+Re-ranking:
+in-memory
+
+LLM:
+optional/asynchronous where possible
+
+Do not call the LLM for every candidate.
+
+Do not perform vector search for every candidate if candidate retrieval can be cached.
+
+Do not query the entire course catalog unnecessarily.
+
+Use:
+
+indexes
+cache
+precomputed profiles
+precomputed embeddings
+incremental behavior aggregates
+
+============================================================
+52. DATABASE INDEXING
+============================================================
+
+Review indexes for:
+
+Course:
+status
+organizationId
+category
+difficulty
+publishedAt
+
+CourseCompetency:
+courseId
+competencyId
+
+Enrollment:
+userId
+courseId
+status
+
+Recommendation:
+userId
+status
+recommendationType
+createdAt
+batchId
+
+RecommendationEvent:
+userId
+recommendationId
+batchId
+eventType
+createdAt
+
+Feedback:
+courseId
+userId
+createdAt
+
+Ensure indexes match actual queries.
+
+Do not blindly add excessive indexes.
+
+============================================================
+53. TESTING — CANDIDATE GENERATION
+============================================================
+
+Test:
+
+1. Skill-gap candidate generated.
+2. Content candidate generated.
+3. Behavioral candidate generated.
+4. Collaborative candidate generated when evidence exists.
+5. Popular candidate generated.
+6. Exploration candidate generated.
+7. Duplicate candidates merged.
+
+============================================================
+54. TESTING — HARD FILTERS
+============================================================
+
+Test:
+
+DRAFT course excluded.
+
+ARCHIVED course excluded.
+
+Unauthorized course excluded.
+
+Completed course excluded when appropriate.
+
+Missing prerequisite handled.
+
+Deleted course excluded.
+
+Wrong organization excluded.
+
+Inactive course excluded.
+
+============================================================
+55. TESTING — RANKING
+============================================================
+
+Scenario:
+
+Course A:
+high skill gap relevance
+
+Course B:
+high popularity
+
+Course C:
+high semantic similarity
+
+Expected:
+
+A can outrank B when the learner has a critical skill gap.
+
+Do not allow popularity to dominate all recommendations.
+
+============================================================
+56. TESTING — DIVERSITY
+============================================================
+
+Input:
+
+10 nearly identical courses.
+
+Expected:
+
+final recommendations contain diversity.
+
+But:
+
+if all 10 are legitimately required to solve a critical learning pathway:
+
+do not artificially remove useful courses merely for diversity.
+
+============================================================
+57. TESTING — COLD START
+============================================================
+
+New user:
+
+Expected:
+
+profile/context/skill-gap/popularity/content recommendations.
+
+No fabricated collaborative signals.
+
+New course:
+
+Expected:
+
+content/competency/context recommendations.
+
+============================================================
+58. TESTING — FEEDBACK
+============================================================
+
+If user dismisses a course:
+
+future ranking should reduce that course.
+
+If user completes a course:
+
+related recommendations can increase.
+
+If user repeatedly abandons a course type:
+
+behavioral affinity should decrease.
+
+Do not make one negative event permanently destroy an entire category preference.
+
+============================================================
+59. TESTING — LEARNING OUTCOME
+============================================================
+
+Simulate:
+
+recommendation
+→ enrollment
+→ completion
+→ competency improvement
+
+Expected:
+
+outcome event recorded.
+
+Do not claim causal certainty.
+
+============================================================
+60. TESTING — FAILURE
+============================================================
+
+If:
+
+vector search unavailable
+
+fallback to non-vector candidate generators.
+
+If:
+
+collaborative model unavailable
+
+fallback to hybrid ranking.
+
+If:
+
+LLM unavailable
+
+return deterministic recommendations.
+
+If:
+
+Redis unavailable
+
+fallback to PostgreSQL.
+
+Recommendation generation must remain functional without LLM.
+
+============================================================
+61. RECOMMENDATION QUALITY GUARDRAILS
+============================================================
+
+Never recommend:
+
+irrelevant content
+inaccessible content
+unsafe/out-of-scope content
+duplicate courses
+courses with unmet mandatory prerequisites as immediate next step
+archived/draft courses
+
+Do not allow popularity to override critical learner needs.
+
+Do not allow LLM to override eligibility.
+
+============================================================
+62. FOLDER STRUCTURE
+============================================================
+
+Create:
+
+backend/src/modules/recommendation/
+
+    recommendation.controller.ts
+    recommendation.routes.ts
+    recommendation.repository.ts
+    recommendation.types.ts
+    recommendation.constants.ts
+
+    candidate-generators/
+        skill-gap.generator.ts
+        content.generator.ts
+        behavioral.generator.ts
+        collaborative.generator.ts
+        popularity.generator.ts
+        contextual.generator.ts
+        exploration.generator.ts
+        continuation.generator.ts
+
+    ranking/
+        feature-builder.ts
+        weighted-ranker.ts
+        ranker.interface.ts
+        diversity-ranker.ts
+        reranker.ts
+
+    services/
+        recommendation.service.ts
+        candidate.service.ts
+        ranking.service.ts
+        eligibility.service.ts
+        profile.service.ts
+        feedback.service.ts
+        outcome.service.ts
+        explanation.service.ts
+
+    algorithms/
+        skill-relevance.algorithm.ts
+        content-similarity.algorithm.ts
+        behavioral-affinity.algorithm.ts
+        collaborative.algorithm.ts
+        quality.algorithm.ts
+        freshness.algorithm.ts
+        contextual.algorithm.ts
+        diversity.algorithm.ts
+        exploration.algorithm.ts
+
+    embeddings/
+        course-embedding.service.ts
+        user-embedding.service.ts
+
+    ai/
+        recommendation-explainer.ts
+        recommendation-prompt.ts
+        recommendation.schema.ts
+
+    jobs/
+        recommendation-profile.job.ts
+        course-embedding.job.ts
+        popularity.job.ts
+        analytics.job.ts
+
+    tests/
+        candidate-generation.test.ts
+        eligibility.test.ts
+        ranking.test.ts
+        diversity.test.ts
+        cold-start.test.ts
+        feedback.test.ts
+        integration.test.ts
+
+============================================================
+63. GIT WORKFLOW
+============================================================
+
+Create branch:
+
+feature/intelligent-recommendation-engine
+
+Do not modify main directly.
+
+Suggested commits:
+
+feat(recommendation): establish recommendation domain
+
+feat(recommendation): add recommendation batches and events
+
+feat(recommendation): implement candidate generation
+
+feat(recommendation): implement hybrid ranking
+
+feat(recommendation): implement diversity and exploration
+
+feat(recommendation): integrate skill gaps
+
+feat(recommendation): integrate behavioral signals
+
+feat(recommendation): add recommendation feedback
+
+feat(recommendation): integrate llm explanations
+
+test(recommendation): add recommendation tests
+
+docs(recommendation): document architecture
+
+============================================================
+64. IMPLEMENTATION ORDER
+============================================================
+
+STEP 1:
+Audit existing schema.
+
+STEP 2:
+Audit existing Recommendation model.
+
+STEP 3:
+Audit existing SkillGap/Competency architecture.
+
+STEP 4:
+Design minimal database migration.
+
+STEP 5:
+Implement RecommendationBatch.
+
+STEP 6:
+Implement RecommendationEvent.
+
+STEP 7:
+Implement RecommendationFeedback.
+
+STEP 8:
+Extend Recommendation with required metadata/version fields.
+
+STEP 9:
+Implement eligibility service.
+
+STEP 10:
+Implement skill-gap candidate generator.
+
+STEP 11:
+Implement continuation candidate generator.
+
+STEP 12:
+Implement contextual candidate generator.
+
+STEP 13:
+Implement content candidate generator.
+
+STEP 14:
+Implement behavioral candidate generator.
+
+STEP 15:
+Implement popularity generator.
+
+STEP 16:
+Implement exploration generator.
+
+STEP 17:
+Implement collaborative interface.
+
+STEP 18:
+Implement candidate merge/deduplication.
+
+STEP 19:
+Implement feature builder.
+
+STEP 20:
+Implement weighted ranker.
+
+STEP 21:
+Implement diversity re-ranking.
+
+STEP 22:
+Implement exploration injection.
+
+STEP 23:
+Implement recommendation batch persistence.
+
+STEP 24:
+Implement recommendation API.
+
+STEP 25:
+Implement impression/event tracking.
+
+STEP 26:
+Implement feedback.
+
+STEP 27:
+Implement outcome tracking.
+
+STEP 28:
+Implement Redis caching.
+
+STEP 29:
+Implement background jobs.
+
+STEP 30:
+Implement LLM explanation.
+
+STEP 31:
+Add analytics.
+
+STEP 32:
+Add tests.
+
+STEP 33:
+Run simulations.
+
+STEP 34:
+Run typecheck.
+
+STEP 35:
+Run lint.
+
+STEP 36:
+Run Prisma validation.
+
+STEP 37:
+Run migration.
+
+STEP 38:
+Verify all existing features.
+
+============================================================
+65. SYNTHETIC RECOMMENDATION SIMULATIONS
+============================================================
+
+Create at least these scenarios.
+
+Scenario A:
+
+Learner has critical Statistics gap.
+
+Course A directly addresses Statistics.
+
+Course B is globally popular.
+
+Expected:
+
+Course A should rank above B.
+
+Scenario B:
+
+Learner completed Observation Fundamentals.
+
+Advanced Observation is the logical next course.
+
+Expected:
+
+Advanced Observation receives contextual/continuation boost.
+
+Scenario C:
+
+Advanced Forecasting requires Numerical Methods.
+
+Learner has not completed Numerical Methods.
+
+Expected:
+
+Numerical Methods is recommended first.
+
+Scenario D:
+
+Learner strongly prefers Data Analysis.
+
+Expected:
+
+Data Analysis-related courses rank higher.
+
+Scenario E:
+
+Learner repeatedly dismisses a course category.
+
+Expected:
+
+future recommendations reduce that category affinity.
+
+Scenario F:
+
+All top 10 courses belong to same category.
+
+Expected:
+
+reranker introduces relevant diversity.
+
+Scenario G:
+
+New learner with no behavior.
+
+Expected:
+
+profile + skill gap + contextual + popularity fallback.
+
+Scenario H:
+
+New course with no interactions.
+
+Expected:
+
+competency/content/context candidate generation works.
+
+Scenario I:
+
+Critical skill gap exists but a trending unrelated course is highly popular.
+
+Expected:
+
+critical skill-gap recommendation remains competitive.
+
+Scenario J:
+
+LLM unavailable.
+
+Expected:
+
+recommendations still generated.
+
+============================================================
+66. EXPLAINABILITY
+============================================================
+
+Every final recommendation must answer:
+
+WHY THIS?
+
+Example:
+
+"This course is recommended because it addresses your Statistical Analysis skill gap and follows the learning path you recently completed."
+
+Reason must come from deterministic signals.
+
+Store:
+
+reasonCodes
+algorithmVersion
+candidateSource
+score
+
+Do not allow the LLM to fabricate reasons.
+
+============================================================
+67. FINAL ACCEPTANCE CRITERIA
+============================================================
+
+The implementation is complete only if:
+
+[ ] Existing Recommendation model preserved.
+
+[ ] Existing SkillGap preserved.
+
+[ ] Existing competency architecture preserved.
+
+[ ] CoursePrerequisite reused.
+
+[ ] RecommendationBatch exists.
+
+[ ] RecommendationEvent exists.
+
+[ ] RecommendationFeedback exists.
+
+[ ] Multiple candidate generators exist.
+
+[ ] Skill-gap recommendations work.
+
+[ ] Content similarity works where vector infrastructure exists.
+
+[ ] Behavioral recommendation works.
+
+[ ] Contextual recommendation works.
+
+[ ] Popularity fallback works.
+
+[ ] Exploration exists.
+
+[ ] Collaborative filtering has an extensible interface.
+
+[ ] Hard eligibility filtering works.
+
+[ ] Prerequisite rules work.
+
+[ ] Completed-course rules work.
+
+[ ] Multi-signal ranking works.
+
+[ ] Ranking weights are configurable.
+
+[ ] Course quality affects ranking.
+
+[ ] Difficulty fit affects ranking.
+
+[ ] Freshness affects ranking.
+
+[ ] Diversity re-ranking works.
+
+[ ] Recommendation batches are persisted.
+
+[ ] Impressions are tracked.
+
+[ ] Clicks are tracked.
+
+[ ] Enrollment is tracked.
+
+[ ] Completion is tracked.
+
+[ ] Feedback is tracked.
+
+[ ] Learning outcomes are tracked.
+
+[ ] LLM only explains recommendations.
+
+[ ] LLM cannot modify ranking.
+
+[ ] LLM cannot bypass eligibility.
+
+[ ] LLM failure has fallback.
+
+[ ] Cold start works.
+
+[ ] Redis failure has fallback.
+
+[ ] Vector search failure has fallback.
+
+[ ] Tests pass.
+
+[ ] Simulation scenarios pass.
+
+[ ] Typecheck passes.
+
+[ ] Lint passes.
+
+[ ] Prisma validation passes.
+
+[ ] Migration succeeds.
+
+[ ] Existing application functionality remains intact.
+
+============================================================
+68. FINAL ENGINE PRINCIPLE
+============================================================
+
+Do NOT build:
+
+    "AI picks a course."
+
+Build:
+
+    USER UNDERSTANDING
+            ↓
+    MULTIPLE CANDIDATE SOURCES
+            ↓
+    HARD ELIGIBILITY
+            ↓
+    MULTI-SIGNAL RANKING
+            ↓
+    DIVERSITY
+            ↓
+    EXPLORATION
+            ↓
+    RECOMMENDATION
+            ↓
+    USER BEHAVIOR
+            ↓
+    LEARNING OUTCOME
+            ↓
+    MODEL IMPROVEMENT
+
+The system must optimize for:
+
+    learner relevance
+    skill development
+    learning progression
+    course completion
+    competency improvement
+    retention
+
+not merely clicks.
+
+At the end, provide a detailed implementation report containing:
+
+1. Existing schema audit
+2. Existing models reused
+3. Existing models modified
+4. New database models
+5. Migration
+6. Candidate generation architecture
+7. Ranking architecture
+8. Ranking formula
+9. Feature definitions
+10. Eligibility rules
+11. Diversity strategy
+12. Exploration strategy
+13. Cold-start strategy
+14. Collaborative filtering strategy
+15. Feedback pipeline
+16. Learning-outcome pipeline
+17. Redis/cache strategy
+18. Vector/embedding strategy
+19. LLM boundary
+20. API endpoints
+21. Tests
+22. Simulation results
+23. Typecheck
+24. Lint
+25. Prisma validation
+26. Migration result
+27. Performance considerations
+28. Known limitations
+29. Future ML ranking upgrade path
+
+
+==============================================================
+
+You are the Lead ML Engineer, Backend Architect, Data Engineer, and Production Software Engineer for the Capacity Connect platform.
+
+Your task is to COMPLETELY IMPLEMENT the production-grade intelligent recommendation engine for Capacity Connect.
+
+DO NOT create a simple random recommendation system.
+DO NOT create only a hardcoded rule-based scoring system.
+DO NOT create a fake ML model.
+DO NOT use an LLM as the recommendation ranking algorithm.
+
+The final system must be a HYBRID ML LEARNING-TO-RANK RECOMMENDATION ENGINE using:
+
+Candidate Generation
+→ Hard Eligibility Filtering
+→ Feature Engineering
+→ ML Learning-to-Rank
+→ Competency/Prerequisite Safety Re-ranking
+→ Diversity Re-ranking
+→ Controlled Exploration
+→ Recommendation Delivery
+→ Interaction Tracking
+→ Learning Outcome Tracking
+→ Training Dataset
+→ Model Evaluation/Retraining
+
+The architecture must be production-ready, modular, explainable, testable, scalable, and designed so the ML model can improve as real Capacity Connect learner data accumulates.
+
+==================================================
+1. FIRST: FULL PROJECT AUDIT — DO NOT CODE YET
+==================================================
+
+Before modifying anything, inspect the COMPLETE repository.
+
+Understand:
+
+- backend architecture
+- frontend architecture
+- Prisma schema
+- PostgreSQL database
+- authentication
+- RBAC
+- users
+- organizations
+- departments
+- courses
+- modules
+- lessons
+- enrollments
+- lesson progress
+- assessments
+- assessment attempts
+- assessment answers
+- competencies
+- competency levels
+- user competencies
+- course competencies
+- skill gaps
+- course prerequisites
+- resources
+- trainers
+- trainer expertise
+- feedback
+- existing AI modules
+- Redis
+- queues
+- jobs
+- events
+- caching
+- API conventions
+- validation
+- error handling
+- logging
+- configuration
+- frontend recommendation surfaces
+- existing Recommendation model
+- existing recommendation-related code
+
+Inspect the existing Prisma schema before creating any model.
+
+IMPORTANT:
+
+Reuse existing models wherever possible.
+
+DO NOT create duplicate:
+
+- UserSkill systems
+- Competency systems
+- SkillGap systems
+- CoursePrerequisite systems
+- CourseCompetency systems
+- Assessment systems
+- Enrollment systems
+- Recommendation systems
+
+If existing infrastructure can support the requirement, extend it rather than duplicating it.
+
+Do not break existing functionality.
+
+==================================================
+2. BUSINESS OBJECTIVE
+==================================================
+
+Capacity Connect is a learning/capacity-building platform.
+
+The recommendation engine must NOT optimize only for clicks.
+
+The primary objective is:
+
+"Recommend the most educationally useful and contextually appropriate learning opportunities for each learner."
+
+Optimize toward:
+
+1. competency improvement
+2. skill-gap reduction
+3. successful course completion
+4. appropriate progression
+5. prerequisite readiness
+6. learner relevance
+7. engagement
+8. long-term learning outcomes
+
+CTR is only one signal.
+
+A learner clicking a course and abandoning it should NOT be treated as a stronger positive outcome than completing a course and improving competency.
+
+==================================================
+3. FINAL ARCHITECTURE
+==================================================
+
+Implement this architecture:
+
+Learner Profile
+      ↓
+Learner State Builder
+      ↓
+Candidate Generation
+      ↓
+Hard Eligibility Filtering
+      ↓
+Feature Engineering
+      ↓
+ML Learning-to-Rank
+      ↓
+Safety / Competency Re-ranking
+      ↓
+Diversity Re-ranking
+      ↓
+Controlled Exploration
+      ↓
+Final Recommendations
+      ↓
+Recommendation Impression
+      ↓
+User Interaction
+      ↓
+Enrollment / Completion
+      ↓
+Assessment
+      ↓
+Competency Improvement
+      ↓
+Outcome Attribution
+      ↓
+Training Dataset
+      ↓
+Model Evaluation
+      ↓
+Model Retraining
+      ↓
+New ML Ranker
+
+==================================================
+4. RECOMMENDATION ENGINE MODULE
+==================================================
+
+Create or evolve:
+
+backend/src/modules/recommendation/
+
+Use a clean architecture similar to:
+
+recommendation/
+│
+├── recommendation.controller.ts
+├── recommendation.routes.ts
+├── recommendation.service.ts
+├── recommendation.repository.ts
+├── recommendation.types.ts
+├── recommendation.constants.ts
+├── recommendation.errors.ts
+│
+├── candidate-generators/
+│   ├── skill-gap.generator.ts
+│   ├── competency.generator.ts
+│   ├── prerequisite.generator.ts
+│   ├── behavioral.generator.ts
+│   ├── semantic.generator.ts
+│   ├── contextual.generator.ts
+│   ├── popularity.generator.ts
+│   ├── continuation.generator.ts
+│   └── exploration.generator.ts
+│
+├── eligibility/
+│   ├── eligibility.service.ts
+│   ├── prerequisite-checker.ts
+│   ├── access-checker.ts
+│   ├── completion-checker.ts
+│   └── difficulty-checker.ts
+│
+├── learner/
+│   ├── learner-profile.service.ts
+│   ├── learner-state.service.ts
+│   └── learner-feature.service.ts
+│
+├── features/
+│   ├── feature-builder.ts
+│   ├── skill-gap.features.ts
+│   ├── competency.features.ts
+│   ├── behavior.features.ts
+│   ├── course.features.ts
+│   ├── context.features.ts
+│   ├── quality.features.ts
+│   └── feature-normalizer.ts
+│
+├── ranking/
+│   ├── ranker.interface.ts
+│   ├── baseline-ranker.ts
+│   ├── ml-ranker.ts
+│   ├── ranking.service.ts
+│   └── model-loader.ts
+│
+├── reranking/
+│   ├── competency-reranker.ts
+│   ├── prerequisite-reranker.ts
+│   ├── diversity-reranker.ts
+│   ├── exploration-reranker.ts
+│   └── final-reranker.ts
+│
+├── embeddings/
+│   ├── course-embedding.service.ts
+│   ├── learner-embedding.service.ts
+│   └── similarity.service.ts
+│
+├── feedback/
+│   ├── feedback.service.ts
+│   └── outcome.service.ts
+│
+├── analytics/
+│   ├── attribution.service.ts
+│   ├── metrics.service.ts
+│   └── recommendation-analytics.service.ts
+│
+├── explanation/
+│   ├── explanation.service.ts
+│   └── explanation.schema.ts
+│
+├── ml/
+│   ├── training-dataset.service.ts
+│   ├── training-example.builder.ts
+│   ├── model-metadata.service.ts
+│   ├── model-evaluation.service.ts
+│   └── model-registry.service.ts
+│
+├── jobs/
+│   ├── generate-recommendations.job.ts
+│   ├── build-training-data.job.ts
+│   ├── update-popularity.job.ts
+│   ├── update-embeddings.job.ts
+│   └── model-evaluation.job.ts
+│
+└── tests/
+    ├── candidate-generation.test.ts
+    ├── eligibility.test.ts
+    ├── feature-engineering.test.ts
+    ├── ranking.test.ts
+    ├── prerequisite.test.ts
+    ├── diversity.test.ts
+    ├── exploration.test.ts
+    ├── cold-start.test.ts
+    ├── feedback.test.ts
+    ├── attribution.test.ts
+    └── integration.test.ts
+
+Adapt this structure to the existing project conventions instead of blindly duplicating files.
+
+==================================================
+5. DATABASE DESIGN
+==================================================
+
+Inspect the existing Recommendation model.
+
+Extend it only where necessary.
+
+Implement persistent recommendation lifecycle tracking.
+
+You need a concept equivalent to:
+
+RecommendationBatch
+
+Fields should include approximately:
+
+- id
+- userId
+- surface
+- context
+- algorithmVersion
+- modelVersion
+- generatedAt
+- expiresAt
+- createdAt
+
+RecommendationEvent should support:
+
+- id
+- userId
+- recommendationId
+- batchId
+- eventType
+- position
+- surface
+- sessionId
+- courseId
+- resourceId
+- trainerId
+- timestamp
+- metadata
+
+Supported events:
+
+IMPRESSION
+VIEW
+CLICK
+SAVE
+DISMISS
+START
+ENROLL
+COMPLETE
+ABANDON
+SHARE
+
+RecommendationFeedback should support:
+
+- NOT_RELEVANT
+- ALREADY_KNOW_THIS
+- TOO_DIFFICULT
+- TOO_EASY
+- NOT_NOW
+- WRONG_TOPIC
+- INTERESTING
+
+Track:
+
+- reason
+- rating if appropriate
+- createdAt
+
+Also track recommendation outcomes.
+
+Possible outcome events:
+
+- COURSE_STARTED
+- COURSE_COMPLETED
+- ASSESSMENT_IMPROVEMENT
+- COMPETENCY_IMPROVEMENT
+- SKILL_GAP_REDUCTION
+
+Preserve historical records.
+
+DO NOT overwrite recommendation history.
+
+==================================================
+6. CANDIDATE GENERATION
+==================================================
+
+Build multiple candidate generators.
+
+Every generator must return a normalized candidate structure.
+
+Example:
+
+Candidate:
+
+- courseId
+- source
+- sourceScore
+- sourceMetadata
+
+Implement:
+
+A. Skill Gap Candidate Generator
+
+Use existing SkillGap records.
+
+Match:
+
+user skill gap
+        ↓
+course competency
+        ↓
+target level
+
+Prioritize courses addressing:
+
+- CRITICAL
+- HIGH
+- MEDIUM
+- LOW
+
+But do not blindly recommend the hardest course.
+
+B. Competency Candidate Generator
+
+Find courses associated with competencies where:
+
+required level > current level.
+
+C. Prerequisite Candidate Generator
+
+If the learner wants or needs a course but lacks prerequisites:
+
+recommend prerequisite courses first.
+
+Example:
+
+Statistics
+    ↓
+Time Series
+    ↓
+Forecasting
+
+If Statistics is weak:
+
+recommend Statistics before Forecasting.
+
+D. Behavioral Candidate Generator
+
+Use:
+
+- completed courses
+- started courses
+- viewed courses
+- abandoned courses
+- saved courses
+- dismissed courses
+- previous recommendations
+- lesson activity
+- assessment activity
+
+Use time decay.
+
+Recent behavior should carry more weight than very old behavior.
+
+E. Semantic Candidate Generator
+
+Use course embeddings.
+
+Represent courses using:
+
+- title
+- description
+- competencies
+- category
+- learning objectives
+- module/lesson metadata
+
+Generate semantic similarity candidates.
+
+Use the vector technology already supported by the project.
+
+If Chroma/vector infrastructure already exists, reuse it.
+
+Do not introduce multiple vector databases unnecessarily.
+
+F. Contextual Candidate Generator
+
+Consider:
+
+- organization
+- department
+- learner role
+- category
+- current learning path
+- active courses
+- recent interests
+
+G. Popularity Candidate Generator
+
+Use contextual popularity.
+
+Prefer:
+
+- department popularity
+- organization popularity
+- competency-group popularity
+- similar learner popularity
+
+Do not allow global popularity to dominate personalized recommendations.
+
+H. Continuation Candidate Generator
+
+Recommend:
+
+- next course in learning path
+- unfinished course
+- next module
+- prerequisite
+- logical progression
+
+I. Exploration Candidate Generator
+
+Generate a small percentage of eligible but less-explored courses.
+
+Exploration MUST remain educationally relevant.
+
+Never recommend random inappropriate content.
+
+==================================================
+7. HARD ELIGIBILITY FILTER
+==================================================
+
+Before ML ranking, remove invalid candidates.
+
+Hard filters include:
+
+1. Course must be published/active.
+2. User must have permission to access it.
+3. Organization restrictions must be respected.
+4. Department restrictions must be respected.
+5. Prerequisite restrictions must be respected.
+6. Course must not already be completed unless:
+   - refresher
+   - recertification
+   - revision
+   - explicitly allowed.
+7. Remove duplicate courses.
+8. Remove courses explicitly dismissed recently.
+9. Remove unavailable courses.
+10. Remove archived courses.
+11. Respect course visibility rules.
+12. Respect user enrollment state.
+
+IMPORTANT:
+
+ML must NEVER override hard eligibility.
+
+==================================================
+8. LEARNER STATE
+==================================================
+
+Build a unified learner state.
+
+The learner state should combine:
+
+- user profile
+- department
+- role
+- UserSkill
+- UserCompetency
+- SkillGap
+- assessment performance
+- assessment trend
+- course history
+- lesson progress
+- completion history
+- behavioral events
+- recommendation interactions
+- feedback
+- learning preferences
+- current learning path
+
+Do not create a second independent competency system.
+
+Use existing Competency and SkillGap infrastructure.
+
+==================================================
+9. FEATURE ENGINEERING
+==================================================
+
+This is one of the most important components.
+
+For every:
+
+USER × COURSE
+
+pair, generate a feature vector.
+
+Create versioned feature definitions.
+
+Features should include:
+
+SKILL FEATURES
+
+- maxSkillGap
+- avgSkillGap
+- weightedSkillGap
+- criticalGapCount
+- highPriorityGapCount
+- competencyCoverage
+- gapCoverage
+- requiredLevel
+- currentLevel
+- levelDifference
+- competencyImportance
+
+PREREQUISITE FEATURES
+
+- prerequisiteCount
+- satisfiedPrerequisiteRatio
+- missingPrerequisiteCount
+- prerequisiteGapSeverity
+- prerequisiteReadiness
+
+BEHAVIOR FEATURES
+
+- courseViews
+- courseClicks
+- courseStarts
+- courseCompletions
+- courseAbandons
+- categoryViews
+- categoryCompletions
+- similarCourseInteractions
+- recentActivity
+- activityRecency
+
+Use time decay.
+
+COURSE FEATURES
+
+- difficulty
+- duration
+- category
+- competencyCount
+- targetLevel
+- freshness
+- qualityScore
+- completionRate
+- averageRating
+- dropoutRate
+- assessmentImprovementRate
+
+CONTEXT FEATURES
+
+- departmentMatch
+- organizationMatch
+- roleMatch
+- categoryMatch
+- learningPathMatch
+
+SEMANTIC FEATURES
+
+- courseUserEmbeddingSimilarity
+- competencySemanticSimilarity
+- recentLearningSimilarity
+
+HISTORICAL FEATURES
+
+- previousRecommendationCount
+- previousImpressionCount
+- previousClickRate
+- previousEnrollmentRate
+- previousCompletionRate
+- previousCompetencyImprovementRate
+
+TEMPORAL FEATURES
+
+- daysSinceLastInteraction
+- daysSinceCoursePublished
+- daysSinceLastLearningActivity
+- currentLearningStreak if available
+
+ALL feature calculations must be deterministic and testable.
+
+==================================================
+10. NORMALIZATION
+==================================================
+
+Normalize features consistently.
+
+Do not normalize training data one way and production inference another way.
+
+Create versioned feature preprocessing.
+
+Store:
+
+- feature version
+- feature names
+- normalization configuration
+
+Avoid data leakage.
+
+For example:
+
+Do NOT use future competency improvement to rank a recommendation made before that improvement occurred.
+
+==================================================
+11. ML MODEL
+==================================================
+
+The primary ranking algorithm must be:
+
+LIGHTGBM LEARNING-TO-RANK
+
+Prefer:
+
+LambdaMART / LightGBM ranking objective.
+
+The model receives:
+
+USER × COURSE feature vectors.
+
+The model predicts a relevance score.
+
+The model must be trained using historical recommendation interactions and learning outcomes.
+
+Do NOT train the model on raw clicks alone.
+
+==================================================
+12. TRAINING LABEL DESIGN
+==================================================
+
+Create an outcome-based label.
+
+Example hierarchy:
+
+COMPETENCY IMPROVEMENT
+highest positive signal
+
+COURSE COMPLETION
+strong positive signal
+
+COURSE START
+positive signal
+
+ENROLLMENT
+positive signal
+
+SAVE
+moderate positive signal
+
+VIEW
+weak positive signal
+
+CLICK
+weak positive signal
+
+NO INTERACTION
+neutral/negative depending on impression context
+
+DISMISS
+negative
+
+ABANDON
+negative
+
+Build configurable label weighting.
+
+Do not hardcode business assumptions everywhere.
+
+Keep label generation versioned.
+
+Example conceptual utility:
+
+competency improvement > completion > start > enrollment > save > click
+
+The exact weights must be configurable.
+
+==================================================
+13. TRAINING DATASET
+==================================================
+
+Build a training dataset generator.
+
+Each training row represents:
+
+USER × COURSE × RECOMMENDATION_CONTEXT
+
+Include:
+
+- userId
+- courseId
+- timestamp
+- surface
+- feature vector
+- label
+- group/query ID
+
+For Learning-to-Rank:
+
+Each learner/session/recommendation batch should form an appropriate query/group.
+
+Prevent:
+
+- future leakage
+- duplicate labels
+- training/test contamination
+- impossible negative examples
+
+Use time-based train/validation/test splitting.
+
+Prefer:
+
+TRAIN = older historical data
+VALIDATION = later data
+TEST = newest data
+
+Never randomly split time-dependent recommendation events if it causes temporal leakage.
+
+==================================================
+14. COLD START
+==================================================
+
+Implement cold-start behavior.
+
+NEW USER:
+
+Use:
+
+- organization
+- department
+- role
+- declared skills
+- initial competency data
+- required competencies
+- popular relevant courses
+- onboarding content
+- exploration
+
+NEW COURSE:
+
+Use:
+
+- competencies
+- semantic embedding
+- category
+- difficulty
+- duration
+- description
+- learning objectives
+
+Do not require historical interaction data for a new course to receive recommendations.
+
+==================================================
+15. BASELINE RANKER
+==================================================
+
+Implement a deterministic baseline ranker.
+
+This is NOT the primary algorithm.
+
+It exists for:
+
+- cold start
+- ML unavailable
+- model failure
+- evaluation
+- A/B comparison
+
+Use signals such as:
+
+skill relevance
+competency coverage
+prerequisite readiness
+quality
+behavior
+context
+semantic similarity
+freshness
+
+The baseline must be deterministic.
+
+==================================================
+16. RANKER INTERFACE
+==================================================
+
+Create:
+
+Ranker interface
+
+Conceptually:
+
+rank(
+  learner,
+  candidates,
+  features,
+  context
+)
+
+returns:
+
+- courseId
+- score
+- modelVersion
+- featureVersion
+- explanationSignals
+
+Implement:
+
+1. BaselineRanker
+2. MLRanker
+
+The RecommendationService must depend on the interface, NOT directly on LightGBM implementation.
+
+This is critical for future model upgrades.
+
+==================================================
+17. MODEL MANAGEMENT
+==================================================
+
+Implement model metadata.
+
+Track:
+
+- modelId
+- modelVersion
+- algorithm
+- featureVersion
+- trainingDatasetVersion
+- trainingStart
+- trainingEnd
+- metrics
+- createdAt
+- activatedAt
+- retiredAt
+- status
+
+Statuses:
+
+- TRAINING
+- VALIDATING
+- ACTIVE
+- RETIRED
+- FAILED
+
+Never silently replace the active model.
+
+Model activation must be explicit and auditable.
+
+==================================================
+18. MODEL EVALUATION
+==================================================
+
+Implement offline evaluation.
+
+Measure:
+
+- NDCG@K
+- Recall@K
+- Precision@K
+- MAP@K
+- MRR
+- completion rate
+- enrollment rate
+- competency improvement rate
+- skill-gap reduction
+- diversity
+- coverage
+
+Most importantly compare:
+
+BaselineRanker
+vs
+MLRanker
+
+Do not deploy a new model simply because its CTR is higher.
+
+A model should demonstrate meaningful improvement in learning outcomes.
+
+==================================================
+19. ONLINE METRICS
+==================================================
+
+Track:
+
+- recommendation impressions
+- click-through rate
+- enrollment rate
+- start rate
+- completion rate
+- abandonment rate
+- competency improvement
+- skill-gap reduction
+- recommendation acceptance
+- dismissal rate
+- diversity
+- coverage
+
+Also track performance by:
+
+- organization
+- department
+- learner group
+- course category
+- competency group
+
+Do not expose sensitive learner information unnecessarily.
+
+==================================================
+20. SAFETY / EDUCATIONAL RE-RANKING
+==================================================
+
+After ML ranking, apply deterministic educational constraints.
+
+Examples:
+
+If a course requires competency level 4 but learner has level 1:
+
+Do not blindly allow ML score to dominate.
+
+If a foundational prerequisite is severely weak:
+
+prioritize prerequisite learning.
+
+Critical skill gaps may receive priority over generic popular courses.
+
+Do not diversify away all critical learning needs.
+
+ML determines preference among eligible candidates.
+
+Business and educational constraints remain authoritative.
+
+==================================================
+21. DIVERSITY
+==================================================
+
+Implement post-ranking diversity.
+
+Avoid recommendations like:
+
+1. Statistics Course A
+2. Statistics Course B
+3. Statistics Course C
+4. Statistics Course D
+5. Statistics Course E
+
+unless the learner genuinely requires that concentration.
+
+Diversify across:
+
+- competency
+- category
+- topic
+- trainer
+- difficulty
+- duration
+
+But preserve relevance.
+
+Use an MMR-style approach or equivalent:
+
+diversity-aware score =
+lambda × relevance
++
+(1-lambda) × novelty
+
+Implement configurable lambda.
+
+==================================================
+22. EXPLORATION
+==================================================
+
+Implement controlled exploration.
+
+Example:
+
+80–90% exploitation
+10–20% exploration
+
+But exploration must remain:
+
+- eligible
+- relevant
+- educationally appropriate
+
+Do not randomly inject irrelevant courses.
+
+Log which recommendations were exploration candidates.
+
+==================================================
+23. EXPLANATIONS
+==================================================
+
+LLM MAY be used only for explanation.
+
+LLM must NOT decide:
+
+- skill gap
+- competency level
+- prerequisite validity
+- eligibility
+- ranking
+- final score
+- access permissions
+
+The deterministic/ML engine provides structured reason codes.
+
+Example:
+
+Reason codes:
+
+- ADDRESSES_SKILL_GAP
+- MATCHES_COMPETENCY
+- NEXT_PREREQUISITE
+- MATCHES_LEARNING_PATH
+- SIMILAR_TO_COMPLETED_COURSE
+- MATCHES_ROLE
+- POPULAR_IN_DEPARTMENT
+- RECOMMENDED_FOR_EXPLORATION
+
+Then the LLM may turn those into natural language.
+
+Example:
+
+"This course is recommended because it directly addresses your current gap in time-series analysis and follows the prerequisite competency you recently completed."
+
+If LLM fails:
+
+return deterministic explanation.
+
+==================================================
+24. RECOMMENDATION SURFACES
+==================================================
+
+Support recommendation contexts:
+
+HOME
+CONTINUE_LEARNING
+CLOSE_SKILL_GAPS
+LEARNING_PATH
+POST_COMPLETION
+COURSE_DETAIL
+EXPLORE
+ASSESSMENT_RESULT
+TRAINER/ADMIN where appropriate
+
+Different surfaces may use different candidate mixes and ranking context.
+
+==================================================
+25. API DESIGN
+==================================================
+
+Implement APIs following existing project conventions.
+
+Conceptually:
+
+GET
+/api/v1/users/:userId/recommendations
+
+Query parameters:
+
+- surface
+- limit
+- cursor
+- refresh
+
+POST
+/api/v1/users/:userId/recommendations/refresh
+
+GET
+/api/v1/recommendations/:id
+
+POST
+/api/v1/recommendations/:id/event
+
+POST
+/api/v1/recommendations/:id/feedback
+
+GET
+/api/v1/users/:userId/recommendations/history
+
+Admin/analytics endpoints:
+
+GET
+/api/v1/admin/recommendations/metrics
+
+GET
+/api/v1/admin/recommendations/models
+
+GET
+/api/v1/admin/recommendations/model/:version
+
+Adapt endpoint naming to existing project conventions.
+
+Use existing:
+
+- authentication
+- RBAC
+- Zod validation
+- error handling
+- response format
+- middleware
+- logging
+
+Never expose internal ML features unnecessarily to normal learners.
+
+==================================================
+26. REDIS / CACHING
+==================================================
+
+Use Redis if already available.
+
+Cache:
+
+- learner recommendation results
+- learner state
+- candidate sets where appropriate
+- course popularity
+- embeddings
+- model metadata
+
+Use appropriate TTL.
+
+Invalidate when important learner state changes:
+
+- assessment completed
+- competency changed
+- skill gap changed
+- course completed
+- recommendation feedback changed
+
+Do not serve stale recommendations after a critical competency update without an appropriate strategy.
+
+==================================================
+27. ASYNC JOBS
+==================================================
+
+Use existing queue/job infrastructure.
+
+Create jobs for:
+
+- recommendation generation
+- learner profile aggregation
+- popularity updates
+- embedding generation
+- training dataset generation
+- model evaluation
+- analytics aggregation
+
+Do not block normal API requests with expensive model training.
+
+==================================================
+28. EVENT-DRIVEN UPDATES
+==================================================
+
+Integrate with existing event infrastructure.
+
+Important events:
+
+AssessmentCompleted
+CourseEnrolled
+CourseStarted
+CourseCompleted
+LessonCompleted
+CompetencyUpdated
+SkillGapUpdated
+RecommendationViewed
+RecommendationClicked
+RecommendationDismissed
+
+When competency or skill-gap state changes:
+
+invalidate affected recommendations.
+
+==================================================
+29. ATTRIBUTION
+==================================================
+
+Implement recommendation attribution.
+
+The system must know:
+
+"This enrollment came from recommendation X."
+
+And:
+
+"This completion came from recommendation X."
+
+And where possible:
+
+"This competency improvement followed recommendation X."
+
+Avoid false attribution.
+
+Use reasonable attribution windows.
+
+Store:
+
+- recommendationId
+- batchId
+- event chain
+- timestamp
+- outcome
+
+==================================================
+30. FEEDBACK LOOP
+==================================================
+
+Implement:
+
+Recommendation
+    ↓
+Interaction
+    ↓
+Outcome
+    ↓
+Training Dataset
+    ↓
+Model
+
+Explicit feedback must also affect short-term recommendations.
+
+For example:
+
+If user says:
+
+"Too difficult"
+
+do not repeatedly recommend similar difficulty courses immediately.
+
+If:
+
+"Already know this"
+
+reduce similar beginner content.
+
+If:
+
+"Wrong topic"
+
+reduce that topic's relevance.
+
+Feedback should not permanently destroy a user's learning path.
+
+Use time decay where appropriate.
+
+==================================================
+31. ML INFRASTRUCTURE
+==================================================
+
+Because the current backend is TypeScript/Node.js, do NOT unnecessarily rewrite the backend.
+
+Keep:
+
+Node.js/Express/TypeScript
+for:
+
+- APIs
+- recommendation orchestration
+- business rules
+- feature retrieval
+- candidate generation
+- caching
+- persistence
+
+Use a Python ML component/service only where required for:
+
+- LightGBM training
+- model evaluation
+- model artifact generation
+- offline ML processing
+
+If the repository already has a Python AI/ML service, integrate with it.
+
+If no ML service exists, create a clean isolated ML service, for example:
+
+ml/
+├── training/
+├── inference/
+├── features/
+├── evaluation/
+├── models/
+└── requirements.txt
+
+Do not make the entire backend dependent on Python.
+
+The Node service should have a safe fallback to BaselineRanker if ML inference fails.
+
+==================================================
+32. MODEL INFERENCE
+==================================================
+
+The production recommendation request should NOT retrain the model.
+
+Inference flow:
+
+API
+ ↓
+RecommendationService
+ ↓
+CandidateGeneration
+ ↓
+Eligibility
+ ↓
+FeatureBuilder
+ ↓
+MLRanker
+ ↓
+Reranking
+ ↓
+Response
+
+Model should be loaded once and reused.
+
+Do not reload the model for every recommendation request.
+
+==================================================
+33. ML FAILURE FALLBACK
+==================================================
+
+If:
+
+- ML model unavailable
+- model loading fails
+- inference timeout
+- malformed model response
+- feature mismatch
+- vector search unavailable
+
+then:
+
+automatically fall back to BaselineRanker.
+
+Never return an empty recommendation list solely because the ML model failed if eligible content exists.
+
+Log the failure.
+
+Expose metrics.
+
+==================================================
+34. MODEL VERSION COMPATIBILITY
+==================================================
+
+Every recommendation response must internally preserve:
+
+- algorithmVersion
+- modelVersion
+- featureVersion
+
+This allows future analysis:
+
+Which model generated this recommendation?
+
+Which features were used?
+
+Which outcome followed?
+
+==================================================
+35. SECURITY
+==================================================
+
+Respect existing RBAC.
+
+A learner can only access their own recommendation data unless authorized.
+
+Trainers can only access permitted learner analytics.
+
+Admins can access system-level analytics according to existing permissions.
+
+Never allow:
+
+/users/:id/recommendations
+
+to expose another learner's private data.
+
+Validate all IDs and request parameters.
+
+Prevent injection attacks.
+
+Do not expose model internals or private behavioral data to unauthorized users.
+
+==================================================
+36. PERFORMANCE
+==================================================
+
+Recommendation API target:
+
+Do not perform expensive database joins repeatedly.
+
+Use:
+
+- batching
+- Prisma select/include carefully
+- caching
+- precomputed aggregates
+- async jobs
+- vector search
+- pagination
+
+Avoid N+1 queries.
+
+Do not generate hundreds/thousands of expensive feature calculations synchronously for every request.
+
+Use candidate limits.
+
+Example conceptual flow:
+
+1000+ possible courses
+        ↓
+candidate generators
+        ↓
+100–300 candidates
+        ↓
+hard filtering
+        ↓
+50–150 candidates
+        ↓
+feature calculation
+        ↓
+ML ranking
+        ↓
+20–50 candidates
+        ↓
+reranking
+        ↓
+10 final recommendations
+
+Tune based on real performance.
+
+==================================================
+37. RECOMMENDATION RESPONSE
+==================================================
+
+Return structured data such as:
+
+{
+  recommendationId,
+  course,
+  rank,
+  score,
+  surface,
+  reasonCodes,
+  explanation,
+  competencyContext,
+  recommendationType,
+  algorithmVersion,
+  modelVersion
+}
+
+Do not expose raw sensitive features.
+
+The frontend should be able to display:
+
+"Recommended for you"
+
+"Closes a skill gap"
+
+"Next step in your learning path"
+
+"Because you completed..."
+
+"Popular in your department"
+
+etc.
+
+==================================================
+38. FRONTEND INTEGRATION
+==================================================
+
+Inspect the existing frontend.
+
+Do not create a separate fake recommendation UI.
+
+Integrate with existing dashboard architecture.
+
+Build reusable components:
+
+RecommendationSection
+RecommendationCard
+RecommendationReason
+RecommendationFeedback
+RecommendationSkeleton
+RecommendationEmptyState
+
+Support:
+
+- loading
+- error
+- empty
+- refresh
+- dismiss
+- feedback
+- pagination/infinite loading if appropriate
+
+Do not show raw ML scores to learners.
+
+==================================================
+39. ADMIN / TRAINER ANALYTICS
+==================================================
+
+Where authorized, provide analytics for:
+
+- recommendation impressions
+- CTR
+- enrollment
+- completion
+- competency improvement
+- skill-gap reduction
+- model performance
+- baseline vs ML
+- recommendation coverage
+- diversity
+- exploration percentage
+- feedback distribution
+
+Admin should be able to see:
+
+active model
+model version
+feature version
+training period
+evaluation metrics
+
+==================================================
+40. TESTING
+==================================================
+
+Write comprehensive tests.
+
+UNIT TEST:
+
+- skill-gap candidate generation
+- competency matching
+- prerequisite logic
+- behavior scoring
+- feature engineering
+- feature normalization
+- cold start
+- ML ranker adapter
+- baseline ranker
+- diversity
+- exploration
+- feedback
+- attribution
+
+INTEGRATION TEST:
+
+- recommendation API
+- database
+- Redis
+- event tracking
+- recommendation lifecycle
+- model fallback
+
+SECURITY TEST:
+
+- unauthorized recommendation access
+- cross-user access
+- RBAC
+- invalid IDs
+
+EDGE CASES:
+
+- no courses
+- no skill gaps
+- no competency data
+- new user
+- new course
+- completed all courses
+- missing prerequisite
+- ML model unavailable
+- vector service unavailable
+- Redis unavailable
+- malformed feature vector
+- empty candidate set
+
+==================================================
+41. EVALUATION / QUALITY GATES
+==================================================
+
+Before considering the feature complete, verify:
+
+Functional:
+
+- candidate generation works
+- eligibility works
+- features are generated
+- baseline works
+- ML ranker interface works
+- model inference works when model exists
+- fallback works
+- diversity works
+- exploration works
+- feedback works
+- attribution works
+
+ML:
+
+- training dataset generation works
+- labels are generated
+- temporal split works
+- feature versioning works
+- model evaluation works
+- model metadata works
+
+Learning:
+
+- skill gaps influence recommendations
+- prerequisites influence recommendations
+- competency improvement is measurable
+- completion is tracked
+
+Production:
+
+- authentication works
+- RBAC works
+- Redis failure is handled
+- ML failure is handled
+- vector failure is handled
+- APIs are validated
+- logging works
+- no N+1 queries
+- no duplicate recommendation system
+- existing functionality remains intact
+
+==================================================
+42. IMPORTANT: DO NOT FAKE ML
+==================================================
+
+This is a strict requirement.
+
+Do NOT write:
+
+const mlScore = random()
+
+Do NOT write:
+
+const aiScore = someHardcodedFormula()
+
+and call it machine learning.
+
+Do NOT pretend a weighted formula is a trained ML model.
+
+If no sufficiently large historical dataset exists yet:
+
+1. Build the complete training-data pipeline.
+2. Build the baseline ranker.
+3. Build the LightGBM/LambdaMART training pipeline.
+4. Build model evaluation.
+5. Build model loading/inference.
+6. Use baseline in production until the first validated ML model exists.
+7. Make the architecture automatically ready to activate the ML model once validated.
+
+This is essential.
+
+==================================================
+43. MODEL TRAINING COMMANDS
+==================================================
+
+Provide clear commands/scripts for:
+
+dataset generation
+model training
+model evaluation
+model validation
+model activation
+
+For example, adapt to project conventions:
+
+npm run recommendation:dataset
+npm run recommendation:evaluate
+npm run recommendation:train
+npm run recommendation:validate
+npm run recommendation:activate
+
+If Python is used:
+
+python -m ml.training.build_dataset
+python -m ml.training.train
+python -m ml.evaluation.evaluate
+
+Use the project's actual package conventions.
+
+==================================================
+44. CONFIGURATION
+==================================================
+
+All important parameters must be configurable.
+
+Examples:
+
+RECOMMENDATION_MODEL_VERSION
+RECOMMENDATION_FEATURE_VERSION
+EXPLORATION_RATE
+DIVERSITY_LAMBDA
+CANDIDATE_LIMIT
+FINAL_RECOMMENDATION_LIMIT
+MODEL_TIMEOUT
+RECOMMENDATION_CACHE_TTL
+FEEDBACK_DECAY_DAYS
+BEHAVIOR_DECAY_DAYS
+MIN_TRAINING_EXAMPLES
+MODEL_MIN_NDCG
+MODEL_MIN_COMPLETION_IMPROVEMENT
+
+Do not scatter magic numbers throughout the code.
+
+==================================================
+45. OBSERVABILITY
+==================================================
+
+Add structured logs for:
+
+- candidate count
+- filtered candidate count
+- ranking latency
+- ML inference latency
+- fallback usage
+- model version
+- recommendation generation
+- recommendation errors
+
+Metrics should allow monitoring:
+
+- recommendation latency
+- ML failure rate
+- fallback rate
+- recommendation coverage
+- CTR
+- enrollment
+- completion
+- competency improvement
+
+==================================================
+46. PHASED IMPLEMENTATION
+==================================================
+
+Implement in this order.
+
+PHASE 1
+
+Repository audit
+Database audit
+Existing recommendation audit
+Architecture design
+
+PHASE 2
+
+Recommendation event/feedback infrastructure
+
+PHASE 3
+
+Candidate generation
+
+PHASE 4
+
+Eligibility engine
+
+PHASE 5
+
+Learner state
+
+PHASE 6
+
+Feature engineering
+
+PHASE 7
+
+Baseline ranker
+
+PHASE 8
+
+Training dataset pipeline
+
+PHASE 9
+
+LightGBM/LambdaMART training pipeline
+
+PHASE 10
+
+ML inference integration
+
+PHASE 11
+
+Competency/prerequisite reranking
+
+PHASE 12
+
+Diversity
+
+PHASE 13
+
+Exploration
+
+PHASE 14
+
+LLM explanations
+
+PHASE 15
+
+Redis/cache/jobs/events
+
+PHASE 16
+
+APIs
+
+PHASE 17
+
+Frontend integration
+
+PHASE 18
+
+Analytics
+
+PHASE 19
+
+Testing
+
+PHASE 20
+
+Performance/security audit
+
+==================================================
+47. GIT WORKFLOW
+==================================================
+
+Before implementation:
+
+Create a scalable feature branch:
+
+feature/ml-recommendation-engine
+
+Do not work directly on main/master.
+
+Make logical commits.
+
+Suggested:
+
+feat(recommendation): add recommendation event tracking
+feat(recommendation): add candidate generation
+feat(recommendation): add eligibility engine
+feat(recommendation): add learner feature pipeline
+feat(recommendation): add baseline ranker
+feat(recommendation): add ml training pipeline
+feat(recommendation): add ml inference
+feat(recommendation): add reranking
+feat(recommendation): add recommendation APIs
+feat(recommendation): add frontend integration
+test(recommendation): add recommendation test suite
+
+Do not commit secrets, model credentials, or private data.
+
+==================================================
+48. DOCUMENTATION
+==================================================
+
+Create/update documentation explaining:
+
+- recommendation architecture
+- candidate generation
+- eligibility
+- feature definitions
+- ML training
+- label generation
+- model evaluation
+- model deployment
+- fallback behavior
+- recommendation events
+- attribution
+- API usage
+- configuration
+- troubleshooting
+
+Create a recommendation architecture document.
+
+Create an ML feature dictionary.
+
+Create a model deployment guide.
+
+==================================================
+49. IMPORTANT ARCHITECTURAL RULE
+==================================================
+
+The system must clearly separate:
+
+WHAT THE LEARNER NEEDS
+→ Skill Gap Analyzer
+
+WHAT THE LEARNER SHOULD LEARN NEXT
+→ Recommendation Engine
+
+WHAT THE LEARNER SHOULD REVISE NOW
+→ Revision Engine
+
+HOW TO EXPLAIN IT
+→ LLM
+
+Do not merge these responsibilities.
+
+The Recommendation Engine may consume SkillGap and Revision signals, but must not replace them.
+
+==================================================
+50. FINAL RECOMMENDATION LOGIC
+==================================================
+
+The final recommendation pipeline should conceptually be:
+
+learnerState
+      ↓
+candidateGenerators
+      ↓
+mergeCandidates()
+      ↓
+deduplicate()
+      ↓
+hardEligibilityFilter()
+      ↓
+buildFeatureVectors()
+      ↓
+MLRanker.rank()
+      ↓
+educationalReranking()
+      ↓
+diversityReranking()
+      ↓
+controlledExploration()
+      ↓
+finalizeRecommendations()
+      ↓
+persistRecommendationBatch()
+      ↓
+returnRecommendations()
+
+Every stage must be independently testable.
+
+==================================================
+51. ACCEPTANCE CRITERIA
+==================================================
+
+The implementation is NOT COMPLETE until all of the following are true:
+
+[ ] Existing repository fully audited
+[ ] Existing Prisma models reused
+[ ] Recommendation event tracking implemented
+[ ] Recommendation feedback implemented
+[ ] Outcome attribution implemented
+[ ] Skill-gap candidate generation implemented
+[ ] Competency candidate generation implemented
+[ ] Prerequisite candidate generation implemented
+[ ] Behavioral candidate generation implemented
+[ ] Semantic candidate generation implemented
+[ ] Contextual candidate generation implemented
+[ ] Popularity candidate generation implemented
+[ ] Continuation candidate generation implemented
+[ ] Exploration candidate generation implemented
+[ ] Hard eligibility implemented
+[ ] Unified learner state implemented
+[ ] Feature engineering implemented
+[ ] Feature versioning implemented
+[ ] Baseline ranker implemented
+[ ] LightGBM/LambdaMART ranker implemented
+[ ] Training dataset pipeline implemented
+[ ] Outcome-based labels implemented
+[ ] Temporal train/validation/test split implemented
+[ ] Offline evaluation implemented
+[ ] Model metadata/versioning implemented
+[ ] Model fallback implemented
+[ ] Competency safety reranking implemented
+[ ] Prerequisite reranking implemented
+[ ] Diversity reranking implemented
+[ ] Exploration implemented
+[ ] Cold-start implemented
+[ ] LLM explanation boundary enforced
+[ ] Redis caching integrated
+[ ] Async jobs integrated
+[ ] Event-driven invalidation integrated
+[ ] APIs implemented
+[ ] Frontend integrated
+[ ] Admin analytics implemented
+[ ] Unit tests implemented
+[ ] Integration tests implemented
+[ ] Security tests implemented
+[ ] Performance reviewed
+[ ] Documentation completed
+[ ] TypeScript typecheck passes
+[ ] Lint passes
+[ ] Tests pass
+[ ] Prisma migration succeeds
+[ ] Existing application still works
+
+==================================================
+52. FINAL INSTRUCTION TO THE CODING AGENT
+==================================================
+
+Do not rush into coding.
+
+First inspect the repository and identify what already exists.
+
+Then produce a short implementation plan based on the actual repository.
+
+Then implement incrementally.
+
+After each major phase:
+
+1. run relevant tests
+2. run typecheck
+3. verify database changes
+4. verify existing functionality
+5. inspect generated code
+6. fix issues before continuing
+
+Never invent existing APIs, models, services, or infrastructure.
+
+If an existing implementation differs from the assumptions above, adapt to the repository instead of duplicating it.
+
+Do not remove working functionality.
+
+Do not create mock/fake ML behavior.
+
+The final result must be a REAL hybrid ML recommendation architecture with:
+
+Candidate Generation
++
+Hard Eligibility
++
+Feature Engineering
++
+LightGBM/LambdaMART Learning-to-Rank
++
+Educational Safety Re-ranking
++
+Diversity
++
+Exploration
++
+Feedback
++
+Learning Outcome Attribution
++
+Continuous Training Pipeline
+
+The system must be able to start with the deterministic baseline when historical data is insufficient and seamlessly activate the validated ML ranker once enough real training data exists.
+
+The ultimate optimization target is:
+
+BETTER LEARNER OUTCOMES
+
+not merely:
+
+MORE CLICKS.
+
+Build this as production software, not as a prototype or demonstration.

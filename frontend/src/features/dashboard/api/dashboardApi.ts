@@ -21,6 +21,21 @@ export const dashboardApi = {
     const response = await apiClient.get<ApiResponse<AdminDashboardData>>('/dashboard/admin');
     return response.data.data;
   },
+
+  getCompetencyAnalytics: async (): Promise<any> => {
+    const response = await apiClient.get<ApiResponse<any>>('/analytics/competencies');
+    return response.data.data;
+  },
+
+  getSkillGapAnalytics: async (): Promise<any> => {
+    const response = await apiClient.get<ApiResponse<any>>('/analytics/skill-gaps');
+    return response.data.data;
+  },
+
+  getRevisionAnalytics: async (): Promise<any> => {
+    const response = await apiClient.get<ApiResponse<any>>('/analytics/revision');
+    return response.data.data;
+  },
 };
 
 export default dashboardApi;

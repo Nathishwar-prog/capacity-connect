@@ -50,6 +50,263 @@ router.patch(
   asyncHandler(userController.updateProfile),
 );
 
+// --- User Competency Profile & Groups ---
+router.get(
+  '/me/competencies',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const prisma = (await import('../database/client')).default;
+
+    const [frameworkCompetencies, groupCompetencies, topicCompetencies] = await Promise.all([
+      prisma.userCompetency.findMany({
+        where: { userId },
+        include: { competency: true },
+      }),
+      prisma.userGroupCompetency.findMany({
+        where: { userId },
+        include: { group: true },
+        orderBy: { groupPriority: 'desc' },
+      }),
+      prisma.userTopicCompetency.findMany({
+        where: { userId },
+        include: { topic: true },
+        orderBy: { competencyScore: 'asc' },
+      }),
+    ]);
+
+    return ResponseHelper.success({
+      res,
+      message: 'Learner competencies retrieved successfully',
+      data: {
+        framework: frameworkCompetencies,
+        groups: groupCompetencies,
+        topics: topicCompetencies,
+      },
+    });
+  }),
+);
+
+router.get(
+  '/me/competencies/groups',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const { groupAnalysisService } = await import('../modules/revision/services/group-analysis.service');
+
+    const analysis = await groupAnalysisService.analyzeGroups(userId);
+    return ResponseHelper.success({
+      res,
+      message: 'Competency group analysis retrieved successfully',
+      data: analysis,
+    });
+  }),
+);
+
+router.get(
+  '/me/competencies/topics',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const prisma = (await import('../database/client')).default;
+
+    const topics = await prisma.userTopicCompetency.findMany({
+      where: { userId },
+      include: {
+        topic: {
+          include: {
+            group: true,
+            prerequisiteFor: {
+              include: { dependentTopic: true },
+            },
+            prerequisites: {
+              include: { prerequisiteTopic: true },
+            },
+          },
+        },
+      },
+      orderBy: { competencyScore: 'asc' },
+    });
+
+    return ResponseHelper.success({
+      res,
+      message: 'Topic competencies retrieved successfully',
+      data: topics,
+    });
+  }),
+);
+
+router.get(
+  '/me/skill-gaps',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const { SkillGapAnalysisService } = await import('../modules/skill-gap/services/skill-gap-analysis.service');
+
+    const service = new SkillGapAnalysisService();
+    const gaps = await service.getLearnerSkillGaps(userId);
+
+    return ResponseHelper.success({
+      res,
+      message: 'Learner skill gaps retrieved successfully',
+      data: gaps,
+    });
+  }),
+);
+
+router.get(
+  '/me/enrollments',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const prisma = (await import('../database/client')).default;
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { userId },
+      include: {
+        course: {
+          include: {
+            trainer: { select: { id: true, firstName: true, lastName: true, email: true } },
+            modules: {
+              include: { lessons: true },
+              orderBy: { orderIndex: 'asc' },
+            },
+            courseCompetencies: {
+              include: { competency: true },
+            },
+          },
+        },
+        lessonProgress: true,
+      },
+      orderBy: { enrolledAt: 'desc' },
+    });
+
+    return ResponseHelper.success({
+      res,
+      message: 'User enrollments retrieved successfully',
+      data: enrollments,
+    });
+  }),
+);
+
+router.get(
+  '/me/revision-plan',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const { revisionPlanService } = await import('../modules/revision/services/revision-plan.service');
+    const prisma = (await import('../database/client')).default;
+
+    // Check for existing active/in-progress session first
+    const activeSession = await prisma.revisionSession.findFirst({
+      where: {
+        userId,
+        status: { in: ['GENERATED', 'STARTED'] },
+      },
+      include: {
+        items: {
+          include: { topic: true },
+          orderBy: { sequenceNumber: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (activeSession) {
+      return ResponseHelper.success({
+        res,
+        message: 'Active revision session retrieved',
+        data: activeSession,
+      });
+    }
+
+    // Otherwise generate a fresh session plan
+    const newSession = await revisionPlanService.generateSessionPlan(userId, { availableMinutes: 30 });
+    return ResponseHelper.success({
+      res,
+      message: 'Fresh adaptive revision session generated',
+      data: newSession,
+    });
+  }),
+);
+
+router.get(
+  '/me/recommendations',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const { RecommendationService } = await import('../modules/recommendation/services/recommendation.service');
+
+    const service = new RecommendationService();
+    const result = await service.getRecommendations({
+      userId,
+      surface: 'DASHBOARD',
+      limit: 8,
+    });
+
+    return ResponseHelper.success({
+      res,
+      message: 'Personalized recommendations retrieved successfully',
+      data: result,
+    });
+  }),
+);
+
+router.get(
+  '/me/trainer-matches',
+  asyncHandler(async (req, res) => {
+    const userId = (req.user as any)?.id || req.user?.userId;
+    const { ResponseHelper } = await import('../errors/response.helper');
+    const prisma = (await import('../database/client')).default;
+
+    // Check pre-computed trainer matches
+    const matches = await prisma.trainerMatch.findMany({
+      where: { traineeId: userId },
+      include: {
+        trainer: {
+          include: {
+            trainerProfile: true,
+            department: true,
+          },
+        },
+        competency: true,
+      },
+      orderBy: { matchScore: 'desc' },
+    });
+
+    if (matches.length > 0) {
+      return ResponseHelper.success({
+        res,
+        message: 'Matched domain trainers retrieved successfully',
+        data: matches,
+      });
+    }
+
+    // Fallback: match available trainers with domain expertise
+    const trainers = await prisma.user.findMany({
+      where: { role: Role.TRAINER },
+      include: {
+        trainerProfile: true,
+        department: true,
+      },
+      take: 4,
+    });
+
+    const synthesizedMatches = trainers.map((t) => ({
+      trainerId: t.id,
+      trainer: t,
+      matchScore: 88.0,
+      reason: `${t.firstName} ${t.lastName} is a senior scientist in ${t.department?.name || 'MoES'} specializing in operational capacity building.`,
+    }));
+
+    return ResponseHelper.success({
+      res,
+      message: 'Matched domain trainers retrieved successfully',
+      data: synthesizedMatches,
+    });
+  }),
+);
+
 // --- User Profile by ID (Self or Admin) ---
 router.get(
   '/:id',

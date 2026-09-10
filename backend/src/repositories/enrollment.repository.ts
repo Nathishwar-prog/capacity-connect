@@ -97,11 +97,35 @@ export class EnrollmentRepository implements IEnrollmentRepository {
                             id: true,
                             title: true,
                             slug: true,
+                            description: true,
                             thumbnailUrl: true,
                             category: true,
                             difficulty: true,
                             durationMinutes: true,
                             status: true,
+                            trainer: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                },
+                            },
+                            modules: {
+                                orderBy: { orderIndex: 'asc' },
+                                include: {
+                                    lessons: {
+                                        orderBy: { orderIndex: 'asc' },
+                                        select: {
+                                            id: true,
+                                            title: true,
+                                            contentType: true,
+                                            durationMinutes: true,
+                                            orderIndex: true,
+                                        },
+                                    },
+                                },
+                            },
                         },
                     },
                 },

@@ -13,17 +13,18 @@ import {
   LearningOverviewGrid,
   ActiveCoursesList,
   UpNextList,
+  TodayLearningPlan,
   LearningJourneyCard,
   CompetencySnapshotCard,
   SkillGapPanel,
   AssessmentSnapshotCard,
   LearningResourcesList,
-  RecommendedCoursesList,
   TrainerConnectionCard,
   AchievementsCard,
   RecentActivityTimeline,
   FuturePlaceholders,
 } from './components';
+import { RecommendationSection } from '@/components/recommendations';
 
 export const TraineeDashboard: React.FC = () => {
   const { user: authUser } = useAuthStore();
@@ -46,11 +47,11 @@ export const TraineeDashboard: React.FC = () => {
         </div>
 
         {/* Continue Learning Hero Skeleton */}
-        <Skeleton className="h-48 w-full rounded-3xl" />
+        <Skeleton className="h-56 w-full rounded-3xl" />
 
         {/* Metrics Overview Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i} className="p-5">
               <Skeleton className="h-4 w-24 mb-4" />
               <Skeleton className="h-8 w-16 mb-2" />
@@ -61,8 +62,8 @@ export const TraineeDashboard: React.FC = () => {
 
         {/* Courses & Up Next Skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="lg:col-span-2 h-64 rounded-2xl" />
-          <Skeleton className="h-64 rounded-2xl" />
+          <Skeleton className="lg:col-span-2 h-72 rounded-2xl" />
+          <Skeleton className="h-72 rounded-2xl" />
         </div>
       </div>
     );
@@ -98,60 +99,115 @@ export const TraineeDashboard: React.FC = () => {
   const departmentName = data.user?.department || 'Observational Meteorology';
   const designation = data.user?.designation || 'Scientific Officer';
 
+  // Urgent revision signal if skill gaps exist
+  const urgentGap = data.skillGaps?.find((g) => g.priority === 'HIGH') || data.skillGaps?.[0];
+  const urgentRevision = urgentGap
+    ? {
+        topicName: urgentGap.competencyName,
+        reason: 'Competency gap identified below cadre operational benchmark',
+        forgettingRisk: 'High',
+      }
+    : null;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* 1. Header & Primary CTAs */}
-      <TraineeDashboardHeader
-        traineeName={traineeName}
-        departmentName={departmentName}
-        designation={designation}
-      />
+    <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      {/* ─────────────────────────────────────────────────────────────
+          LEVEL 1: WHAT SHOULD I DO NOW? (Header + Next Action Hero)
+          ───────────────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <TraineeDashboardHeader
+          traineeName={traineeName}
+          departmentName={departmentName}
+          designation={designation}
+        />
 
-      {/* 2. Primary Hero Card: Continue Learning */}
-      <ContinueLearningCard course={data.continueLearning} />
+        <ContinueLearningCard
+          course={data.continueLearning}
+          urgentRevision={urgentRevision}
+        />
+      </section>
 
-      {/* 3. Learning Progress Overview */}
-      <LearningOverviewGrid metrics={data.metrics} />
+      {/* ─────────────────────────────────────────────────────────────
+          LEVEL 2: HOW AM I PROGRESSING? (Progress Summary + Active Work)
+          ───────────────────────────────────────────────────────────── */}
+      <section className="space-y-6">
+        <LearningOverviewGrid metrics={data.metrics} />
 
-      {/* 4. Active Courses (2 Cols) + Up Next (1 Col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ActiveCoursesList courses={data.activeCourses} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Active Courses & Capacity Journey (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            <ActiveCoursesList courses={data.activeCourses} />
+            <LearningJourneyCard />
+          </div>
+
+          {/* Up Next & Today's 20-min Plan (5 cols) */}
+          <div className="lg:col-span-5 space-y-6">
+            <TodayLearningPlan
+              activeCourseTitle={data.continueLearning?.courseTitle}
+              activeCourseId={data.continueLearning?.courseId}
+              urgentRevisionTopic={urgentGap?.competencyName}
+            />
+            <UpNextList items={data.upNext} />
+          </div>
         </div>
-        <div>
-          <UpNextList items={data.upNext} />
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          LEVEL 3: WHAT NEEDS IMPROVEMENT? (Competencies & Skill Gaps)
+          ───────────────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Priority 3 • Competency & Skill Health
+          </h2>
+          <span className="text-[11px] text-slate-400 font-medium">Diagnostic Gap Analysis</span>
         </div>
-      </div>
 
-      {/* 5. Learning Journey Milestone Progression */}
-      <LearningJourneyCard />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CompetencySnapshotCard competencies={data.competencies} />
+          <SkillGapPanel gaps={data.skillGaps} />
+        </div>
 
-      {/* 6. Competencies Snapshot (1 Col) + Skill Gaps (1 Col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CompetencySnapshotCard competencies={data.competencies} />
-        <SkillGapPanel gaps={data.skillGaps} />
-      </div>
-
-      {/* 7. Assessments (1 Col) + Learning Resources (1 Col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AssessmentSnapshotCard assessments={data.assessments} />
-        <LearningResourcesList resources={data.resources} />
-      </div>
+      </section>
 
-      {/* 8. Recommended Courses */}
-      <RecommendedCoursesList recommendations={data.recommendations} />
+      {/* ─────────────────────────────────────────────────────────────
+          LEVEL 4: WHAT CAN HELP ME IMPROVE? (AI Recommendations & Resources)
+          ───────────────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Priority 4 • Recommendations & Learning Resources
+          </h2>
+          <span className="text-[11px] text-slate-400 font-medium">Institutional Curriculum</span>
+        </div>
 
-      {/* 9. Assigned Instructor (1 Col) + Achievements (1 Col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TrainerConnectionCard trainer={data.trainer} />
-        <AchievementsCard achievements={data.achievements} />
-      </div>
+        <RecommendationSection surface="DASHBOARD" limit={3} />
 
-      {/* 10. Recent Activity Timeline */}
-      <RecentActivityTimeline activities={data.recentActivity} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LearningResourcesList resources={data.resources} />
+          <TrainerConnectionCard trainer={data.trainer} />
+        </div>
+      </section>
 
-      {/* 11. Future AI Capabilities (Coming Soon) */}
-      <FuturePlaceholders />
+      {/* ─────────────────────────────────────────────────────────────
+          LEVEL 5: WHAT HAVE I ACHIEVED? & RECENT ACTIVITY
+          ───────────────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Priority 5 • Milestones & Learning History
+          </h2>
+          <span className="text-[11px] text-slate-400 font-medium">Verified Credentials</span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AchievementsCard achievements={data.achievements} />
+          <RecentActivityTimeline activities={data.recentActivity} />
+        </div>
+
+        <FuturePlaceholders />
+      </section>
     </div>
   );
 };

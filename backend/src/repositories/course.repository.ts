@@ -3,8 +3,8 @@ import { Course, CourseStatus, CourseDifficulty } from '@prisma/client';
 import { CreateCourseDto, UpdateCourseDto, CourseListParamsDto } from '../dto/course.dto';
 
 export interface ICourseRepository {
-    findById(id: string): Promise<(Course & { prerequisites?: { prerequisiteCourse: Course }[] }) | null>;
-    findBySlug(slug: string): Promise<Course | null>;
+    findById(id: string): Promise<any | null>;
+    findBySlug(slug: string): Promise<any | null>;
     findAll(params: CourseListParamsDto): Promise<{ courses: Course[]; total: number }>;
     create(data: Omit<CreateCourseDto, 'prerequisites'>): Promise<Course>;
     update(id: string, data: Omit<UpdateCourseDto, 'prerequisites'>): Promise<Course>;
@@ -16,7 +16,7 @@ export interface ICourseRepository {
 }
 
 export class CourseRepository implements ICourseRepository {
-    public async findById(id: string): Promise<(Course & { prerequisites?: { prerequisiteCourse: Course }[] }) | null> {
+    public async findById(id: string): Promise<any | null> {
         return prisma.course.findUnique({
             where: { id },
             include: {
@@ -24,14 +24,91 @@ export class CourseRepository implements ICourseRepository {
                     include: {
                         prerequisiteCourse: true,
                     }
+                },
+                trainer: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        trainerProfile: true,
+                    }
+                },
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                    }
+                },
+                courseCompetencies: {
+                    include: {
+                        competency: true,
+                    }
+                },
+                modules: {
+                    orderBy: { orderIndex: 'asc' },
+                    include: {
+                        lessons: {
+                            orderBy: { orderIndex: 'asc' },
+                            include: {
+                                lessonResources: {
+                                    include: {
+                                        resource: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         });
     }
 
-    public async findBySlug(slug: string): Promise<Course | null> {
+    public async findBySlug(slug: string): Promise<any | null> {
         return prisma.course.findUnique({
             where: { slug },
+            include: {
+                prerequisites: {
+                    include: {
+                        prerequisiteCourse: true,
+                    }
+                },
+                trainer: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        trainerProfile: true,
+                    }
+                },
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                    }
+                },
+                courseCompetencies: {
+                    include: {
+                        competency: true,
+                    }
+                },
+                modules: {
+                    orderBy: { orderIndex: 'asc' },
+                    include: {
+                        lessons: {
+                            orderBy: { orderIndex: 'asc' },
+                            include: {
+                                lessonResources: {
+                                    include: {
+                                        resource: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         });
     }
 
@@ -71,6 +148,31 @@ export class CourseRepository implements ICourseRepository {
                 include: {
                     trainer: { select: { id: true, firstName: true, lastName: true, email: true } },
                     organization: { select: { id: true, name: true } },
+                    courseCompetencies: {
+                        include: {
+                            competency: true,
+                        }
+                    },
+                    modules: {
+                        orderBy: { orderIndex: 'asc' },
+                        select: {
+                            id: true,
+                            title: true,
+                            description: true,
+                            orderIndex: true,
+                            lessons: {
+                                orderBy: { orderIndex: 'asc' },
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    contentType: true,
+                                    durationMinutes: true,
+                                    orderIndex: true,
+                                    isPreview: true,
+                                }
+                            }
+                        }
+                    }
                 },
             }),
             prisma.course.count({ where }),

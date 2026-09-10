@@ -32,6 +32,7 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
     // Attach enriched user context to request
     req.user = {
       userId: dbUser.id,
+      id: dbUser.id,
       email: dbUser.email,
       role: dbUser.role,
       permissions: payload.permissions || [],

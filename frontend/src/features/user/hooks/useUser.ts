@@ -19,7 +19,6 @@ export const useUser = () => {
   const updateProfileMutation = useMutation({
     mutationFn: (payload: UpdateUserPayload) => userApi.updateUser(authUser?.id || '', payload),
     onSuccess: (updatedUser) => {
-      // Sync global auth store
       setUser({
         id: updatedUser.id,
         email: updatedUser.email,
@@ -27,9 +26,39 @@ export const useUser = () => {
         lastName: updatedUser.lastName,
         role: updatedUser.role,
         permissions: updatedUser.permissions,
+        organizationId: authUser?.organizationId,
+        departmentId: updatedUser.departmentId || authUser?.departmentId,
       });
-      // Invalidate queries to trigger re-fetches
       queryClient.invalidateQueries({ queryKey: ['profile', updatedUser.id] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+    },
+  });
+
+  // Mutation to update user role
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) => userApi.updateUserRole(id, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
+    },
+  });
+
+  // Mutation to update user status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      userApi.updateUserStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
+    },
+  });
+
+  // Mutation to approve user
+  const approveUserMutation = useMutation({
+    mutationFn: (id: string) => userApi.approveUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
     },
   });
 
@@ -37,7 +66,8 @@ export const useUser = () => {
   const deleteUserMutation = useMutation({
     mutationFn: (id: string) => userApi.deleteUser(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin'] });
     },
   });
 
@@ -48,6 +78,15 @@ export const useUser = () => {
 
     updateProfile: updateProfileMutation.mutateAsync,
     isUpdatingProfile: updateProfileMutation.isPending,
+
+    updateUserRole: updateRoleMutation.mutateAsync,
+    isUpdatingRole: updateRoleMutation.isPending,
+
+    updateUserStatus: updateStatusMutation.mutateAsync,
+    isUpdatingStatus: updateStatusMutation.isPending,
+
+    approveUser: approveUserMutation.mutateAsync,
+    isApprovingUser: approveUserMutation.isPending,
 
     deleteUser: deleteUserMutation.mutateAsync,
     isDeletingUser: deleteUserMutation.isPending,

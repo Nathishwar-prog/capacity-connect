@@ -253,6 +253,9 @@ export class CourseStructureService {
                     durationMinutes: l.durationMinutes,
                     orderIndex: l.orderIndex,
                     isPreview: l.isPreview,
+                    learningObjectives: l.learningObjectives,
+                    keyTakeaways: l.keyTakeaways,
+                    sourceProvenance: l.sourceProvenance,
                     resources,
                 };
             });
@@ -271,11 +274,28 @@ export class CourseStructureService {
         });
 
         return {
+            id: rawStructure.id,
+            title: rawStructure.title,
+            slug: rawStructure.slug,
+            description: rawStructure.description,
+            overview: rawStructure.overview,
+            targetAudience: rawStructure.targetAudience,
+            learningOutcomes: rawStructure.learningOutcomes,
+            prerequisitesText: rawStructure.prerequisitesText,
+            glossary: rawStructure.glossary,
+            references: rawStructure.references,
+            category: rawStructure.category,
+            difficulty: rawStructure.difficulty,
+            status: rawStructure.status,
+            durationMinutes: rawStructure.durationMinutes,
             course: {
                 id: rawStructure.id,
                 title: rawStructure.title,
                 slug: rawStructure.slug,
                 description: rawStructure.description,
+                overview: rawStructure.overview,
+                targetAudience: rawStructure.targetAudience,
+                learningOutcomes: rawStructure.learningOutcomes,
                 category: rawStructure.category,
                 difficulty: rawStructure.difficulty,
                 status: rawStructure.status,

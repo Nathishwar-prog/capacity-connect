@@ -1,8 +1,16 @@
 'use client';
 
 import React from 'react';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AppShell } from '@/components/layout/AppShell';
 import { TraineeDashboard } from '@/features/dashboard/trainee';
 
 export default function TraineeDashboardPage() {
-  return <TraineeDashboard />;
+  return (
+    <ProtectedRoute allowedRoles={['TRAINEE', 'ADMIN', 'SUPER_ADMIN']}>
+      <AppShell>
+        <TraineeDashboard />
+      </AppShell>
+    </ProtectedRoute>
+  );
 }

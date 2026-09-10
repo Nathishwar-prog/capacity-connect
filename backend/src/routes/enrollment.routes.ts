@@ -22,7 +22,7 @@ const enrollmentService = new EnrollmentService(
     userRepo
 );
 
-const enrollmentController = new EnrollmentController(enrollmentService);
+export const enrollmentController = new EnrollmentController(enrollmentService);
 
 export const enrollmentRouter = Router();
 

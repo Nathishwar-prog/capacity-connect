@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface UserState {
   id: string;
@@ -40,46 +41,58 @@ interface AuthStore {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isInitializing: true,
-
-  setToken: (token) =>
-    set((state) => ({
-      token,
-      isAuthenticated: !!token && !!state.user,
-    })),
-
-  setUser: (user) =>
-    set((state) => ({
-      user,
-      isAuthenticated: !!state.token && !!user,
-    })),
-
-  setCredentials: (user, token) =>
-    set({
-      user,
-      token,
-      isAuthenticated: true,
-      isInitializing: false,
-    }),
-
-  setInitializing: (isInitializing) =>
-    set({
-      isInitializing,
-    }),
-
-  logout: () => {
-    // Clear in-memory credentials
-    set({
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
       user: null,
       token: null,
       isAuthenticated: false,
-      isInitializing: false,
-    });
-  },
-}));
+      isInitializing: true,
+
+      setToken: (token) =>
+        set((state) => ({
+          token,
+          isAuthenticated: !!token && !!state.user,
+        })),
+
+      setUser: (user) =>
+        set((state) => ({
+          user,
+          isAuthenticated: !!state.token && !!user,
+        })),
+
+      setCredentials: (user, token) =>
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          isInitializing: false,
+        }),
+
+      setInitializing: (isInitializing) =>
+        set({
+          isInitializing,
+        }),
+
+      logout: () => {
+        // Clear credentials
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isInitializing: false,
+        });
+      },
+    }),
+    {
+      name: 'cc_auth_session',
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    },
+  ),
+);
 
 export default useAuthStore;
