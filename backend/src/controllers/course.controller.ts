@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { CourseService } from '../services/course.service';
+import { courseImportService } from '../services/course-import.service';
 import { ResponseHelper } from '../errors/response.helper';
+import { BadRequestError } from '../errors/app-error';
 
 export class CourseController {
     private courseService: CourseService;
@@ -93,6 +95,83 @@ export class CourseController {
             message: 'Course published',
             data: course,
         });
+    };
+
+    public validateCourse = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const validation = await this.courseService.validateCourse(req.params.id, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course validation completed',
+            data: validation,
+        });
+    };
+
+    public saveDraft = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const course = await this.courseService.saveDraft(req.params.id, req.body, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course draft saved successfully',
+            data: course,
+        });
+    };
+
+    public getTopicsAndCompetencies = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const data = await this.courseService.getTopicsAndCompetencies(req.params.id, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course topics and competencies retrieved',
+            data,
+        });
+    };
+
+    public updateTopicsAndCompetencies = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const data = await this.courseService.updateTopicsAndCompetencies(req.params.id, req.body, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course topics and competencies updated',
+            data,
+        });
+    };
+
+    public importCourse = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const file = req.file;
+        if (!file) {
+            throw new BadRequestError('No document file uploaded');
+        }
+
+        const job = await courseImportService.createJob(file, userCtx.userId);
+        return ResponseHelper.created(res, job, 'Course document uploaded and ingestion job started');
+    };
+
+    public getImportStatus = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const status = await courseImportService.getJobStatus(req.params.jobId, userCtx.userId);
+        return ResponseHelper.success({
+            res,
+            message: 'Import job status retrieved',
+            data: status,
+        });
+    };
+
+    public getImportPreview = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const preview = await courseImportService.getJobPreview(req.params.jobId, userCtx.userId);
+        return ResponseHelper.success({
+            res,
+            message: 'Import job preview retrieved',
+            data: preview,
+        });
+    };
+
+    public approveImport = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const course = await courseImportService.approveJob(req.params.jobId, userCtx, req.body.customEdits);
+        return ResponseHelper.created(res, course, 'Course imported and committed to database successfully');
     };
 
     public archiveCourse = async (req: Request, res: Response): Promise<Response> => {

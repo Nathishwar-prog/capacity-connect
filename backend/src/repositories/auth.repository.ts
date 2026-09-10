@@ -45,6 +45,7 @@ export interface CreatePendingUserData {
   organizationId: string;
   departmentId?: string;
   role?: Role;
+  status?: UserStatus;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -169,6 +170,8 @@ export class AuthRepository implements IAuthRepository {
 
   public async createPendingUser(data: CreatePendingUserData): Promise<UserWithRelations> {
     const assignedRole = data.role || Role.TRAINEE;
+    const userStatus =
+      data.status || (assignedRole === Role.TRAINEE ? UserStatus.APPROVED : UserStatus.PENDING);
 
     return prisma.$transaction(
       async (tx) => {
@@ -182,8 +185,8 @@ export class AuthRepository implements IAuthRepository {
             lastName: data.lastName,
             phone: data.phone,
             role: assignedRole,
-            status: UserStatus.PENDING, // Strictly enforces required PENDING approval stage
-            emailVerified: false,
+            status: userStatus,
+            emailVerified: userStatus === UserStatus.APPROVED,
           },
           include: {
             organization: { select: { name: true } },
@@ -201,7 +204,8 @@ export class AuthRepository implements IAuthRepository {
             data: {
               userId: newUser.id,
               designation: 'Trainee',
-              bio: 'Continuous learning member.',
+              bio: 'MoES / IMD Capacity Building Trainee.',
+              profileCompletion: 20,
             },
           });
         } else if (assignedRole === Role.TRAINER) {
@@ -225,7 +229,7 @@ export class AuthRepository implements IAuthRepository {
             newValues: {
               email: newUser.email,
               role: newUser.role,
-              status: UserStatus.PENDING,
+              status: userStatus,
             },
             ipAddress: data.ipAddress,
             userAgent: data.userAgent,

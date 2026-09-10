@@ -249,6 +249,18 @@ enum NotificationType {
   ANNOUNCEMENT
 }
 
+enum ImportJobStatus {
+  UPLOADED
+  PROCESSING
+  PARSING
+  ANALYZING
+  VALIDATING
+  READY_FOR_REVIEW
+  IMPORTING
+  COMPLETED
+  FAILED
+}
+
 enum AchievementType {
   COURSE_COMPLETION
   ASSESSMENT_EXCELLENCE
@@ -406,6 +418,10 @@ model User {
 
   // AI Skill Gap Analyzer
   skillGapAnalyses      SkillGapAnalysis[]
+
+  // Course Ingestion & Documents
+  uploadedCourseDocuments CourseDocument[]  @relation("UploadedCourseDocuments")
+  trainerImportJobs       CourseImportJob[] @relation("TrainerImportJobs")
 
   @@index([email])
   @@index([organizationId])
@@ -676,6 +692,13 @@ model Course {
   durationMinutes Int              @default(0)
   status          CourseStatus     @default(DRAFT)
   publishedAt     DateTime?
+  overview        String?
+  targetAudience  String?
+  learningOutcomes Json?
+  prerequisitesText String?
+  glossary        Json?
+  references      Json?
+  version         Int              @default(1)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
@@ -708,6 +731,10 @@ model Course {
   recommendationProfile CourseRecommendationProfile?
   recommendationEvents  RecommendationEvent[]
 
+  // Course Ingestion & Documents
+  documents  CourseDocument[]
+  importJobs CourseImportJob[]
+
   @@index([organizationId])
   @@index([trainerId])
   @@index([status])
@@ -727,6 +754,54 @@ model CoursePrerequisite {
   @@index([courseId])
   @@index([prerequisiteCourseId])
   @@map("course_prerequisites")
+}
+
+model CourseDocument {
+  id         String   @id @default(uuid())
+  courseId   String?
+  fileName   String
+  fileType   String   // DOCX or PDF
+  storageKey String
+  fileSize   BigInt?
+  checksum   String?
+  version    Int      @default(1)
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+
+  uploader   User              @relation("UploadedCourseDocuments", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  course     Course?           @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  importJobs CourseImportJob[]
+
+  @@index([courseId])
+  @@index([uploadedBy])
+  @@map("course_documents")
+}
+
+model CourseImportJob {
+  id               String          @id @default(uuid())
+  courseDocumentId String
+  trainerId        String
+  courseId         String?
+  status           ImportJobStatus @default(UPLOADED)
+  progress         Float           @default(0.0)
+  error            String?
+  parserVersion    String          @default("1.0.0")
+  confidenceScore  Float?
+  parsedData       Json?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  document CourseDocument @relation(fields: [courseDocumentId], references: [id], onDelete: Cascade)
+  trainer  User           @relation("TrainerImportJobs", fields: [trainerId], references: [id], onDelete: Restrict)
+  course   Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([courseDocumentId])
+  @@index([trainerId])
+  @@index([courseId])
+  @@index([status])
+  @@map("course_import_jobs")
 }
 
 model CourseModule {
@@ -755,9 +830,12 @@ model Lesson {
   resourceUrl     String?
   durationMinutes Int?
   orderIndex      Int               @default(0)
-  isPreview       Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  isPreview          Boolean           @default(false)
+  learningObjectives Json?
+  keyTakeaways       Json?
+  sourceProvenance   Json?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   module          CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   lessonProgress  LessonProgress[]

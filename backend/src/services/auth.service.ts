@@ -98,11 +98,17 @@ export class AuthService {
       organizationId = defaultOrg.id;
     }
 
+    if (dto.role && dto.role !== Role.TRAINEE) {
+      throw new BadRequestError(
+        'Public self-registration is strictly restricted to Trainee accounts. Trainer and Administrative roles must be provisioned by an administrator.',
+      );
+    }
+
     const passwordHash = await PasswordUtils.hash(dto.password);
     // Public self-registration is strictly restricted to TRAINEE accounts
     const assignedRole = Role.TRAINEE;
 
-    // Create user in PENDING status with no active session
+    // Create user in APPROVED status so trainee can sign in immediately
     const user = await this.authRepository.createPendingUser({
       email: dto.email,
       passwordHash,
@@ -112,6 +118,7 @@ export class AuthService {
       organizationId,
       departmentId: dto.departmentId,
       role: assignedRole,
+      status: UserStatus.APPROVED,
       ipAddress,
       userAgent,
     });
@@ -123,15 +130,14 @@ export class AuthService {
         email: user.email,
       });
 
-      const verificationSubject = 'Verify Your Email — Capacity Connect';
+      const verificationSubject = 'Welcome to Capacity Connect — Verify Your Email';
       const verificationBody = `
         <h2>Welcome to Capacity Connect, ${user.firstName}!</h2>
-        <p>Your registration for the MoES/IMD Digital Capacity Building Portal is currently <strong>PENDING ADMINISTRATIVE APPROVAL</strong>.</p>
-        <p>Please verify your official email address using the following verification token:</p>
+        <p>Your Trainee account for the MoES/IMD Digital Capacity Building Portal is active and ready for login.</p>
+        <p>Please verify your official email address using the following token:</p>
         <div style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 14px; word-break: break-all;">
           ${verificationToken}
         </div>
-        <p style="color: #64748b; font-size: 12px; margin-top: 16px;">This token is valid for 24 hours. Once your email is verified and an administrator approves your account, you will be able to sign in.</p>
       `;
 
       await mailService.sendEmail(user.email, verificationSubject, verificationBody);
@@ -150,9 +156,8 @@ export class AuthService {
 
     const permissions = permissionsMap[user.role] || [];
     return {
-      message:
-        'Registration successful. Your account is pending administrative approval. A verification link has been dispatched to your email.',
-      requiresApproval: true,
+      message: 'Registration successful! You may now sign in with your credentials.',
+      requiresApproval: false,
       user: this.mapToAuthUser(user, permissions),
     };
   }

@@ -7,6 +7,8 @@ import { CourseModuleRepository } from '../repositories/course-module.repository
 import { LessonRepository } from '../repositories/lesson.repository';
 import { CourseStructureService } from '../services/course-structure.service';
 import { CourseStructureController } from '../controllers/course-structure.controller';
+import { CourseImportController } from '../controllers/course-import.controller';
+import { courseDocumentUpload } from '../middlewares/course-document-upload.middleware';
 import { validate } from '../validators/validate.middleware';
 import { authenticate, requirePermission } from '../auth/auth.middleware';
 import {
@@ -25,6 +27,7 @@ import {
 } from '../validators/course-structure.validation';
 import { asyncHandler } from '../errors/async.handler';
 import { Permissions } from '../permissions';
+import { enrollmentController } from './enrollment.routes';
 
 const router = Router();
 
@@ -43,9 +46,36 @@ const courseStructureService = new CourseStructureService(
 
 const courseController = new CourseController(courseService);
 const courseStructureController = new CourseStructureController(courseStructureService);
+const courseImportController = new CourseImportController();
 
 // All course routes require authentication
 router.use(authenticate);
+
+// ── Course Document Import Workflow ───────────────────────────────────────────
+router.post(
+    '/import',
+    requirePermission(Permissions.COURSES_CREATE),
+    courseDocumentUpload.single('file'),
+    asyncHandler(courseImportController.importDocument),
+);
+
+router.get(
+    '/import/:jobId',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseImportController.getJobStatus),
+);
+
+router.get(
+    '/import/:jobId/preview',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseImportController.getJobPreview),
+);
+
+router.post(
+    '/import/:jobId/approve',
+    requirePermission(Permissions.COURSES_CREATE),
+    asyncHandler(courseImportController.approveJob),
+);
 
 // List Courses
 router.get(
@@ -60,6 +90,44 @@ router.get(
     '/:id',
     requirePermission(Permissions.COURSES_READ),
     asyncHandler(courseController.getCourse),
+);
+
+// Course Health Validation
+router.get(
+    '/:id/validate',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseImportController.validateCourse),
+);
+
+// Autosave Draft
+router.patch(
+    '/:id/draft',
+    requirePermission(Permissions.COURSES_UPDATE),
+    asyncHandler(courseImportController.saveDraft),
+);
+
+// Topics & Competency Mappings for Builder
+router.get(
+    '/:id/topics-competencies',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseImportController.getTopicsAndCompetencies),
+);
+
+router.put(
+    '/:id/topics-competencies',
+    requirePermission(Permissions.COURSES_UPDATE),
+    asyncHandler(courseImportController.updateTopicCompetencyMapping),
+);
+
+// Enroll in Course: POST /:id/enroll
+router.post(
+    '/:id/enroll',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(async (req, res, next) => {
+        req.params.courseId = req.params.id;
+        req.body = { ...req.body, courseId: req.params.id };
+        return enrollmentController.enroll(req, res, next);
+    }),
 );
 
 // Create Course
@@ -106,11 +174,11 @@ router.post(
     asyncHandler(courseController.rejectCourse),
 );
 
-// Publish Course
+// Publish Course (with Validation Check)
 router.post(
     '/:id/publish',
     requirePermission(Permissions.COURSES_PUBLISH),
-    asyncHandler(courseController.publishCourse),
+    asyncHandler(courseImportController.publishCourse),
 );
 
 // ── Course Structure Routes ──────────────────────────────────────────────────

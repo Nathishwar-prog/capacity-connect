@@ -21,6 +21,8 @@ function LoginContent() {
     }
   }, [isAuthenticated, user, isInitializing, router]);
 
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 bg-slate-900 text-slate-900 relative selection:bg-indigo-500 selection:text-white overflow-hidden">
       {/* Subtle atmospheric ambient glow */}
@@ -56,11 +58,21 @@ function LoginContent() {
           </p>
         </div>
 
+        {/* Success Notice if just registered */}
+        {registrationSuccess && (
+          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-medium flex items-center gap-2.5 animate-in fade-in">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Account created successfully! Please sign in with your official credentials below.</span>
+          </div>
+        )}
+
         {/* Tab Switcher */}
         <div className="flex p-1 rounded-2xl bg-slate-100 border border-slate-200/80">
           <button
             type="button"
-            onClick={() => setActiveTab('signin')}
+            onClick={() => {
+              setActiveTab('signin');
+            }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'signin'
                 ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
@@ -71,7 +83,10 @@ function LoginContent() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('signup')}
+            onClick={() => {
+              setActiveTab('signup');
+              setRegistrationSuccess(false);
+            }}
             className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'signup'
                 ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
@@ -93,7 +108,8 @@ function LoginContent() {
           ) : (
             <RegisterForm
               onSuccess={() => {
-                router.push('/dashboard/trainee');
+                setRegistrationSuccess(true);
+                setActiveTab('signin');
               }}
             />
           )}

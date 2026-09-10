@@ -18,14 +18,44 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
 
     const restoreSession = async () => {
       try {
-        // Step 1: Exchange HttpOnly refresh cookie for access token
+        const existingToken = useAuthStore.getState().token;
+
+        if (existingToken) {
+          try {
+            const user = await authApi.getMe();
+            if (!isMounted) return;
+
+            setUser({
+              id: user.id,
+              organizationId: user.organizationId,
+              organizationName: user.organizationName,
+              departmentId: user.departmentId,
+              departmentName: user.departmentName,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              status: user.status,
+              permissions: user.permissions,
+              traineeProfile: user.traineeProfile,
+              trainerProfile: user.trainerProfile,
+            });
+
+            queryClient.setQueryData(['currentUser'], user);
+            return;
+          } catch (err: any) {
+            // Token might have expired; continue to try refresh token below
+          }
+        }
+
+        // Exchange HttpOnly refresh cookie for access token
         const refreshResponse = await authApi.refreshToken();
         if (!isMounted) return;
 
         const { accessToken } = refreshResponse;
         setToken(accessToken);
 
-        // Step 2: Fetch authenticated user identity
+        // Fetch authenticated user identity
         const user = await authApi.getMe();
         if (!isMounted) return;
 
@@ -47,10 +77,13 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
 
         // Seed TanStack query cache
         queryClient.setQueryData(['currentUser'], user);
-      } catch (error) {
-        // Unauthenticated or expired session
+      } catch (error: any) {
+        // Only clear session if server explicitly rejects refresh token or unauthenticated
+        const status = error?.response?.status;
         if (isMounted) {
-          logout();
+          if (status === 401 || status === 403 || !useAuthStore.getState().token) {
+            logout();
+          }
         }
       } finally {
         if (isMounted) {

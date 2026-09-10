@@ -1,0 +1,69 @@
+
+ADVANCED SYNOPTIC METEOROLOGY & RADAR ANALYSIS
+Specialized Operations Course
+
+TABLE OF CONTENTS
+Course Overview .................................................... Page 1
+Module 1: Synoptic Weather Systems ................................. Page 2
+  1.1 Frontal Dynamics & Jet Streams ............................... Page 3
+Module 2: Doppler Radar Interpretation ............................. Page 5
+  2.1 Supercell Signatures & Hook Echo Detection ................... Page 6
+Glossary ........................................................... Page 8
+
+COURSE OVERVIEW
+This comprehensive course trains severe weather forecasters on jet stream coupling and Doppler radar mesocyclone detection.
+
+TARGET AUDIENCE
+Operational Aeronautical and Severe Weather Forecasters.
+
+LEARNING OUTCOMES
+• Analyze upper-level jet streaks and ageostrophic circulations.
+• Detect mesocyclones and tornado vortex signatures (TVS) on Doppler velocity products.
+
+MODULE 1: Synoptic Weather Systems
+Covers jet streak dynamics and upper tropospheric divergence.
+
+1.1 Frontal Dynamics & Jet Streams
+OBJECTIVES
+• Identify jet streak quadrants associated with ascent.
+• Evaluate quasi-geostrophic vertical velocity.
+
+Jet streaks induce four-quadrant ageostrophic circulation patterns with divergence in the right entrance and left exit regions.
+
+KEY TAKEAWAYS
+• Right entrance and left exit quadrants favor upward vertical motion.
+
+KNOWLEDGE CHECK
+Question 1: In a straight jet streak, which quadrant exhibits upper-level divergence?
+A) Left entrance
+B) Right entrance *(Correct)*
+C) Right exit
+D) Center axis
+Answer: B
+Explanation: Mass divergence occurs in the right entrance and left exit quadrants due to sub-geostrophic deceleration.
+
+MODULE 2: Doppler Radar Interpretation
+Covers convective storm morphology and radar moments.
+
+2.1 Supercell Signatures & Hook Echo Detection
+OBJECTIVES
+• Identify hook echo and bounded weak echo regions (BWER).
+• Calculate rotational velocity in mesocyclones.
+
+Supercell thunderstorms exhibit persistent rotating updrafts identifiable by velocity couplets and cyclonic shear.
+
+KEY TAKEAWAYS
+• Hook echoes indicate precipitation wrapped around the rotating updraft.
+
+KNOWLEDGE CHECK
+Question 2: A bounded weak echo region (BWER) in a supercell thunderstorm is created by:
+A) Strong downdraft evaporating hydrometeors
+B) Intense updraft suspending precipitation aloft *(Correct)*
+C) Complete radar beam attenuation
+D) Ground clutter interference
+Answer: B
+Explanation: Strong updrafts prevent large precipitation particles from descending, leaving a low-reflectivity core surrounded by echo aloft.
+
+GLOSSARY
+BWER: Bounded Weak Echo Region.
+Mesocyclone: A cyclonically rotating vortex in a convective storm.

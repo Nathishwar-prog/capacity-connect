@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-09-09T09:19:01.219Z",
+  "organization": "Ministry of Earth Sciences & India Meteorological Department",
+  "environment": "development",
+  "summary": {
+    "users": 21,
+    "courses": 14,
+    "topics": 37,
+    "competencies": 8,
+    "dependencies": 32,
+    "questions": 25,
+    "learningEvents": 149,
+    "enrollments": 6,
+    "skillGaps": 24,
+    "recommendations": 40,
+    "userTopicCompetencies": 40
+  },
+  "distributions": {
+    "totalEvents": 149,
+    "correctEvents": 119,
+    "incorrectEvents": 30,
+    "accuracyRatePercentage": 80,
+    "hintUsagePercentage": 31,
+    "personaCoverage": [
+      {
+        "code": "LEARNER_A",
+        "persona": "STRONG_BEGINNER",
+        "email": "learner-a@imd.gov.in",
+        "expectedBehavior": "Strong fundamentals, low evidence count, moderate confidence, diagnostic recommendations for advanced domains."
+      },
+      {
+        "code": "LEARNER_B",
+        "persona": "WEAK_FUNDAMENTALS",
+        "email": "learner-b@imd.gov.in",
+        "expectedBehavior": "Root prerequisite weakness detection: system identifies Atmospheric Stability as upstream blocker and prioritizes fundamental remediation."
+      },
+      {
+        "code": "LEARNER_C",
+        "persona": "STRONG_OBSERVER",
+        "email": "learner-c@imd.gov.in",
+        "expectedBehavior": "Recommendations must focus on NWP, Radar, and Forecasting courses to bridge operational forecasting gap."
+      },
+      {
+        "code": "LEARNER_D",
+        "persona": "STRONG_FORECASTER",
+        "email": "learner-d@imd.gov.in",
+        "expectedBehavior": "Recommendations must focus on instrumentation, sensor calibration, and data quality assurance."
+      },
+      {
+        "code": "LEARNER_E",
+        "persona": "FORGETTING_RISK",
+        "email": "learner-e@imd.gov.in",
+        "expectedBehavior": "Competency score remains reasonable, but retention decays and forgetting risk elevates (F > 0.60); revision engine schedules spaced retrieval."
+      },
+      {
+        "code": "LEARNER_F",
+        "persona": "HIGH_SCORE_LOW_CONFIDENCE",
+        "email": "learner-f@imd.gov.in",
+        "expectedBehavior": "System must NOT assume mastery; confidence score remains low (< 0.40); prompts diagnostic verification rather than advanced promotion."
+      },
+      {
+        "code": "LEARNER_G",
+        "persona": "HINT_DEPENDENCY",
+        "email": "learner-g@imd.gov.in",
+        "expectedBehavior": "Accuracy is high (> 85%), but independence score is heavily penalized; competency score is noticeably lower than independent Learner J."
+      },
+      {
+        "code": "LEARNER_H",
+        "persona": "SLOW_BUT_ACCURATE",
+        "email": "learner-h@imd.gov.in",
+        "expectedBehavior": "Solid competency, but speedScore is reduced; treated as competent but deliberate learner."
+      },
+      {
+        "code": "LEARNER_I",
+        "persona": "RECENTLY_FAILED",
+        "email": "learner-i@imd.gov.in",
+        "expectedBehavior": "Urgent remediation required; recent consecutive failures escalate priority and override cooldown suppression."
+      },
+      {
+        "code": "LEARNER_J",
+        "persona": "WELL_MASTERED",
+        "email": "learner-j@imd.gov.in",
+        "expectedBehavior": "High competency (> 90), high confidence (> 0.85), low revision priority, long review interval, maintain/challenge mode."
+      },
+      {
+        "code": "LEARNER_K",
+        "persona": "MIXED_PROFILE",
+        "email": "learner-k@imd.gov.in",
+        "expectedBehavior": "Personalized recommendations tailored to her specific skill gaps rather than globally popular generic courses."
+      },
+      {
+        "code": "LEARNER_L",
+        "persona": "COLD_START",
+        "email": "learner-l@imd.gov.in",
+        "expectedBehavior": "Cold start handling: recommended foundational/beginner diagnostic assessments rather than aggressive advanced courses."
+      }
+    ]
+  }
+}

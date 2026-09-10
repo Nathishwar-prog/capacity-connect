@@ -25,9 +25,9 @@ describe('ResourceService Integration & Unit Test Suite', () => {
 
     // Fetch canonical seed users
     const [adminUser, trainerUser, traineeUser] = await Promise.all([
-      prisma.user.findUnique({ where: { email: 'admin@enterprise.com' } }),
-      prisma.user.findUnique({ where: { email: 'alex.trainer@enterprise.com' } }),
-      prisma.user.findUnique({ where: { email: 'user@enterprise.com' } }),
+      prisma.user.findFirst({ where: { OR: [{ email: 'admin@enterprise.com' }, { role: Role.ADMIN }] } }),
+      prisma.user.findFirst({ where: { OR: [{ email: 'alex.trainer@enterprise.com' }, { role: Role.TRAINER }] } }),
+      prisma.user.findFirst({ where: { OR: [{ email: 'user@enterprise.com' }, { role: Role.TRAINEE }] } }),
     ]);
 
     if (!adminUser || !trainerUser || !traineeUser) {

@@ -463,6 +463,17 @@ export class AssessmentService {
             answers: processedAnswers,
         });
 
+        // Trigger Learning Intelligence Pipeline:
+        // AssessmentAttempt -> LearningEvents -> TopicCompetency -> MemoryStability ->
+        // ErrorPatterns -> GroupAggregation -> CompetencyResults -> SkillGapUpdate
+        try {
+            const { learningPipelineService } = await import('./learning-pipeline.service');
+            await learningPipelineService.processAssessmentSubmission(finalizedAttempt.id, userId);
+        } catch (pipelineErr) {
+            const logger = (await import('../logger/winston.logger')).default;
+            logger.error(`Error in learning intelligence pipeline for attempt ${attemptId}:`, pipelineErr);
+        }
+
         return {
             result: {
                 attemptId: finalizedAttempt.id,

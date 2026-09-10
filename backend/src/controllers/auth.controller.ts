@@ -110,7 +110,7 @@ export class AuthController {
    * Returns safe account details from validated JWT session.
    */
   public getMe = async (req: Request, res: Response): Promise<Response> => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user?.userId || (req as any).user?.id;
     const user = await this.authService.getMe(userId);
 
     return ResponseHelper.success({
@@ -159,7 +159,7 @@ export class AuthController {
   };
 
   public submitTraineeOnboarding = async (req: Request, res: Response): Promise<Response> => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user?.userId || (req as any).user?.id;
     const updatedUser = await this.authService.submitTraineeOnboarding(userId, req.body);
 
     return ResponseHelper.success({

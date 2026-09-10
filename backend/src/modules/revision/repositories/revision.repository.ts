@@ -316,6 +316,7 @@ export class RevisionRepository {
     previousCompetency?: number;
     newCompetency?: number;
     metadata?: any;
+    occurredAt?: Date;
   }) {
     return prisma.learningEvent.create({
       data: {
@@ -339,6 +340,7 @@ export class RevisionRepository {
         previousCompetency: data.previousCompetency,
         newCompetency: data.newCompetency,
         metadata: data.metadata,
+        occurredAt: data.occurredAt ?? new Date(),
       },
     });
   }

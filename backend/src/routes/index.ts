@@ -14,6 +14,10 @@ import assessmentRouter from './assessment.routes';
 import revisionRouter from '../modules/revision/routes/revision.routes';
 import skillGapRouter from '../modules/skill-gap/routes/skill-gap.routes';
 import recommendationRouter from '../modules/recommendation/routes/recommendation.routes';
+import topicRouter from './topic.routes';
+import { revisionSessionRouter } from './revision-session.routes';
+import { learningEventRouter } from './learning-event.routes';
+import { analyticsRouter } from './analytics.routes';
 
 const router = Router();
 
@@ -175,7 +179,11 @@ router.use('/trainer', trainerRouter);
 router.use('/trainee', traineeRouter);
 router.use('/assessments', assessmentRouter);
 router.use('/revision', revisionRouter);
+router.use('/revision-sessions', revisionSessionRouter);
+router.use('/learning-events', learningEventRouter);
+router.use('/topics', topicRouter);
 router.use('/skill-gaps', skillGapRouter);
 router.use('/recommendations', recommendationRouter);
+router.use('/analytics', analyticsRouter);
 
 export default router;

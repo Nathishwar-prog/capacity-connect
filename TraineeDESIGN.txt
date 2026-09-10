@@ -1,0 +1,1733 @@
+Act as a Senior Product Designer, UX Architect, Learning Experience Designer, Frontend Architect and Design-System Engineer.
+
+You are redesigning the complete Trainee / Learner experience of Capacity Connect.
+
+Capacity Connect is a digital capacity-building and learning management platform for MoES / IMD, supporting:
+
+Trainees
+Trainers
+Competency development
+Courses
+Learning resources
+Assessments
+Skill-gap analysis
+Adaptive revision
+Recommendations
+Trainer matching
+Learning progress
+AI-assisted learning
+
+The trainee interface must feel like a professional institutional learning platform, not a generic LMS template.
+
+The existing application already contains backend, database, authentication, RBAC, APIs and frontend pages.
+
+CRITICAL RULE
+
+DO NOT rebuild the application from scratch.
+
+First inspect the existing implementation.
+
+Understand:
+
+Existing routes
+Existing trainee pages
+Existing components
+API endpoints
+Database models
+Prisma schema
+Authentication
+RBAC
+Existing trainee workflows
+Existing learning data
+Existing competency data
+Existing assessment data
+Existing revision functionality
+
+Then redesign the UI/UX around the existing functionality.
+
+Do not break working functionality.
+
+1. PRIMARY DESIGN GOAL
+
+Transform the current trainee portal into:
+
+A personalized learning command center that clearly tells the trainee what to learn, why it matters, what needs attention, and what to do next.
+
+When a trainee opens the platform, within 5 seconds they should understand:
+
+What am I currently learning?
+
+What should I do next?
+
+How much progress have I made?
+
+Which competencies are strong?
+
+Which competencies need improvement?
+
+Do I have any assessments pending?
+
+What should I revise?
+
+What courses/resources are recommended?
+
+Who is my assigned trainer?
+
+What achievements have I earned?
+
+The interface should reduce cognitive load.
+
+Do not make the trainee search through multiple cards to figure out their next action.
+
+2. CURRENT TRAINEE SCREEN — PROBLEMS TO ADDRESS
+
+The current dashboard has good functional coverage, but redesign it substantially.
+
+Current page contains:
+
+Learning workspace
+Continue learning
+Course statistics
+Active courses
+Up Next
+Capacity building journey
+Competencies
+Skill gaps
+Assessments
+Learning resources
+Recommendations
+Assigned instructor
+Achievements
+Recent activity
+AI insights
+Smart revision
+Learning assistant
+
+This is valuable information, but it currently becomes a very long vertical page with too many similarly styled cards.
+
+Fix this by establishing a strong priority hierarchy.
+
+The page should answer:
+
+Priority 1
+
+What should I do now?
+
+Priority 2
+
+How am I progressing?
+
+Priority 3
+
+What needs improvement?
+
+Priority 4
+
+What can help me improve?
+
+Priority 5
+
+What have I achieved?
+
+3. TRAINEE DESIGN LANGUAGE
+
+The trainee UI should share the same overall Capacity Connect design system as Admin:
+
+clean
+institutional
+modern
+professional
+accessible
+restrained
+consistent
+
+But introduce a slightly more learning-oriented visual language.
+
+Use:
+
+Primary
+Indigo / Royal Blue
+
+Learning
+Blue
+
+Competency
+Green
+
+Revision
+Purple
+
+Assessment
+Amber
+
+Critical skill gap
+Red
+
+Neutral
+Cool gray
+
+Do not use excessive gradients.
+
+Do not make every card colorful.
+
+Color should communicate meaning.
+
+4. TRAINEE APPLICATION SHELL
+
+Create a consistent trainee shell.
+
+┌──────────────────────────────────────────────────────────────┐
+│ Capacity Connect     Search      Notifications     Profile  │
+├──────────────┬───────────────────────────────────────────────┤
+│              │                                               │
+│ NAVIGATION   │                PAGE CONTENT                    │
+│              │                                               │
+│              │                                               │
+└──────────────┴───────────────────────────────────────────────┘
+
+The current trainee sidebar should be redesigned into clear groups.
+
+5. TRAINEE SIDEBAR
+
+Use:
+
+WORKSPACE
+TRAINEE
+
+OVERVIEW
+
+▦ Dashboard
+
+LEARNING
+
+📖 My Learning
+🔄 Adaptive Revision
+📚 Course Catalog
+📂 Learning Resources
+📝 Assessments
+
+DEVELOPMENT
+
+◎ My Competencies
+⚠ Skill Gaps
+✨ AI Recommendations
+🏆 Achievements
+
+SUPPORT
+
+👨‍🏫 My Trainers
+💬 Feedback
+🤖 Learning Assistant
+
+ACCOUNT
+
+👤 My Profile
+⚙ Learning Preferences
+
+Use Lucide React icons consistently.
+
+Do not use random icon libraries.
+
+6. ACTIVE NAVIGATION
+
+The active page must be immediately recognizable.
+
+Example:
+
+┌──────────────────────────────┐
+│ ◉  Dashboard                 │
+└──────────────────────────────┘
+
+Use:
+
+subtle tinted background
+primary text
+small active indicator
+icon emphasis
+
+Do not use a giant bright border.
+
+7. COLLAPSIBLE SIDEBAR
+
+Desktop:
+
+Expanded
+Icon + Label
+
+Collapsed:
+
+Icon only
+
+Add tooltips.
+
+Remember sidebar state.
+
+Mobile:
+
+Drawer navigation
+8. TRAINEE HEADER
+
+The header should contain:
+
+Breadcrumb
+
+Search
+Notifications
+Help / Assistant
+Profile
+
+Example:
+
+Learner
+›
+My Learning
+
+Never show incorrect contexts such as:
+
+Trainer
+›
+Training Command Center
+
+on trainee pages.
+
+9. TRAINEE DASHBOARD REDESIGN
+
+Redesign the dashboard completely.
+
+Use this structure:
+
+PAGE HEADER
+↓
+TODAY'S LEARNING ACTION
+↓
+PROGRESS SUMMARY
+↓
+CURRENT LEARNING
+↓
+UP NEXT
+↓
+COMPETENCY & SKILL HEALTH
+↓
+ASSESSMENTS
+↓
+RECOMMENDATIONS / REVISION
+↓
+TRAINER
+↓
+ACHIEVEMENTS
+↓
+RECENT ACTIVITY
+
+Do NOT make every section equally prominent.
+
+10. PERSONALIZED WELCOME HEADER
+
+Instead of a generic oversized heading:
+
+Good morning, Kavita Nair
+
+use:
+
+Good morning, Kavita
+
+Continue your learning journey
+and strengthen your meteorological competencies.
+
+[Continue Learning]
+[Explore Courses]
+
+Below it:
+
+Meteorologist Grade-I
+Hydrology & Flash Flood
+Meteorological Division
+
+Use real profile data.
+
+Do not hardcode trainee information.
+
+11. "WHAT TO DO NEXT" HERO
+
+This should be the most important component on the trainee dashboard.
+
+Example:
+
+┌─────────────────────────────────────────────────────────────┐
+│ CONTINUE LEARNING                                          │
+│                                                             │
+│ Seismological Data Processing & Earthquake Hazard          │
+│ Monitoring                                                  │
+│                                                             │
+│ Module 1 · National Seismological Network                  │
+│                                                             │
+│ Progress                                                    │
+│ ███████████████████░░░░ 72%                                │
+│                                                             │
+│ Last activity: 2 days ago                                  │
+│                                                             │
+│                    [Resume Learning →]                      │
+└─────────────────────────────────────────────────────────────┘
+
+Only show this if the trainee actually has an active course.
+
+If there is no active course:
+
+You're ready to start learning.
+
+Explore the course catalog and choose your next
+capacity-building pathway.
+
+[Explore Courses]
+12. NEXT ACTION ENGINE
+
+The dashboard should intelligently prioritize:
+
+Continue lesson
+↓
+Complete assessment
+↓
+Revision recommended
+↓
+Skill gap remediation
+↓
+Explore recommended course
+
+The trainee should not need to decide what to do from 15 equal cards.
+
+Create a single:
+
+Recommended Next Step
+
+component.
+
+Example:
+
+Recommended next step
+
+Revise Percentage Increase & Decrease
+
+Your recent assessment indicates this competency
+needs reinforcement.
+
+Reason:
+Competency 42/100
+Forgetting risk: High
+
+[Start Revision]
+
+The revision engine architecture explicitly supports explainable recommendations using weakness, forgetting risk, importance, dependency impact, uncertainty and recency. Use those signals when available rather than showing a generic "AI recommendation."
+
+13. PROGRESS SUMMARY
+
+Create a compact learning overview:
+
+Your Progress
+
+Courses
+3 enrolled
+
+In Progress
+2
+
+Completed
+1
+
+Overall Progress
+30%
+
+Competency Coverage
+78%
+
+Each metric should be clickable.
+
+14. MY LEARNING PAGE
+
+Redesign this as the trainee's central learning workspace.
+
+Top:
+
+My Learning
+
+Continue where you left off and manage
+your active learning pathways.
+
+[Search]
+
+[All]
+[In Progress]
+[Completed]
+[Not Started]
+
+Course cards should contain:
+
+Course title
+Domain
+Level
+Trainer
+Progress
+Modules
+Last activity
+Estimated time
+Status
+
+Example:
+
+┌───────────────────────────────────────────────┐
+│ INTERMEDIATE · Seismology                    │
+│                                               │
+│ Seismological Data Processing                │
+│ & Earthquake Hazard Monitoring                │
+│                                               │
+│ Progress                              72%    │
+│ ███████████████████░░░                       │
+│                                               │
+│ 6 / 8 lessons                                 │
+│ Last activity · Yesterday                     │
+│                                               │
+│ [Continue Learning →]                         │
+└───────────────────────────────────────────────┘
+15. COURSE DETAIL PAGE
+
+Create a proper learning course overview.
+
+Structure:
+
+Course Header
+↓
+Course Progress
+↓
+Learning Objectives
+↓
+Modules
+↓
+Lessons
+↓
+Assessments
+↓
+Resources
+↓
+Competencies
+↓
+Trainer
+
+Example:
+
+Seismological Data Processing
+
+Intermediate
+Seismology
+
+72% complete
+
+8 Modules
+24 Lessons
+2 Assessments
+
+Competencies developed:
+• Seismic data interpretation
+• Earthquake hazard assessment
+• Observation techniques
+16. MODULE / LESSON EXPERIENCE
+
+The actual learning page should be distraction-free.
+
+Layout:
+
+┌──────────────┬─────────────────────────────────────┐
+│ COURSE       │                                     │
+│ CONTENT      │       LESSON CONTENT                │
+│              │                                     │
+│ ✓ Lesson 1   │       Video / Text / PDF            │
+│ ✓ Lesson 2   │                                     │
+│ ● Lesson 3   │                                     │
+│ ○ Lesson 4   │                                     │
+│              │                                     │
+│              │                                     │
+│              │ [Previous] [Complete & Continue]   │
+└──────────────┴─────────────────────────────────────┘
+
+The learner should always know:
+
+Where am I?
+What have I completed?
+What comes next?
+17. COURSE PROGRESS
+
+Do not only show:
+
+30%
+
+Explain it:
+
+30% complete
+
+3 of 10 modules
+8 of 24 lessons
+1 of 3 assessments
+
+This gives the trainee a meaningful sense of progress.
+
+18. ADAPTIVE REVISION PAGE
+
+This should be one of the platform's strongest trainee pages.
+
+Do NOT make it look like a generic "AI study page."
+
+Header:
+
+Adaptive Revision
+
+Your personalized revision plan based on
+your competency, recent performance and learning history.
+
+[Start Recommended Revision]
+
+Then:
+
+Today's Revision
+
+3 topics recommended
+~20 minutes
+19. REVISION PRIORITY CARDS
+
+Example:
+
+HIGH PRIORITY
+
+Percentage Increase & Decrease
+
+Competency
+42 / 100
+
+Forgetting Risk
+High
+
+Importance
+High
+
+Prerequisite impact
+High
+
+Recommended mode
+Rebuild
+
+[Start Revision]
+
+Use a small expandable:
+
+Why am I seeing this?
+
+Then:
+
+This topic was prioritized because your competency
+is low and recent learning evidence suggests that
+retention may be declining.
+
+The technical revision design explicitly requires every recommendation to carry machine-readable/explainable reasons.
+
+20. REVISION MODES
+
+Visually distinguish:
+
+Recovery
+Rebuild
+Strengthen
+Retrieve
+Maintain
+Challenge
+
+Based on competency level.
+
+For example:
+
+42 / 100
+REBUILD
+
+The revision architecture defines these modes based on competency ranges, so use those concepts consistently.
+
+21. COURSE CATALOG
+
+Create a proper discovery experience.
+
+Header:
+
+Course Catalog
+
+Explore capacity-building programs aligned
+with your role and competency development.
+
+[Search courses]
+
+Filters:
+
+Domain
+Level
+Duration
+Competency
+Status
+
+Cards:
+
+Course
+Domain
+Difficulty
+Duration
+Competencies
+Trainer
+Enrollment
+
+Add:
+
+Recommended for you
+
+but only when recommendations are backed by actual data.
+
+22. LEARNING RESOURCES
+
+Create a searchable resource library.
+
+Resource types:
+
+PDF
+Video
+Article
+Reference
+Practice Material
+Guideline
+
+Use filters.
+
+Example:
+
+Learning Resources
+
+[Search resources...]
+
+[All] [Videos] [Documents] [Practice]
+
+┌─────────────────────────────────┐
+│ PDF                             │
+│ Meteorological Observation      │
+│ Guidelines                      │
+│                                 │
+│ Atmospheric Observation         │
+│ 18 min read                     │
+│                                 │
+│ [Open Resource →]               │
+└─────────────────────────────────┘
+23. ASSESSMENTS PAGE
+
+Make assessment status extremely clear.
+
+Assessments
+
+Pending
+In Progress
+Completed
+
+Cards/table:
+
+Assessment
+Course
+Type
+Due
+Score
+Status
+Action
+
+Status:
+
+Not Started
+In Progress
+Submitted
+Passed
+Needs Review
+Failed
+
+Do not use only color.
+
+24. ASSESSMENT DETAIL
+
+Show:
+
+Assessment Overview
+
+Course
+Assessment type
+Questions
+Time limit
+Attempts
+Passing score
+
+Before starting:
+
+[Start Assessment]
+
+During assessment:
+
+Question 4 of 20
+
+██████████████░░░░░░
+
+Question
+
+...
+
+[Previous]       [Next]
+
+Keep the interface focused.
+
+25. ASSESSMENT RESULTS
+
+Show:
+
+Assessment Result
+
+82%
+
+Passed
+
+Correct answers
+41 / 50
+
+Time
+34 min
+
+Competency impact
+
+Then:
+
+Areas to strengthen
+
+Data Interpretation
+58%
+
+Forecasting
+64%
+
+Provide:
+
+[Start Recommended Revision]
+26. MY COMPETENCIES PAGE
+
+This should be visually excellent.
+
+Header:
+
+My Competencies
+
+Track your development against
+IMD / WMO operational competency requirements.
+
+Summary:
+
+Overall Competency
+74%
+
+Strong
+8
+
+Developing
+4
+
+Needs Attention
+2
+
+Then competency matrix.
+
+27. COMPETENCY DETAIL
+
+Example:
+
+Atmospheric Observation
+
+Competency
+74 / 100
+
+██████████████████░░░░
+
+Confidence
+High
+
+Recent performance
+Strong
+
+Last assessed
+Sep 8, 2026
+
+Then:
+
+Evidence
+
+Quiz performance
+Practice
+Assessment
+Revision
+
+Remember that competency and confidence are separate concepts in the revision architecture. Do not represent confidence as simply another mastery score.
+
+28. SKILL GAPS
+
+Create a clear skill-gap dashboard.
+
+Skill Gaps
+
+2 competencies require attention
+
+HIGH PRIORITY
+Percentage
+42 / 100
+
+MEDIUM
+Data Interpretation
+58 / 100
+
+For each:
+
+Why this matters
+What to learn
+Recommended course
+Recommended revision
+
+Example:
+
+Skill Gap
+
+Percentage Increase & Decrease
+
+Current competency
+42%
+
+Target
+75%
+
+Gap
+33 points
+
+Recommended:
+1. Review Basic Calculations
+2. Complete Percentage lesson
+3. Attempt diagnostic questions
+4. Complete targeted revision
+
+This connects the entire learning journey.
+
+29. AI RECOMMENDATIONS
+
+Avoid generic cards saying:
+
+AI recommends...
+
+Instead create explainable recommendations.
+
+Example:
+
+Recommended for you
+
+Weather Forecast Verification
+
+Why:
+Matches your role
++
+Supports a competency you're developing
++
+Builds on your current course
+
+[View Course]
+
+Recommendations should be explainable.
+
+30. ACHIEVEMENTS
+
+Create a clean achievement page.
+
+Achievements
+
+3 / 12 earned
+
+Learning Milestones
+Competency Milestones
+Assessment Milestones
+
+Earned:
+
+✓ First Course Completed
+✓ Assessment Excellence
+✓ Atmospheric Observation
+
+Locked:
+
+○ Complete 3 courses
+○ Reach 80% competency
+
+Do not make this childish/gamified.
+
+This is a government professional development platform.
+
+31. MY TRAINERS
+
+Create trainer relationship page.
+
+My Trainers
+
+Assigned Instructor
+
+Dr. E. N. Rajagopal
+
+Senior Scientist
+NWP Systems Lead
+
+Meteorological Training
+
+[View Profile]
+[Contact]
+
+Then:
+
+Training Areas
+Current Courses
+Recent Feedback
+Upcoming Sessions
+32. FEEDBACK
+
+Create structured feedback.
+
+Training Feedback
+
+Course
+Trainer
+Learning experience
+Content quality
+Assessment quality
+Resources
+
+Use rating controls and comments.
+
+Avoid making the page feel like a consumer review site.
+
+33. LEARNING ASSISTANT
+
+Create a dedicated AI assistant experience.
+
+Do not make it visually overwhelming.
+
+Learning Assistant
+
+Ask questions about your
+courses, learning resources and competencies.
+
+────────────────────────
+
+How can I help?
+
+[Ask a question...]
+
+Suggested:
+• Explain this concept
+• Help me revise
+• Explain my skill gap
+• Summarize this lesson
+
+The assistant should clearly communicate its scope.
+
+34. MY PROFILE
+
+Redesign profile with:
+
+Personal Information
+Institution
+Role
+Department
+Contact
+Learning Preferences
+Security
+Activity
+
+Do not expose unnecessary technical permissions to trainees.
+
+35. TRAINEE SETUP / ONBOARDING
+
+Create a proper setup flow if the application supports trainee setup.
+
+Steps:
+
+1. Profile
+2. Institution
+3. Role / Domain
+4. Learning Goals
+5. Diagnostic Assessment
+6. Recommended Learning Path
+
+Use a stepper.
+
+Do not overwhelm a new user with the complete dashboard before setup is finished.
+
+36. LEARNING JOURNEY
+
+Make the trainee journey visible.
+
+Instead of a tiny horizontal strip, use a clear journey:
+
+Course Enrolled
+      ↓
+Modules
+      ↓
+Lessons
+      ↓
+Practice
+      ↓
+Assessment
+      ↓
+Competency
+      ↓
+Skill Gap
+      ↓
+Adaptive Revision
+      ↓
+Improvement
+      ↓
+Certification / Achievement
+
+This is the central product experience.
+
+37. "TODAY" EXPERIENCE
+
+Consider a compact dashboard section:
+
+Today's Learning
+
+20 min recommended
+
+1. Continue Seismological Data Processing
+   12 min
+
+2. Revise Percentage
+   5 min
+
+3. Complete retrieval check
+   3 min
+
+This gives the trainee a simple daily plan.
+
+38. DATA VISUALIZATION
+
+Use charts only where useful.
+
+Recommended:
+
+Competency progress
+
+Line chart.
+
+Course progress
+
+Progress bars.
+
+Assessment performance
+
+Bar chart.
+
+Learning activity
+
+Weekly activity chart.
+
+Skill gaps
+
+Horizontal bars.
+
+Revision effectiveness
+
+Before vs after competency.
+
+Avoid:
+
+3D charts
+unnecessary pie charts
+decorative charts
+charts with unreadable labels
+39. RESPONSIVE DESIGN
+
+The trainee experience must be excellent on:
+
+1440px
+1280px
+1024px
+768px
+390px
+
+Mobile should not simply be the desktop layout compressed.
+
+Mobile order:
+
+Welcome
+↓
+Next Action
+↓
+Progress
+↓
+Current Learning
+↓
+Skill Health
+↓
+Assessments
+↓
+Recommendations
+40. LOADING STATES
+
+Every dynamic section needs skeleton loading.
+
+Never show a blank page while APIs load.
+
+Use:
+
+Card skeleton
+Table skeleton
+Chart skeleton
+Profile skeleton
+Course skeleton
+41. EMPTY STATES
+
+Examples:
+
+No courses
+No courses enrolled yet
+
+Explore the catalog to begin your
+capacity-building journey.
+
+[Explore Courses]
+No skill gaps
+You're on track
+
+No significant competency gaps
+have been identified.
+
+Keep learning and practicing.
+No achievements
+Your achievements will appear here
+as you complete courses and milestones.
+42. ERROR STATES
+
+Never show raw API errors.
+
+Example:
+
+Unable to load your learning progress
+
+Please try again.
+
+[Retry]
+43. NOTIFICATION SYSTEM
+
+Create trainee-specific notifications:
+
+Assessment due
+Course updated
+Revision recommended
+Trainer feedback received
+New resource available
+Competency updated
+Achievement earned
+44. GLOBAL SEARCH
+
+Search across:
+
+Courses
+Lessons
+Resources
+Competencies
+Assessments
+Trainers
+
+Use command-palette behavior if appropriate.
+
+45. DATA INTEGRITY
+
+This is extremely important.
+
+Do not use fake trainee analytics.
+
+Do not hardcode:
+
+30%
+74%
+78%
+3 courses
+2 skill gaps
+
+unless these values come from the real backend.
+
+Use:
+
+Database
+↓
+API
+↓
+Frontend
+
+as the source of truth.
+
+46. BACKEND INTEGRATION
+
+Before implementing UI:
+
+Inspect all available APIs for:
+
+courses
+enrollments
+lessons
+progress
+assessments
+competencies
+skill gaps
+revision plans
+learning events
+resources
+trainers
+achievements
+feedback
+recommendations
+notifications
+
+Connect the UI to those APIs.
+
+Do not create fake APIs.
+
+Do not modify backend contracts unless necessary.
+
+If a required metric is not available:
+
+Design a graceful UI state rather than inventing data.
+
+47. PERFORMANCE
+
+The trainee dashboard may contain many sections.
+
+Do not load everything simultaneously if unnecessary.
+
+Use:
+
+lazy loading
+caching
+optimized API calls
+skeleton loading
+pagination
+debounced search
+code splitting
+
+Prioritize:
+
+Next Action
+Progress
+Current Course
+
+before secondary analytics.
+
+48. ACCESSIBILITY
+
+Implement:
+
+WCAG-conscious contrast
+keyboard navigation
+visible focus
+semantic HTML
+accessible dialogs
+accessible tabs
+accessible forms
+accessible progress indicators
+accessible status labels
+
+Do not rely only on color.
+
+49. MICROINTERACTIONS
+
+Add subtle interactions:
+
+Card hover
+Progress animation
+Button feedback
+Course completion animation
+Achievement reveal
+Drawer transition
+Tab transition
+Toast feedback
+
+Keep animations subtle:
+
+150–250ms
+
+Do not create distracting animations.
+
+50. COMPONENT ARCHITECTURE
+
+Build reusable components:
+
+TraineeLayout
+TraineeSidebar
+TraineeHeader
+PageHeader
+LearningHero
+NextActionCard
+ProgressCard
+CourseCard
+CourseProgress
+ModuleList
+LessonNavigation
+CompetencyCard
+CompetencyBar
+SkillGapCard
+RevisionCard
+AssessmentCard
+RecommendationCard
+TrainerCard
+AchievementCard
+ActivityFeed
+ResourceCard
+EmptyState
+ErrorState
+Skeleton
+NotificationCenter
+
+Avoid duplicate UI implementations.
+
+51. DESIGN CONSISTENCY
+
+All trainee pages must use the same:
+
+Typography
+Spacing
+Colors
+Buttons
+Cards
+Badges
+Tables
+Tabs
+Dialogs
+Icons
+Progress indicators
+
+Do not let every page develop its own design language.
+
+52. ROUTE AUDIT
+
+This is mandatory.
+
+Inspect every trainee navigation route.
+
+Create a route matrix:
+
+Dashboard
+My Learning
+Adaptive Revision
+Course Catalog
+Learning Resources
+Assessments
+My Competencies
+Skill Gaps
+AI Recommendations
+Achievements
+My Trainers
+Feedback
+Learning Assistant
+My Profile
+Learning Preferences
+
+For EVERY route verify:
+
+Route exists
+Page exists
+Authentication works
+Trainee RBAC works
+API works
+Refresh works
+Direct URL works
+Back navigation works
+Mobile works
+Loading works
+Empty state works
+Error state works
+
+There must be:
+
+ZERO accidental 404 pages.
+
+53. AUTHENTICATION
+
+An authenticated trainee must not randomly be redirected to login.
+
+Audit:
+
+JWT/session persistence
+middleware
+protected routes
+token refresh
+role validation
+API authorization
+
+If session expires legitimately:
+
+Your session has expired.
+
+Please sign in again to continue.
+
+[Sign in]
+
+Never silently redirect the user.
+
+54. ROLE ISOLATION
+
+The trainee must never accidentally see:
+
+Admin navigation
+Admin controls
+Trainer controls
+Administrative permissions
+
+Frontend visibility should reflect RBAC, while backend authorization remains the final authority.
+
+55. TRAINEE DASHBOARD FINAL LAYOUT
+
+Use approximately this structure:
+
+┌─────────────────────────────────────────────────────────────┐
+│ HEADER                                                      │
+├──────────────┬──────────────────────────────────────────────┤
+│              │                                              │
+│ SIDEBAR      │ Good morning, Kavita                        │
+│              │                                              │
+│              │ ┌──────────────────────────────────────────┐ │
+│              │ │ RECOMMENDED NEXT STEP                    │ │
+│              │ │ Continue learning / revision             │ │
+│              │ │                         [Start →]         │ │
+│              │ └──────────────────────────────────────────┘ │
+│              │                                              │
+│              │ Progress Summary                              │
+│              │ ┌──────┬──────┬──────┬──────┐               │
+│              │ │  3   │  2   │  1   │ 30%  │               │
+│              │ └──────┴──────┴──────┴──────┘               │
+│              │                                              │
+│              │ Current Learning       │ Up Next             │
+│              │                         │                    │
+│              │ Competency Health      │ Today's Learning    │
+│              │                         │                    │
+│              │ Skill Gaps             │ Assessments         │
+│              │                         │                    │
+│              │ Recommendations        │ Trainer             │
+│              │                         │                    │
+│              │ Achievements / Activity                      │
+└──────────────┴──────────────────────────────────────────────┘
+56. IMPORTANT — DO NOT COPY THE ADMIN UI
+
+The trainee interface should share the same design system, but the information architecture must be learner-centric.
+
+Admin asks:
+
+What is happening across the institution?
+
+Trainer asks:
+
+How are my trainees performing?
+
+Trainee asks:
+
+What should I learn next?
+
+Design accordingly.
+
+57. UX PRINCIPLE
+
+Every trainee page should answer:
+
+WHERE AM I?
+
+Breadcrumb + page title.
+
+WHY AM I HERE?
+
+Short description.
+
+WHAT SHOULD I DO?
+
+Primary CTA.
+
+HOW AM I DOING?
+
+Progress / competency.
+
+WHAT NEXT?
+
+Recommended next action.
+
+58. VISUAL HIERARCHY RULE
+
+Do not make 15 cards equally important.
+
+Use:
+
+Level 1
+Primary learning action
+
+Level 2
+Progress and current learning
+
+Level 3
+Competency / assessment / skill gaps
+
+Level 4
+Recommendations / resources
+
+Level 5
+History / achievements / secondary information
+
+This is the biggest UX improvement needed in the current screenshot.
+
+59. PROFESSIONAL LEARNING EXPERIENCE
+
+The trainee should feel:
+
+"This platform understands my learning journey."
+
+Not:
+
+"This is a page containing many dashboard cards."
+
+Use connected information.
+
+For example:
+
+Assessment
+     ↓
+Competency update
+     ↓
+Skill gap
+     ↓
+Revision recommendation
+     ↓
+Targeted practice
+     ↓
+New assessment
+     ↓
+Competency improvement
+
+The underlying revision architecture is explicitly designed around this continuous learning-event → competency → memory → priority → revision → evaluation loop.
+
+60. FINAL QA CHECKLIST
+
+Before completing the work:
+
+UX
+ Trainee understands next action immediately
+ Dashboard is not overwhelming
+ Navigation is intuitive
+ Learning journey is obvious
+ Progress is understandable
+ Skill gaps are actionable
+ Revision recommendations are explainable
+UI
+ Consistent spacing
+ Strong typography
+ Good contrast
+ Professional cards
+ Clear CTAs
+ Consistent icons
+ Responsive layouts
+Functionality
+ Courses work
+ Lessons work
+ Assessments work
+ Resources work
+ Competencies work
+ Skill gaps work
+ Revision works
+ Recommendations work
+ Trainers work
+ Achievements work
+ Profile works
+Security
+ RBAC works
+ Trainee cannot access Admin pages
+ Protected routes work
+ Session persistence works
+ Session expiration is handled correctly
+Routing
+ Every trainee route exists
+ No accidental 404
+ Direct URL works
+ Refresh works
+ Back navigation works
+Data
+ No fake statistics
+ No hardcoded user data
+ Real API integration
+ Loading states
+ Empty states
+ Error states
+FINAL INSTRUCTION
+
+Do not simply redesign the current screenshot.
+
+Redesign the entire trainee product experience.
+
+Treat the trainee workflow as a connected system:
+
+ONBOARDING
+    ↓
+LEARNING PATH
+    ↓
+COURSES
+    ↓
+LESSONS
+    ↓
+PRACTICE
+    ↓
+ASSESSMENTS
+    ↓
+COMPETENCY
+    ↓
+SKILL GAP
+    ↓
+ADAPTIVE REVISION
+    ↓
+RE-ASSESSMENT
+    ↓
+COMPETENCY IMPROVEMENT
+    ↓
+ACHIEVEMENT
+
+The UI should make this journey obvious to the trainee.
+
+The final product should feel like:
+
+A modern, personalized professional learning environment built specifically for MoES / IMD capacity development.
+
+Not a generic LMS.
+
+Not a generic SaaS dashboard.
+
+Not an AI demo.
+
+A production-ready Capacity Connect trainee experience.
+
+One design change I would especially prioritize
+
+Your current screenshot has excellent feature coverage, but it tries to expose almost everything on one dashboard. I would make the "Recommended Next Step" the visual center of the trainee experience.
+
+For example:
+
+Continue Seismological Data Processing — 12 min remaining
+
+or
+
+Revise Percentage Increase & Decrease — High Priority — ~10 min
+
+or
+
+Complete Synoptic Weather Analysis Assessment — Due today
+
+Then everything else supports that decision.
+
+That creates a much more natural learning loop:
+
+"What should I do?" → "Why?" → "Do it" → "Measure improvement" → "What's next?"
+
+And that fits especially well with your adaptive revision architecture, where the system is explicitly supposed to answer what the learner should revise, why it should be revised now, and what revision format is appropriate.

@@ -26,6 +26,7 @@ export interface IngestLearningEventDTO {
   lessonId?: string;
   assessmentQuestionId?: string;
   metadata?: any;
+  occurredAt?: Date;
 }
 
 export class LearningEventService {
@@ -34,6 +35,7 @@ export class LearningEventService {
    * error analytics, and refreshes the parent group's aggregated competency.
    */
   async ingestEvent(dto: IngestLearningEventDTO) {
+    const eventDate = dto.occurredAt ?? new Date();
     const {
       userId,
       topicId,
@@ -124,10 +126,11 @@ export class LearningEventService {
       daysElapsed: memoryCheck.daysElapsed,
     });
 
-    // Calculate fresh retrievability with new stability
+    // Calculate fresh retrievability with new stability relative to event date and now
     const freshRetrievability = calculateRetrievability({
       currentStabilityDays: newStability,
-      lastPracticedAt: new Date(),
+      lastPracticedAt: eventDate,
+      currentDate: new Date(),
     });
 
     // 6. Error Tracking
@@ -166,6 +169,7 @@ export class LearningEventService {
       previousCompetency: competencyResult.previousScore,
       newCompetency: competencyResult.newScore,
       metadata,
+      occurredAt: eventDate,
     });
 
     await revisionRepository.upsertUserTopicCompetency({
@@ -182,8 +186,8 @@ export class LearningEventService {
       retention: freshRetrievability.retrievability,
       forgettingRisk: freshRetrievability.forgettingFactor * 100,
       priorityScore: Math.round((100 - competencyResult.newScore) * 10) / 10,
-      lastReviewedAt: new Date(),
-      lastAssessedAt: new Date(),
+      lastReviewedAt: eventDate,
+      lastAssessedAt: eventDate,
     });
 
     // 8. Trigger parent group aggregation

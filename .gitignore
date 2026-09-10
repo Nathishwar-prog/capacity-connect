@@ -60,6 +60,13 @@ build/
 .next/
 out/
 
+# Uploads
+uploads/*
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/Forecasters_Training_Course.docx
+
+
 # Serverless directories
 .serverless/
 

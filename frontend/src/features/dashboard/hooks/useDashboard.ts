@@ -36,3 +36,36 @@ export const useAdminDashboard = () => {
     staleTime: 60 * 1000,
   });
 };
+
+export const useAdminCompetencyAnalytics = () => {
+  const { isAuthenticated, user } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['analytics', 'competencies'],
+    queryFn: () => dashboardApi.getCompetencyAnalytics(),
+    enabled: isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useAdminSkillGapAnalytics = () => {
+  const { isAuthenticated, user } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['analytics', 'skill-gaps'],
+    queryFn: () => dashboardApi.getSkillGapAnalytics(),
+    enabled: isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useAdminRevisionAnalytics = () => {
+  const { isAuthenticated, user } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['analytics', 'revision'],
+    queryFn: () => dashboardApi.getRevisionAnalytics(),
+    enabled: isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'),
+    staleTime: 60 * 1000,
+  });
+};
