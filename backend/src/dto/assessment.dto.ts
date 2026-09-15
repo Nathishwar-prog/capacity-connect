@@ -7,6 +7,8 @@ import { AssessmentType, AssessmentStatus, QuestionType } from '@prisma/client';
 
 export const CreateAssessmentSchema = z.object({
     courseId: z.string().uuid().optional().nullable(),
+    moduleId: z.string().uuid().optional().nullable(),
+    lessonId: z.string().uuid().optional().nullable(),
     title: z.string().min(3, 'Title must be at least 3 characters long').max(200, 'Title cannot exceed 200 characters'),
     description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
     subject: z.string().min(2, 'Subject must be at least 2 characters long').max(100, 'Subject cannot exceed 100 characters'),
@@ -18,10 +20,29 @@ export const CreateAssessmentSchema = z.object({
     status: z.nativeEnum(AssessmentStatus).default(AssessmentStatus.DRAFT),
 });
 
-export const UpdateAssessmentSchema = CreateAssessmentSchema.partial();
+export const AssessmentBuilderQuestionSchema = z.object({
+    id: z.string().optional(),
+    questionText: z.string().min(1, 'Question prompt cannot be empty'),
+    questionType: z.nativeEnum(QuestionType).default(QuestionType.SINGLE_CHOICE),
+    marks: z.number().min(0.1).default(1.0),
+    orderIndex: z.number().int().optional(),
+    explanation: z.string().optional().nullable(),
+    options: z.array(z.object({
+        id: z.string().optional(),
+        optionText: z.string().min(1, 'Option text cannot be empty'),
+        isCorrect: z.boolean().default(false),
+        orderIndex: z.number().int().optional(),
+    })).min(2, 'At least 2 options are required'),
+});
+
+export const UpdateAssessmentSchema = CreateAssessmentSchema.partial().extend({
+    questions: z.array(AssessmentBuilderQuestionSchema).optional(),
+});
 
 export const AssessmentQuerySchema = z.object({
     courseId: z.string().uuid().optional(),
+    moduleId: z.string().uuid().optional(),
+    lessonId: z.string().uuid().optional(),
     status: z.nativeEnum(AssessmentStatus).optional(),
     search: z.string().optional(),
     page: z.coerce.number().int().min(1).default(1),

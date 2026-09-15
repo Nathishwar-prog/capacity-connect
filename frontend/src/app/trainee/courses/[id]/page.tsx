@@ -35,6 +35,10 @@ import {
   HelpCircle,
   Activity,
   CheckCircle,
+  Star,
+  Users,
+  Target,
+  Info,
 } from 'lucide-react';
 
 interface LessonResource {
@@ -111,6 +115,214 @@ interface CourseDetail {
   }>;
 }
 
+interface RankedTrainerMentor {
+  trainerId: string;
+  matchScore: number;
+  rating: number;
+  totalReviews: number;
+  yearsExperience: number;
+  isDirectCourseInstructor: boolean;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  designation: string;
+  department: string | null;
+  organizationName: string | null;
+  bio: string | null;
+  matchedCompetencies: string[];
+  reason: string;
+  factorScores: {
+    courseExpertise: number;
+    competencyMatch: number;
+    rating: number;
+    experience: number;
+    availability: number;
+  };
+}
+
+interface CourseTrainerMatchResult {
+  courseId: string;
+  courseTitle: string;
+  status: 'MATCHED' | 'NO_TRAINER_MATCH' | 'LIMITED_EVIDENCE';
+  message: string;
+  trainers: RankedTrainerMentor[];
+}
+
+interface TraineeCourseRecommendation {
+  courseId: string;
+  matchScore: number;
+  matchedGaps: string[];
+  reason: string;
+  factorScores: {
+    skillGapRelevance: number;
+    competencyCoverage: number;
+    prerequisiteFit: number;
+    courseQuality: number;
+    difficultyFit: number;
+    learnerPreference: number;
+  };
+}
+
+// ── Mentor Card Sub-Component ───────────────────────────────────────────────
+function MentorCard({
+  mentor,
+  rank,
+  mentorshipRequested,
+  expandedFactors,
+  setExpandedFactors,
+  onRequestMentorship,
+  showBadge,
+}: {
+  mentor: RankedTrainerMentor;
+  rank?: number;
+  mentorshipRequested: string | null;
+  expandedFactors: { [k: string]: boolean };
+  setExpandedFactors: React.Dispatch<React.SetStateAction<{ [k: string]: boolean }>>;
+  onRequestMentorship: (m: RankedTrainerMentor) => void;
+  showBadge?: 'LIMITED';
+}) {
+  const isRequested = mentorshipRequested === mentor.trainerId;
+  const isExpanded = expandedFactors[mentor.trainerId] ?? false;
+
+  const renderStars = (rating: number) => {
+    return (
+      <span className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <svg key={n} className={`w-3 h-3 ${n <= Math.round(rating) ? 'text-amber-400' : 'text-slate-200'}`} fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        ))}
+      </span>
+    );
+  };
+
+  const factors = [
+    { label: 'Course Expertise', value: mentor.factorScores.courseExpertise, weight: '35%', color: 'bg-indigo-500' },
+    { label: 'Competency Match', value: mentor.factorScores.competencyMatch, weight: '25%', color: 'bg-purple-500' },
+    { label: 'Rating', value: mentor.factorScores.rating, weight: '20%', color: 'bg-amber-500' },
+    { label: 'Experience', value: mentor.factorScores.experience, weight: '10%', color: 'bg-emerald-500' },
+    { label: 'Availability', value: mentor.factorScores.availability, weight: '10%', color: 'bg-sky-500' },
+  ];
+
+  return (
+    <div className={`rounded-2xl border transition-all ${isRequested ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-indigo-200 hover:shadow-sm'}`}>
+      <div className="p-4 flex flex-col sm:flex-row sm:items-start gap-4">
+        {/* Rank + Avatar */}
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {rank && (
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 shrink-0 mt-1">
+              #{rank}
+            </div>
+          )}
+          <div className="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-700 font-black flex items-center justify-center text-sm shrink-0">
+            {mentor.avatarUrl ? (
+              <img src={mentor.avatarUrl} alt={mentor.name} className="w-full h-full object-cover rounded-2xl" />
+            ) : (
+              mentor.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+            )}
+          </div>
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black text-slate-900">{mentor.name}</span>
+              {mentor.isDirectCourseInstructor && (
+                <span className="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-wide">
+                  Course Instructor
+                </span>
+              )}
+              {showBadge === 'LIMITED' && (
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-bold uppercase">
+                  Limited Data
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-500 font-medium truncate">{mentor.designation}</div>
+            {mentor.organizationName && (
+              <div className="text-[10px] text-slate-400 truncate">{mentor.organizationName}</div>
+            )}
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+              {renderStars(mentor.rating)}
+              <span className="text-[11px] text-slate-600 font-bold">{mentor.rating.toFixed(1)}</span>
+              {mentor.totalReviews > 0 && (
+                <span className="text-[10px] text-slate-400">({mentor.totalReviews} reviews)</span>
+              )}
+              <span className="text-[10px] text-slate-400">•</span>
+              <span className="text-[11px] text-slate-600 font-medium">{mentor.yearsExperience}y experience</span>
+            </div>
+            {mentor.matchedCompetencies.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {mentor.matchedCompetencies.slice(0, 4).map((comp, i) => (
+                  <span key={i} className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                    {comp}
+                  </span>
+                ))}
+                {mentor.matchedCompetencies.length > 4 && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px]">
+                    +{mentor.matchedCompetencies.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Match Score & CTA */}
+        <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-2 shrink-0">
+          <div className="text-center">
+            <div className={`text-2xl font-black ${
+              mentor.matchScore >= 85 ? 'text-emerald-600' : mentor.matchScore >= 70 ? 'text-indigo-600' : 'text-slate-600'
+            }`}>
+              {Math.round(mentor.matchScore)}%
+            </div>
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Match</div>
+          </div>
+          {isRequested ? (
+            <span className="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-black flex items-center gap-1">
+              ✓ Requested
+            </span>
+          ) : (
+            <button
+              onClick={() => onRequestMentorship(mentor)}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black shadow-sm transition-colors whitespace-nowrap"
+            >
+              Choose Mentor
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Reason & Factor Breakdown */}
+      <div className="px-4 pb-4 space-y-3">
+        {mentor.reason && (
+          <p className="text-[11px] text-slate-500 leading-relaxed italic border-l-2 border-indigo-200 pl-3">
+            {mentor.reason}
+          </p>
+        )}
+        <button
+          onClick={() => setExpandedFactors((prev) => ({ ...prev, [mentor.trainerId]: !prev[mentor.trainerId] }))}
+          className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+        >
+          <span>{isExpanded ? '▾ Hide' : '▸ View'} match factor breakdown</span>
+        </button>
+        {isExpanded && (
+          <div className="space-y-2 pt-1">
+            {factors.map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <div className="flex justify-between items-center text-[10px]">
+                  <span className="text-slate-600 font-semibold">{f.label} <span className="text-slate-400 font-normal">({f.weight})</span></span>
+                  <span className="font-black text-slate-700">{Math.round(f.value)}%</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className={`${f.color} h-full rounded-full transition-all duration-500`} style={{ width: `${f.value}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TraineeCourseDetailPage() {
   const { id } = useParams();
   const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -119,6 +331,14 @@ export default function TraineeCourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
+
+  // Mentor & Recommendation Matching State
+  const [trainerMatchResult, setTrainerMatchResult] = useState<CourseTrainerMatchResult | null>(null);
+  const [recommendationData, setRecommendationData] = useState<TraineeCourseRecommendation | null>(null);
+  const [targetRoleName, setTargetRoleName] = useState<string | null>(null);
+  const [selectedMentor, setSelectedMentor] = useState<RankedTrainerMentor | null>(null);
+  const [mentorshipRequested, setMentorshipRequested] = useState<string | null>(null);
+  const [expandedFactors, setExpandedFactors] = useState<{ [trainerId: string]: boolean }>({});
 
   // Completed lessons tracking
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
@@ -198,11 +418,42 @@ export default function TraineeCourseDetailPage() {
           // fallback
         }
       }
+
+      // Fetch Course Trainers & Ranked Domain Mentors
+      try {
+        const trainersRes = await apiClient.get(`/courses/${id}/trainers`);
+        if (trainersRes.data?.data) {
+          setTrainerMatchResult(trainersRes.data.data);
+        }
+      } catch (err) {
+        console.warn('Could not fetch course trainers:', err);
+      }
+
+      // Fetch Trainee Recommendations to check if this course is part of recommended pathway
+      try {
+        const recsRes = await apiClient.get('/trainee/recommendations');
+        if (recsRes.data?.data) {
+          const matchedRec = recsRes.data.data.recommendations?.find(
+            (r: any) => r.courseId === courseData.id || r.courseId === id
+          );
+          if (matchedRec) {
+            setRecommendationData(matchedRec);
+            setTargetRoleName(recsRes.data.data.targetRole?.title || null);
+          }
+        }
+      } catch {
+        // Trainee not yet onboarded or recommendations unavailable
+      }
     } catch (err) {
       console.error('Failed to load course details:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRequestMentorship = (mentor: RankedTrainerMentor) => {
+    setMentorshipRequested(mentor.trainerId);
+    setSelectedMentor(null);
   };
 
   const handleEnroll = async () => {
@@ -593,6 +844,136 @@ export default function TraineeCourseDetailPage() {
                   })}
                 </div>
               </div>
+
+              {/* ── RECOMMENDED FOR YOU BANNER ─────────────────────────── */}
+              {recommendationData && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                      <Target className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black uppercase tracking-wider text-indigo-100">Recommended for You</span>
+                        <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-black text-white">
+                          {Math.round(recommendationData.matchScore)}% Match
+                        </span>
+                      </div>
+                      <p className="text-xs text-indigo-100 leading-relaxed max-w-lg">
+                        {recommendationData.reason}
+                      </p>
+                      {recommendationData.matchedGaps.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {recommendationData.matchedGaps.slice(0, 3).map((gap, i) => (
+                            <span key={i} className="px-2 py-0.5 rounded-full bg-white/15 text-[10px] font-bold text-white border border-white/20">
+                              {gap}
+                            </span>
+                          ))}
+                          {recommendationData.matchedGaps.length > 3 && (
+                            <span className="px-2 py-0.5 rounded-full bg-white/15 text-[10px] font-bold text-white border border-white/20">
+                              +{recommendationData.matchedGaps.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {targetRoleName && (
+                    <div className="shrink-0 text-right">
+                      <div className="text-[10px] text-indigo-200 font-medium">Target Role</div>
+                      <div className="text-xs font-black text-white">{targetRoleName}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── RECOMMENDED DOMAIN MENTORS ─────────────────────────── */}
+              <Card className="p-0 border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    Recommended Domain Mentors
+                  </h2>
+                  {trainerMatchResult && (
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                      trainerMatchResult.status === 'MATCHED'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : trainerMatchResult.status === 'LIMITED_EVIDENCE'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}>
+                      {trainerMatchResult.status === 'MATCHED'
+                        ? `${trainerMatchResult.trainers.length} Mentor${trainerMatchResult.trainers.length !== 1 ? 's' : ''} Found`
+                        : trainerMatchResult.status === 'LIMITED_EVIDENCE'
+                        ? 'Limited Evidence'
+                        : 'No Mentor Found'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-5">
+                  {/* Loading State */}
+                  {!trainerMatchResult && (
+                    <div className="flex items-center gap-3 text-slate-500 text-xs py-4">
+                      <div className="w-5 h-5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                      <span>Matching domain experts to this course...</span>
+                    </div>
+                  )}
+
+                  {/* No Trainer Match */}
+                  {trainerMatchResult?.status === 'NO_TRAINER_MATCH' && (
+                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="text-xs font-bold text-amber-900">No Approved Mentor Currently Available</div>
+                        <p className="text-xs text-amber-800 leading-relaxed">{trainerMatchResult.message}</p>
+                        <p className="text-[11px] text-amber-700 mt-1">This course is available. Please check back later or browse the trainer directory for mentors who specialize in this domain.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Limited Evidence */}
+                  {trainerMatchResult?.status === 'LIMITED_EVIDENCE' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                        <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs font-bold text-amber-900">Incomplete Expertise Data</div>
+                          <p className="text-xs text-amber-800 leading-relaxed mt-0.5">{trainerMatchResult.message}</p>
+                        </div>
+                      </div>
+                      {trainerMatchResult.trainers.map((mentor) => (
+                        <MentorCard
+                          key={mentor.trainerId}
+                          mentor={mentor}
+                          mentorshipRequested={mentorshipRequested}
+                          expandedFactors={expandedFactors}
+                          setExpandedFactors={setExpandedFactors}
+                          onRequestMentorship={handleRequestMentorship}
+                          showBadge="LIMITED"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Matched Mentors */}
+                  {trainerMatchResult?.status === 'MATCHED' && (
+                    <div className="space-y-4">
+                      {trainerMatchResult.trainers.map((mentor, idx) => (
+                        <MentorCard
+                          key={mentor.trainerId}
+                          mentor={mentor}
+                          rank={idx + 1}
+                          mentorshipRequested={mentorshipRequested}
+                          expandedFactors={expandedFactors}
+                          setExpandedFactors={setExpandedFactors}
+                          onRequestMentorship={handleRequestMentorship}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
             </div>
           )}
 

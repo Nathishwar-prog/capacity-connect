@@ -100,25 +100,25 @@ export default function AssessmentRunnerPage() {
     setSubmitting(true);
 
     try {
-      // Format answers payload
+      // Format answers payload - only send valid question selections
       const formattedAnswers = assessment.questions.map((q) => ({
         questionId: q.id,
-        selectedOptionId: answers[q.id] || q.options[0]?.id,
-      }));
+        selectedOptionId: answers[q.id] || null,
+      })).filter((ans) => Boolean(ans.selectedOptionId));
 
       const res = await apiClient.post(`/assessments/${id}/attempts/${attemptId}/submit`, {
         answers: formattedAnswers,
       });
 
-      const attemptResult = res.data.data;
-      const score = attemptResult.score ?? 30;
-      const maxScore = attemptResult.maxScore ?? (assessment.questions.length * 10 || 30);
-      const pct = Math.round((score / Math.max(1, maxScore)) * 100);
+      const attemptResult = res.data.data?.result || res.data.data;
+      const score = Number(attemptResult.score ?? 0);
+      const maxScore = Number(attemptResult.totalPossibleMarks ?? attemptResult.maxScore ?? (assessment.questions.length * 1));
+      const pct = Number(attemptResult.percentage ?? (maxScore > 0 ? Math.round((score / maxScore) * 100) : 0));
 
       setResult({
         score,
         totalMarks: maxScore,
-        passed: attemptResult.passed ?? pct >= assessment.passingScore,
+        passed: Boolean(attemptResult.passed ?? (pct >= assessment.passingScore)),
         percentage: pct,
         competencyResults: attemptResult.competencyResults || [
           {

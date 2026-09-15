@@ -552,7 +552,7 @@ function AdvancedCourseBuilderContent() {
             )}
           </div>
 
-          <Link href={`/trainee/courses/${courseId}`} target="_blank">
+          <Link href={`/trainer/courses/${courseId}/preview`} target="_blank">
             <Button variant="outline" size="sm" className="text-xs h-8 gap-1 font-semibold">
               <Eye className="w-3.5 h-3.5" />
               <span>Preview</span>

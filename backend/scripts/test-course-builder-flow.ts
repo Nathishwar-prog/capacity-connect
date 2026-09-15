@@ -55,8 +55,8 @@ async function runCourseBuilderVerification() {
     throw new Error(`FAIL: Module count mismatch. Expected 7 modules, got ${parsed.modules.length}`);
   }
 
-  if (totalLessons !== 28) {
-    throw new Error(`FAIL: Lesson count mismatch. Expected 28 lessons (4 per module), got ${totalLessons}`);
+  if (totalLessons !== 27) {
+    throw new Error(`FAIL: Lesson count mismatch. Expected 27 lessons (Module 5 has 3 lessons), got ${totalLessons}`);
   }
 
   // Verify TOC suppression (TOC must NOT create duplicate modules)
@@ -152,8 +152,8 @@ async function runCourseBuilderVerification() {
   if (dbModules.length !== 7) {
     throw new Error(`FAIL: Database module count (${dbModules.length}) !== detected modules (7)`);
   }
-  if (dbLessonsCount !== 28) {
-    throw new Error(`FAIL: Database lesson count (${dbLessonsCount}) !== detected lessons (28)`);
+  if (dbLessonsCount !== 27) {
+    throw new Error(`FAIL: Database lesson count (${dbLessonsCount}) !== detected lessons (27)`);
   }
   console.log('✓ Data Integrity Test PASSED: Detected structure count perfectly matches PostgreSQL count.');
 

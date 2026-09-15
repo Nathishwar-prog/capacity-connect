@@ -63,9 +63,14 @@ function TrainerTraineesContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Trainee Monitoring & Progress
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              My Trainees
+            </h1>
+            <Badge variant="outline" className="text-[10px] font-bold text-indigo-700 border-indigo-200 bg-indigo-50">
+              Trainer Scoped Cohorts
+            </Badge>
+          </div>
           <p className="text-xs text-slate-500 mt-1">
             Supervise scientific trainee cohorts enrolled in your atmospheric sciences courses
           </p>

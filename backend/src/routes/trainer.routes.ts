@@ -155,6 +155,26 @@ router.post(
   validate({ params: courseIdParamSchema }),
   asyncHandler(trainerController.submitCourseForApproval),
 );
+router.post(
+  '/courses/:courseId/publish',
+  validate({ params: courseIdParamSchema }),
+  asyncHandler(trainerController.publishCourse),
+);
+router.post(
+  '/courses/:courseId/unpublish',
+  validate({ params: courseIdParamSchema }),
+  asyncHandler(trainerController.unpublishCourse),
+);
+router.post(
+  '/courses/:courseId/duplicate',
+  validate({ params: courseIdParamSchema }),
+  asyncHandler(trainerController.duplicateCourse),
+);
+router.get(
+  '/courses/:courseId/analytics',
+  validate({ params: courseIdParamSchema }),
+  asyncHandler(trainerController.getCourseAnalytics),
+);
 
 // --- 4. Course Builder (Modules & Lessons) ---
 router.post(
@@ -230,6 +250,20 @@ router.get(
 
 // --- 7. Assessments ---
 router.get('/assessments', asyncHandler(trainerController.getAssessments));
+router.get(
+  '/assessments/import/template',
+  asyncHandler(trainerController.getAssessmentImportTemplate),
+);
+router.post(
+  '/assessments/import/validate',
+  requirePermission(Permissions.ASSESSMENT_CREATE),
+  asyncHandler(trainerController.validateAssessmentImport),
+);
+router.post(
+  '/assessments/import/confirm',
+  requirePermission(Permissions.ASSESSMENT_CREATE),
+  asyncHandler(trainerController.confirmAssessmentImport),
+);
 router.post(
   '/assessments',
   requirePermission(Permissions.ASSESSMENT_CREATE),

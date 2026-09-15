@@ -1,0 +1,1383 @@
+Absolutely. The key is to treat **data sufficiency as a first-class part of the recommendation pipeline**, rather than allowing the AI to generate recommendations from incomplete or unsupported data.
+
+Your intended flow should be:
+
+> **Trainee enters role → system determines required competencies for that role → AI analyzes current skills → identifies competency gaps → maps gaps to courses actually available in DB → displays recommended courses → trainee opens a course → system finds suitable/high-rated mentors for that specific course → trainee can choose/enroll.**
+
+This fits the Capacity Connect design: the platform is intended to use AI for skill-gap analysis and personalized course recommendations, while trainer matching uses course requirements and trainer expertise. 
+
+---
+
+# 1. Complete implementation architecture
+
+I would implement it as **7 separate services/modules** rather than one large "AI recommendation" function.
+
+```text
+                    ┌─────────────────────┐
+                    │   TRAINEE SIGNUP    │
+                    └──────────┬──────────┘
+                               ↓
+                    ┌─────────────────────┐
+                    │ Profile Onboarding  │
+                    │ Role + Department   │
+                    │ Skills + Experience │
+                    └──────────┬──────────┘
+                               ↓
+                    ┌─────────────────────┐
+                    │ Role Competency     │
+                    │ Resolver            │
+                    └──────────┬──────────┘
+                               ↓
+                    ┌─────────────────────┐
+                    │ Data Sufficiency    │
+                    │ Validator           │
+                    └──────────┬──────────┘
+                               ↓
+                  ┌────────────┴────────────┐
+                  ↓                         ↓
+           DATA SUFFICIENT            DATA INSUFFICIENT
+                  ↓                         ↓
+          AI SKILL GAP ANALYZER       Ask for more data /
+                  ↓                   diagnostic assessment
+          Missing Competencies
+                  ↓
+       ┌────────────────────────┐
+       │ Course Matching Engine │
+       └───────────┬────────────┘
+                   ↓
+          Courses in Database
+                   ↓
+          Availability Filter
+                   ↓
+          Recommendation Ranker
+                   ↓
+        ┌──────────────────────┐
+        │ Recommended Courses  │
+        └──────────┬───────────┘
+                   ↓
+             User clicks
+              a course
+                   ↓
+       ┌────────────────────────┐
+       │ Trainer Matching Engine│
+       └───────────┬────────────┘
+                   ↓
+       Trainers for THAT course
+                   ↓
+       Expertise + Rating +
+       Experience + Availability
+                   ↓
+          Ranked Mentors
+                   ↓
+       Course Detail Page
+       + Recommended Mentors
+```
+
+The workflow diagram you uploaded similarly places profile creation, evidence/assessment, skill-gap analysis, missing skills, course mapping, recommendations and competency mapping into the trainee flow. 
+
+---
+
+# 2. Step 1 — New trainee onboarding
+
+After:
+
+```text
+Register
+   ↓
+Login
+   ↓
+RBAC
+```
+
+don't send a first-time trainee directly to the dashboard.
+
+Check:
+
+```text
+profileCompleted
+initialAssessmentCompleted
+competencyProfileInitialized
+```
+
+For example:
+
+```ts
+if (!trainee.profileCompleted) {
+    redirect("/trainee/onboarding");
+}
+```
+
+Onboarding should collect only information that actually contributes to recommendations.
+
+### Required information
+
+```text
+Personal
+├── Name
+├── Email
+└── Location (if actually required)
+
+Professional
+├── Role
+├── Department
+├── Organization
+├── Experience
+└── Current designation
+
+Learning
+├── Current skills
+├── Skill proficiency
+├── Previous courses
+├── Certifications
+└── Learning goals
+
+Preferences
+├── Preferred learning mode
+├── Preferred language
+├── Available learning time
+└── Preferred trainer mode
+```
+
+Don't make every field mandatory.
+
+Instead classify:
+
+```text
+REQUIRED
+RECOMMENDED
+OPTIONAL
+```
+
+---
+
+# 3. Step 2 — Role → Required Competencies
+
+This is extremely important.
+
+**Do not ask the LLM to invent the required skills for a role every time.**
+
+Create a structured competency catalogue.
+
+Example:
+
+```text
+Role
+ └── Data Analyst
+
+Required Competencies
+ ├── SQL
+ ├── Excel
+ ├── Statistics
+ ├── Data Visualization
+ ├── Python
+ └── Data Interpretation
+```
+
+Database:
+
+```text
+roles
+role_competencies
+competencies
+competency_dependencies
+```
+
+Example:
+
+```text
+Role: Data Analyst
+
+SQL
+importance: 90
+requiredLevel: 4
+
+Statistics
+importance: 85
+requiredLevel: 3
+
+Python
+importance: 75
+requiredLevel: 3
+```
+
+The pitch deck explicitly describes competency mapping as mapping trainee courses to required competencies. 
+
+---
+
+# 4. Step 3 — Data Sufficiency Engine
+
+This is the part you specifically asked about.
+
+You should **never simply show an error such as "Recommendation engine failed."**
+
+Instead, distinguish between:
+
+### A. System error
+
+Something technically broke.
+
+```text
+RECOMMENDATION_ENGINE_ERROR
+```
+
+Example:
+
+> We couldn't generate recommendations right now. Please try again.
+
+### B. Data insufficiency
+
+The system is working, but there isn't enough trustworthy data.
+
+```text
+INSUFFICIENT_PROFILE_DATA
+```
+
+Example:
+
+> We need a little more information about your current skills to generate reliable recommendations.
+
+### C. No competency mapping
+
+Role exists but has no competency configuration.
+
+```text
+ROLE_COMPETENCY_DATA_UNAVAILABLE
+```
+
+### D. No course available
+
+Skill gap identified, but there is no matching course.
+
+```text
+NO_COURSE_MATCH
+```
+
+### E. No suitable trainer
+
+Course exists, but no trainer satisfies matching criteria.
+
+```text
+NO_TRAINER_MATCH
+```
+
+These should be treated as **different states**, not one generic error.
+
+---
+
+# 5. Data Sufficiency Score
+
+Create a deterministic validator before calling the AI.
+
+For example:
+
+```text
+Profile completeness
+        +
+Role validity
+        +
+Required competency availability
+        +
+Current skill information
+        +
+Assessment evidence
+        +
+Course catalogue availability
+```
+
+You can calculate:
+
+```text
+dataSufficiencyScore = 0–100
+```
+
+Example:
+
+| Signal                     |  Weight |
+| -------------------------- | ------: |
+| Valid role                 |      20 |
+| Role competency mapping    |      20 |
+| Current skills             |      20 |
+| Skill proficiency/evidence |      20 |
+| Assessment evidence        |      10 |
+| Learning goal              |      10 |
+| **Total**                  | **100** |
+
+Then:
+
+```text
+80–100 → READY
+60–79  → LIMITED
+40–59  → NEEDS_MORE_DATA
+0–39   → BLOCKED
+```
+
+But don't use this score blindly. Some fields are **hard requirements**.
+
+For example:
+
+```text
+Role missing
+    ↓
+BLOCKED
+```
+
+Even if everything else is present.
+
+---
+
+# 6. What happens when data is insufficient?
+
+This is where your UX should be smart.
+
+### Example 1
+
+Trainee enters:
+
+> Role: Data Analyst
+
+but provides no skills.
+
+System should NOT say:
+
+> AI cannot analyze your skills.
+
+Instead:
+
+> **We know your target role, but we don't yet have enough information about your current skills.**
+
+Then give:
+
+```text
+Complete your skill profile
+
+[Add my skills]
+
+or
+
+[Take 10-minute diagnostic assessment]
+```
+
+---
+
+# 7. Best approach: Self-reported skills + Diagnostic Assessment
+
+For a new trainee, self-reported information alone shouldn't be treated as authoritative competency evidence.
+
+Your revision-engine design specifically recommends a cold-start strategy where new users have low confidence, with competency initialized from diagnostic assessment, course baseline or a neutral prior. 
+
+So:
+
+```text
+Role
+ ↓
+Required competencies
+ ↓
+Self-reported skills
+ ↓
+Initial diagnostic assessment
+ ↓
+Evidence-backed competency profile
+ ↓
+Skill-gap analysis
+```
+
+For example:
+
+```text
+Data Analyst
+
+SQL
+Self rating: 4/5
+Diagnostic: 62%
+Confidence: 0.61
+
+Python
+Self rating: 3/5
+Diagnostic: 41%
+Confidence: 0.72
+
+Statistics
+Self rating: 2/5
+Diagnostic: 35%
+Confidence: 0.75
+```
+
+Now the recommendation engine has much better information.
+
+---
+
+# 8. AI Skill Gap Analyzer
+
+Now give the AI **structured data**, not just:
+
+> "Analyze this person's skills."
+
+Send:
+
+```json
+{
+  "role": "Data Analyst",
+  "requiredCompetencies": [
+    {
+      "name": "SQL",
+      "requiredLevel": 4,
+      "importance": 90
+    },
+    {
+      "name": "Python",
+      "requiredLevel": 3,
+      "importance": 80
+    },
+    {
+      "name": "Statistics",
+      "requiredLevel": 3,
+      "importance": 85
+    }
+  ],
+  "learnerCompetencies": [
+    {
+      "name": "SQL",
+      "currentLevel": 3,
+      "confidence": 0.72
+    },
+    {
+      "name": "Python",
+      "currentLevel": 1,
+      "confidence": 0.81
+    },
+    {
+      "name": "Statistics",
+      "currentLevel": 1,
+      "confidence": 0.76
+    }
+  ]
+}
+```
+
+The AI returns structured output:
+
+```json
+{
+  "gaps": [
+    {
+      "competency": "Python",
+      "currentLevel": 1,
+      "requiredLevel": 3,
+      "gap": 2,
+      "severity": "HIGH"
+    },
+    {
+      "competency": "Statistics",
+      "currentLevel": 1,
+      "requiredLevel": 3,
+      "gap": 2,
+      "severity": "HIGH"
+    }
+  ]
+}
+```
+
+### Important
+
+The LLM should **not be the source of truth for competency**.
+
+Your revision-engine report explicitly establishes that the database-backed learner model should be the source of truth, while the LLM should operate as the content-generation/personalization layer. 
+
+So:
+
+```text
+Database / assessment evidence
+          ↓
+Competency calculation
+          ↓
+AI interprets / explains gaps
+```
+
+not:
+
+```text
+LLM
+ ↓
+invent competency score
+```
+
+---
+
+# 9. Step 3 — Missing Skill → Course Mapping
+
+Now you have:
+
+```text
+Missing Skills
+
+Python
+Statistics
+Data Visualization
+```
+
+Don't ask AI:
+
+> "Give me courses."
+
+Instead query your database.
+
+Your course database should have competency mappings:
+
+```text
+Course
+ ├── courseId
+ ├── title
+ ├── description
+ ├── difficulty
+ ├── duration
+ └── competencies
+```
+
+Example:
+
+```text
+Course: Python for Data Analysis
+
+Competencies:
+ ├── Python → 90%
+ ├── Data Analysis → 80%
+ └── Pandas → 70%
+```
+
+Then:
+
+```text
+Missing competency
+        ↓
+course_competency mapping
+        ↓
+available courses
+```
+
+---
+
+# 10. Course recommendation ranking
+
+Suppose the trainee has:
+
+```text
+Python           HIGH gap
+Statistics       HIGH gap
+Data Viz         MEDIUM gap
+```
+
+Database contains:
+
+```text
+Python Fundamentals
+Python for Data Analysis
+Advanced Python
+Statistics for Data Science
+Data Visualization with Power BI
+```
+
+The recommendation engine filters and ranks them.
+
+For example:
+
+```text
+Recommendation Score =
+    Skill Gap Match
+  + Competency Coverage
+  + Course Quality
+  + Difficulty Fit
+  + Prerequisite Fit
+  + Course Availability
+```
+
+You can make the ranking:
+
+```text
+35% Skill gap relevance
+25% Competency coverage
+15% prerequisite fit
+10% course quality
+10% difficulty fit
+5% learner preference
+```
+
+Store the explanation.
+
+Example:
+
+> **Why this course?**
+> It covers 82% of your Python competency gap and directly addresses your current beginner-level proficiency.
+
+This matches the project's emphasis on explainable recommendations. The revision engine specifically says every recommendation should carry machine-readable reasons. 
+
+---
+
+# 11. Course availability is a HARD FILTER
+
+This is very important.
+
+Suppose AI identifies:
+
+```text
+Missing skill: Python
+```
+
+AI might know about:
+
+```text
+"Advanced Python for Data Science"
+```
+
+But your platform doesn't have it.
+
+**Do not show it as a recommended course.**
+
+Correct flow:
+
+```text
+AI identifies:
+Python
+
+        ↓
+
+Database:
+Search courses mapped to Python
+
+        ↓
+
+No course
+
+        ↓
+
+NO_COURSE_MATCH
+```
+
+UI:
+
+> **Python is one of your recommended skill areas.**
+>
+> We currently don't have a matching course available for this competency.
+>
+> **You can:**
+>
+> • Explore related courses
+> • Check again later
+> • Continue with another recommended skill
+
+This keeps the system truthful.
+
+---
+
+# 12. Recommended Course UI
+
+Your trainee dashboard can show:
+
+### Recommended for You
+
+```text
+┌─────────────────────────────────────────────┐
+│ Python for Data Analysis                    │
+│                                             │
+│ Skill gap: Python                           │
+│ Match: 94%                                  │
+│ Difficulty: Beginner → Intermediate         │
+│ Duration: 6 hours                           │
+│                                             │
+│ Why recommended?                            │
+│ Builds the Python competency required       │
+│ for your Data Analyst role.                 │
+│                                             │
+│ [View Course]                               │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+# 13. Clicking the course → Mentor Matching
+
+This should be a **second recommendation engine**, not part of the course recommendation query.
+
+User clicks:
+
+> Python for Data Analysis
+
+Then:
+
+```text
+GET /courses/:courseId
+```
+
+Load:
+
+```text
+course
+competencies
+requirements
+trainers
+trainer expertise
+trainer ratings
+trainer experience
+availability
+```
+
+Then trainer matching.
+
+---
+
+# 14. Trainer matching logic
+
+First apply hard filters.
+
+```text
+Trainer teaches course?
+        ↓ YES
+Trainer active?
+        ↓ YES
+Trainer approved?
+        ↓ YES
+Trainer has required competency?
+        ↓ YES
+Trainer available?
+        ↓ YES
+```
+
+Then ranking.
+
+Example:
+
+```text
+Trainer Match Score =
+    35% Course Expertise
+  + 25% Competency Match
+  + 20% Rating
+  + 10% Experience
+  + 10% Availability
+```
+
+For example:
+
+```text
+Python for Data Analysis
+
+1. Mentor A
+   Match: 96%
+   Rating: 4.9
+   Experience: 8 years
+
+2. Mentor B
+   Match: 91%
+   Rating: 4.8
+   Experience: 6 years
+
+3. Mentor C
+   Match: 87%
+   Rating: 4.7
+   Experience: 5 years
+```
+
+---
+
+# 15. Don't rank trainers only by rating
+
+This is a critical point.
+
+Suppose:
+
+```text
+Trainer A
+Rating: 5.0
+Python expertise: Low
+```
+
+and:
+
+```text
+Trainer B
+Rating: 4.7
+Python expertise: Excellent
+```
+
+Trainer B should probably rank higher.
+
+So:
+
+```text
+Rating ≠ Match
+```
+
+Instead:
+
+```text
+Course expertise
+       +
+Required competency match
+       +
+Rating
+       +
+Experience
+       +
+Availability
+```
+
+The pitch deck describes trainer matching as suggesting suitable trainers based on course requirements and expertise. 
+
+---
+
+# 16. Course Detail Page
+
+When trainee clicks the recommendation:
+
+```text
+/course/python-data-analysis
+```
+
+Show:
+
+```text
+┌─────────────────────────────────────────────┐
+│ Python for Data Analysis                    │
+│                                             │
+│ Recommended because:                       │
+│ • Python competency gap: HIGH              │
+│ • Role requirement: HIGH                   │
+│ • Match: 94%                               │
+│                                             │
+│ Course Overview                             │
+│ Modules                                     │
+│ Lessons                                     │
+│ Assessments                                 │
+│ Resources                                   │
+└─────────────────────────────────────────────┘
+```
+
+Then:
+
+### Recommended Mentors
+
+```text
+Based on this course and your learning needs
+
+┌──────────────────────────────────────────┐
+│ Mentor A                                 │
+│ ⭐ 4.9                                   │
+│ Python • Data Analysis • Pandas          │
+│ 8 years experience                       │
+│                                          │
+│ Match: 96%                               │
+│ [View Profile] [Choose Mentor]           │
+└──────────────────────────────────────────┘
+```
+
+---
+
+# 17. Trainer matching should also have data sufficiency
+
+This is another place where you need proper states.
+
+### Case 1 — Excellent match
+
+```text
+3 suitable trainers found
+```
+
+Show them.
+
+### Case 2 — Course exists but no trainer
+
+```text
+NO_TRAINER_MATCH
+```
+
+Display:
+
+> This course is available, but we couldn't find an approved mentor who currently matches the course requirements.
+
+### Case 3 — Trainers exist but insufficient evidence
+
+For example:
+
+```text
+2 trainers teach Python
+but their competency mapping is incomplete.
+```
+
+Don't claim:
+
+> Best mentor: Trainer A
+
+Instead:
+
+> We found trainers for this course, but there isn't enough verified expertise data to rank them reliably.
+
+That's a **data-quality state**, not a system error.
+
+---
+
+# 18. Recommended backend architecture
+
+I'd separate the backend into:
+
+```text
+services/
+│
+├── onboarding/
+│   ├── profile.service.ts
+│   └── profile-validation.service.ts
+│
+├── competency/
+│   ├── role-competency.service.ts
+│   ├── competency.service.ts
+│   └── assessment.service.ts
+│
+├── skill-gap/
+│   ├── skill-gap.service.ts
+│   └── skill-gap-ai.service.ts
+│
+├── recommendation/
+│   ├── recommendation.service.ts
+│   ├── course-matching.service.ts
+│   ├── ranking.service.ts
+│   └── data-sufficiency.service.ts
+│
+├── trainer/
+│   ├── trainer-matching.service.ts
+│   └── trainer-ranking.service.ts
+│
+└── learning/
+    ├── learning-event.service.ts
+    ├── competency-update.service.ts
+    └── revision.service.ts
+```
+
+This keeps your recommendation engine maintainable.
+
+---
+
+# 19. Suggested API flow
+
+### Onboarding
+
+```http
+POST /api/trainee/onboarding
+```
+
+### Get role competencies
+
+```http
+GET /api/roles/:roleId/competencies
+```
+
+### Validate recommendation data
+
+```http
+GET /api/trainee/recommendations/readiness
+```
+
+Response:
+
+```json
+{
+  "status": "READY",
+  "score": 86,
+  "missingData": [],
+  "warnings": []
+}
+```
+
+or:
+
+```json
+{
+  "status": "NEEDS_MORE_DATA",
+  "score": 48,
+  "missingData": [
+    "currentSkills",
+    "skillEvidence"
+  ],
+  "nextAction": "DIAGNOSTIC_ASSESSMENT"
+}
+```
+
+### Generate skill gaps
+
+```http
+POST /api/trainee/skill-gap/analyze
+```
+
+### Get recommendations
+
+```http
+GET /api/trainee/recommendations
+```
+
+### Course details
+
+```http
+GET /api/courses/:courseId
+```
+
+### Course mentors
+
+```http
+GET /api/courses/:courseId/trainers
+```
+
+---
+
+# 20. Database relationships
+
+A clean structure would look like:
+
+```text
+User
+ │
+ └── TraineeProfile
+       │
+       ├── Role
+       │    └── RoleCompetency
+       │
+       ├── TraineeSkill
+       │
+       ├── CompetencyAssessment
+       │
+       └── UserCompetency
+                │
+                ↓
+          SkillGap
+                │
+                ↓
+        CourseCompetency
+                │
+                ↓
+             Course
+                │
+                ↓
+        CourseTrainer
+                │
+                ↓
+             Trainer
+                │
+                ├── TrainerCompetency
+                ├── TrainerRating
+                └── TrainerAvailability
+```
+
+And retain learning events separately:
+
+```text
+User
+ ↓
+LearningEvent
+ ↓
+Competency Update
+ ↓
+UserCompetency
+ ↓
+Recommendation
+ ↓
+Revision
+```
+
+The revision-engine document specifically recommends immutable learning events, competency aggregates, confidence, assessment evidence, and continuous updates. 
+
+---
+
+# 21. The most important rule: AI should never bypass database constraints
+
+Your architecture should be:
+
+```text
+                 AI
+                  │
+          Skill-gap interpretation
+                  │
+                  ↓
+       ┌─────────────────────┐
+       │ Deterministic Rules │
+       └──────────┬──────────┘
+                  ↓
+             PostgreSQL
+                  │
+        ┌─────────┴─────────┐
+        ↓                   ↓
+ Available Courses     Available Trainers
+        ↓                   ↓
+ Course Ranker        Trainer Ranker
+        ↓                   ↓
+       USER                USER
+```
+
+Not:
+
+```text
+User
+ ↓
+LLM
+ ↓
+"Here are 5 courses and 3 mentors"
+```
+
+That second architecture will eventually produce hallucinated courses, nonexistent mentors, inaccurate expertise and unreliable recommendations.
+
+---
+
+# 22. Complete real-world example
+
+Suppose:
+
+### Trainee
+
+```text
+Role:
+Data Analyst
+
+Current skills:
+SQL
+Python
+Excel
+
+Experience:
+1 year
+```
+
+Diagnostic assessment:
+
+```text
+SQL          78
+Python       42
+Excel        81
+Statistics   31
+Power BI     35
+```
+
+Role requirements:
+
+```text
+SQL          80
+Python       75
+Excel        70
+Statistics   70
+Power BI     65
+```
+
+Gap engine:
+
+```text
+Statistics
+Gap: 39
+Severity: HIGH
+
+Power BI
+Gap: 30
+Severity: HIGH
+
+Python
+Gap: 33
+Severity: HIGH
+```
+
+Then course database:
+
+```text
+Statistics for Data Analysts
+Python for Data Analysis
+Power BI Fundamentals
+```
+
+Recommendation engine:
+
+```text
+1. Statistics for Data Analysts
+   Match: 96%
+
+2. Python for Data Analysis
+   Match: 93%
+
+3. Power BI Fundamentals
+   Match: 89%
+```
+
+Trainee clicks:
+
+> Statistics for Data Analysts
+
+Then trainer engine queries only trainers related to that course.
+
+```text
+Trainer A
+Statistics expertise: Excellent
+Rating: 4.9
+Experience: 9 years
+Match: 97%
+
+Trainer B
+Statistics expertise: Excellent
+Rating: 4.8
+Experience: 7 years
+Match: 94%
+
+Trainer C
+Statistics expertise: Good
+Rating: 4.6
+Experience: 5 years
+Match: 86%
+```
+
+Course page:
+
+```text
+Statistics for Data Analysts
+
+Recommended for you
+96% match
+
+Because:
+✓ High competency gap
+✓ Required for your role
+✓ Course directly covers the missing competency
+
+Recommended Mentors
+
+🥇 Trainer A — 97% match — ⭐4.9
+🥈 Trainer B — 94% match — ⭐4.8
+🥉 Trainer C — 86% match — ⭐4.6
+```
+
+That is the experience I would target.
+
+---
+
+# 23. Data-sufficiency state machine
+
+I strongly recommend implementing this explicitly:
+
+```text
+                    NEW USER
+                       │
+                       ↓
+               PROFILE INCOMPLETE
+                       │
+                       ↓
+                PROFILE COMPLETE
+                       │
+                       ↓
+             CHECK ROLE COMPETENCY
+                 /           \
+                /             \
+          NOT FOUND           FOUND
+             ↓                  ↓
+       DATA BLOCKED       CHECK SKILLS
+                              │
+                    ┌─────────┴─────────┐
+                    ↓                   ↓
+               SUFFICIENT          INSUFFICIENT
+                    ↓                   ↓
+              SKILL GAP          DIAGNOSTIC
+               ANALYSIS           ASSESSMENT
+                    │                   │
+                    └─────────┬─────────┘
+                              ↓
+                         SKILL GAPS
+                              ↓
+                      COURSE DATABASE
+                       /           \
+                      /             \
+                  FOUND          NOT FOUND
+                    ↓                ↓
+             RECOMMENDATIONS    NO COURSE
+                    ↓
+              USER CLICKS COURSE
+                    ↓
+               TRAINER DATABASE
+                    /       \
+                   /         \
+               FOUND       NOT FOUND
+                 ↓             ↓
+          TRAINER RANKING   NO TRAINER
+                 ↓
+          COURSE + MENTORS
+```
+
+This gives you a **production-quality fallback system** instead of an AI demo that only works when every piece of data happens to exist.
+
+---
+
+# 24. How this connects to your revision engine
+
+After the trainee starts learning, don't throw away the onboarding competency profile.
+
+It becomes the **initial learner model**.
+
+Then:
+
+```text
+Initial assessment
+      ↓
+Initial competency
+      ↓
+Course recommendation
+      ↓
+Course enrollment
+      ↓
+Lesson
+      ↓
+Quiz
+      ↓
+Learning Event
+      ↓
+Competency Update
+      ↓
+Memory / Forgetting Update
+      ↓
+Recommendation Update
+      ↓
+Revision Recommendation
+```
+
+The revision engine's intended pipeline is essentially **learning event → competency update → memory/forgetting update → dependency analysis → priority scoring → candidate filtering → session optimization → revision generation**. 
+
+And importantly, the engine already defines different behavior for insufficient evidence: a high score with little evidence should retain low confidence and trigger further assessment rather than assuming mastery. 
+
+---
+
+# 25. Final implementation principle
+
+The entire system should follow this rule:
+
+> **AI identifies and explains; the database verifies and supplies; deterministic ranking decides; the UI communicates confidence and limitations.**
+
+So the actual production pipeline is:
+
+```text
+TRAINEE DATA
+     ↓
+DATA SUFFICIENCY VALIDATOR
+     ↓
+ROLE → REQUIRED COMPETENCIES
+     ↓
+CURRENT COMPETENCY PROFILE
+     ↓
+AI SKILL GAP ANALYSIS
+     ↓
+MISSING COMPETENCIES
+     ↓
+DATABASE COURSE MATCHING
+     ↓
+COURSE AVAILABILITY FILTER
+     ↓
+COURSE RECOMMENDATION RANKING
+     ↓
+TRAINEE RECOMMENDATION PAGE
+     ↓
+COURSE CLICK
+     ↓
+COURSE-SPECIFIC TRAINER MATCHING
+     ↓
+EXPERTISE + COMPETENCY + RATING + EXPERIENCE
+     ↓
+TRAINER RANKING
+     ↓
+COURSE DETAIL + BEST MATCHED MENTORS
+```
+
+**This is the architecture I would implement in your existing Capacity Connect trainee workflow.** It also gives you a very strong SIH demonstration because you can visibly show the chain: **role → competency requirements → skill gap → real DB course → matched trainer**, while gracefully demonstrating what happens when data is missing instead of pretending the AI always has an answer.

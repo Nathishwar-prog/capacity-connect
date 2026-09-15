@@ -194,6 +194,11 @@ export class CourseImportService {
 
         const totalModules = parsed.modules?.length || 0;
         const totalLessons = parsed.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0;
+        const totalKnowledgeChecks =
+            parsed.modules?.reduce(
+                (acc, m) => acc + (m.lessons?.reduce((lAcc, l) => lAcc + (l.knowledgeChecks?.length || 0), 0) || 0),
+                0
+            ) || 0;
         const totalTopics = parsed.globalTopics?.length || 0;
         const totalCompetencies = parsed.globalTopics?.filter((t) => t.matchedCompetencyId).length || 0;
         const totalGlossaryTerms = parsed.specialSections?.glossary?.length || 0;
@@ -205,7 +210,7 @@ export class CourseImportService {
             totalLessons,
             totalTopics,
             totalCompetencyMappings: totalCompetencies,
-            totalKnowledgeChecks: 0,
+            totalKnowledgeChecks,
             totalGlossaryTerms,
             totalReferences,
             overallConfidence,
@@ -246,7 +251,7 @@ export class CourseImportService {
                 totalLessons,
                 totalTopics,
                 totalCompetencyMappings: totalCompetencies,
-                totalKnowledgeChecks: 0,
+                totalKnowledgeChecks,
                 totalGlossaryTerms,
                 totalReferences,
                 overallConfidence,
@@ -355,6 +360,9 @@ export class CourseImportService {
             // 4. Create LearningTopics
             const topicIdByCode = new Map<string, string>();
             const linkedCompetencyIds = new Set<string>();
+            const topicCompetencyCreates: Array<{ topicId: string; competencyId: string; weight: number }> = [];
+            const courseCompetencyCreates: Array<{ courseId: string; competencyId: string; targetLevel: number; importance: number; weight: number }> = [];
+
             if (parsed.globalTopics && parsed.globalTopics.length > 0) {
                 for (let i = 0; i < parsed.globalTopics.length; i++) {
                     const top = parsed.globalTopics[i];
@@ -375,50 +383,62 @@ export class CourseImportService {
 
                     topicIdByCode.set(top.code, createdTopic.id);
 
-                    // Link to Competency if matched
+                    // Collect Competency links
                     if (top.matchedCompetencyId) {
-                        await tx.learningTopicCompetency.create({
-                            data: {
-                                topicId: createdTopic.id,
-                                competencyId: top.matchedCompetencyId,
-                                weight: 1.0,
-                            },
+                        topicCompetencyCreates.push({
+                            topicId: createdTopic.id,
+                            competencyId: top.matchedCompetencyId,
+                            weight: 1.0,
                         });
 
-                        // Also attach CourseCompetency once per unique competency
                         if (!linkedCompetencyIds.has(top.matchedCompetencyId)) {
                             linkedCompetencyIds.add(top.matchedCompetencyId);
-                            await tx.courseCompetency.create({
-                                data: {
-                                    courseId: course.id,
-                                    competencyId: top.matchedCompetencyId,
-                                    targetLevel: 2,
-                                    importance: 1.0,
-                                    weight: 1.0,
-                                },
-                            }).catch(() => {});
+                            courseCompetencyCreates.push({
+                                courseId: course.id,
+                                competencyId: top.matchedCompetencyId,
+                                targetLevel: 2,
+                                importance: 1.0,
+                                weight: 1.0,
+                            });
                         }
                     }
+                }
+
+                // Batch insert competency relations
+                if (topicCompetencyCreates.length > 0) {
+                    await tx.learningTopicCompetency.createMany({
+                        data: topicCompetencyCreates,
+                        skipDuplicates: true,
+                    });
+                }
+                if (courseCompetencyCreates.length > 0) {
+                    await tx.courseCompetency.createMany({
+                        data: courseCompetencyCreates,
+                        skipDuplicates: true,
+                    });
                 }
             }
 
             // 5. Create Topic Prerequisites
             if (parsed.topicPrerequisites && parsed.topicPrerequisites.length > 0) {
+                const prereqCreates: Array<{ prerequisiteTopicId: string; dependentTopicId: string; edgeWeight: number }> = [];
                 for (const prereq of parsed.topicPrerequisites) {
                     const fromId = topicIdByCode.get(prereq.fromTopicCode);
                     const toId = topicIdByCode.get(prereq.toTopicCode);
 
                     if (fromId && toId && fromId !== toId) {
-                        await tx.topicPrerequisite.create({
-                            data: {
-                                prerequisiteTopicId: fromId,
-                                dependentTopicId: toId,
-                                edgeWeight: 1.0,
-                            },
-                        }).catch(() => {
-                            // ignore duplicate edge
+                        prereqCreates.push({
+                            prerequisiteTopicId: fromId,
+                            dependentTopicId: toId,
+                            edgeWeight: 1.0,
                         });
                     }
+                }
+                if (prereqCreates.length > 0) {
+                    await tx.topicPrerequisite.createMany({
+                        data: prereqCreates,
+                        skipDuplicates: true,
+                    });
                 }
             }
 
@@ -431,6 +451,7 @@ export class CourseImportService {
                 options: Array<{ optionText: string; isCorrect: boolean; orderIndex: number }>;
                 topicCode?: string;
             }> = [];
+            const lessonTopicsToCreate: Array<{ lessonId: string; topicId: string }> = [];
 
             for (let mIdx = 0; mIdx < parsed.modules.length; mIdx++) {
                 const mod = parsed.modules[mIdx];
@@ -460,17 +481,15 @@ export class CourseImportService {
                         },
                     });
 
-                    // Map Lesson to LearningTopics
+                    // Collect Lesson to LearningTopics
                     if (les.suggestedTopics && les.suggestedTopics.length > 0) {
                         for (const top of les.suggestedTopics) {
                             const topicId = topicIdByCode.get(top.code);
                             if (topicId) {
-                                await tx.lessonTopic.create({
-                                    data: {
-                                        lessonId: createdLesson.id,
-                                        topicId,
-                                    },
-                                }).catch(() => {});
+                                lessonTopicsToCreate.push({
+                                    lessonId: createdLesson.id,
+                                    topicId,
+                                });
                             }
                         }
                     }
@@ -489,6 +508,14 @@ export class CourseImportService {
                         }
                     }
                 }
+            }
+
+            // Batch insert lesson topics
+            if (lessonTopicsToCreate.length > 0) {
+                await tx.lessonTopic.createMany({
+                    data: lessonTopicsToCreate,
+                    skipDuplicates: true,
+                });
             }
 
             // 7. Create Assessment if Knowledge Checks exist
@@ -543,8 +570,8 @@ export class CourseImportService {
 
             return course;
         }, {
-            timeout: 120000,
-            maxWait: 30000,
+            timeout: 300000,
+            maxWait: 60000,
         });
 
         logger.info(`Successfully approved and created course ${createdCourse.id} from job ${jobId}`);

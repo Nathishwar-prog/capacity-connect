@@ -605,20 +605,20 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           {userRole === 'TRAINEE' && !isCollapsed && (
             <div className="pt-3 border-t border-slate-100">
               <Link
-                href="/trainee/setup"
+                href="/trainee/onboarding"
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-left hover:border-indigo-300 hover:bg-indigo-50 transition-all cursor-pointer block"
               >
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Trainee Setup</span>
+                    <span>Role Onboarding</span>
                   </div>
                   <span className="text-[10px] text-indigo-600/80 block mt-0.5 font-medium">
-                    Profile & Capacity Onboarding
+                    Profile, Skills & Diagnostic
                   </span>
                 </div>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-2xs">
-                  Setup
+                  Wizard
                 </span>
               </Link>
             </div>

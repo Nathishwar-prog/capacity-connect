@@ -7,9 +7,9 @@ export class TrainerService {
   private trainerRepository: TrainerRepository;
   private userRepository: UserRepository;
 
-  constructor() {
-    this.trainerRepository = new TrainerRepository();
-    this.userRepository = new UserRepository();
+  constructor(trainerRepository?: TrainerRepository, userRepository?: UserRepository) {
+    this.trainerRepository = trainerRepository || new TrainerRepository();
+    this.userRepository = userRepository || new UserRepository();
   }
 
   /**
@@ -27,7 +27,10 @@ export class TrainerService {
     }
 
     if (course.trainerId !== trainerId) {
-      throw new ForbiddenError('Access denied: You do not have permission to manage this course');
+      const user = await this.userRepository.findById(trainerId);
+      if (!user?.organizationId || user.organizationId !== course.organizationId) {
+        throw new ForbiddenError('Access denied: You do not have permission to manage this course');
+      }
     }
 
     return course;
@@ -332,6 +335,7 @@ export class TrainerService {
     };
   }
 
+
   /**
    * Course Management
    */
@@ -343,17 +347,30 @@ export class TrainerService {
       page?: number;
       pageSize?: number;
     },
+    userRole?: string,
+    organizationId?: string,
   ) {
-    const page = filters.page || 1;
-    const take = filters.pageSize || 10;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const take = Math.min(200, Math.max(1, Number(filters.pageSize) || 10));
     const skip = (page - 1) * take;
 
-    const { total, courses } = await this.trainerRepository.getTrainerCourses(userId, {
-      status: filters.status,
-      search: filters.search,
-      skip,
-      take,
-    });
+    let resolvedOrgId = organizationId;
+    if (!resolvedOrgId && userRole !== Role.SUPER_ADMIN) {
+      const dbUser = await this.userRepository.findById(userId);
+      resolvedOrgId = dbUser?.organizationId;
+    }
+
+    const { total, courses } = await this.trainerRepository.getTrainerCourses(
+      userId,
+      {
+        status: filters.status,
+        search: filters.search,
+        skip,
+        take,
+      },
+      userRole,
+      resolvedOrgId,
+    );
 
     return {
       courses: courses.map((c: any) => ({
@@ -472,28 +489,104 @@ export class TrainerService {
   public async deleteCourse(courseId: string, userId: string, userRole: string) {
     const course = await this.assertCourseOwnership(courseId, userId, userRole);
 
-    if (
-      course.status === CourseStatus.PUBLISHED &&
-      userRole !== Role.ADMIN &&
-      userRole !== Role.SUPER_ADMIN
-    ) {
-      throw new BadRequestError(
-        'Published courses cannot be deleted by trainers. Request archival instead.',
-      );
-    }
-
-    await this.trainerRepository.deleteCourse(courseId);
+    const result = await this.trainerRepository.deleteCourseSafely(courseId);
 
     await this.trainerRepository.logAudit({
       organizationId: course.organizationId,
       userId,
-      action: 'COURSE_DELETED',
+      action: result.archived ? 'COURSE_ARCHIVED' : 'COURSE_DELETED',
       entityType: 'Course',
       entityId: courseId,
       oldValues: { title: course.title },
     });
 
-    return { message: 'Course successfully deleted' };
+    return result;
+  }
+
+  public async publishCourse(courseId: string, userId: string, userRole: string) {
+    const course = await this.assertCourseOwnership(courseId, userId, userRole);
+
+    if (course.status === CourseStatus.PUBLISHED) {
+      throw new BadRequestError('Course is already published.');
+    }
+
+    if (course.modules.length === 0) {
+      throw new BadRequestError('Course validation failed: Must contain at least one module.');
+    }
+
+    for (const mod of course.modules) {
+      if (mod.lessons.length === 0) {
+        throw new BadRequestError(
+          `Course validation failed: Module '${mod.title}' contains no lessons.`,
+        );
+      }
+    }
+
+    const updated = await this.trainerRepository.updateCourse(courseId, {
+      status: CourseStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+
+    await this.trainerRepository.logAudit({
+      organizationId: course.organizationId,
+      userId,
+      action: 'COURSE_PUBLISHED',
+      entityType: 'Course',
+      entityId: courseId,
+      newValues: { status: CourseStatus.PUBLISHED },
+    });
+
+    return updated;
+  }
+
+  public async unpublishCourse(courseId: string, userId: string, userRole: string) {
+    const course = await this.assertCourseOwnership(courseId, userId, userRole);
+
+    if (course.status !== CourseStatus.PUBLISHED) {
+      throw new BadRequestError('Only published courses can be unpublished.');
+    }
+
+    const updated = await this.trainerRepository.unpublishCourse(courseId);
+
+    await this.trainerRepository.logAudit({
+      organizationId: course.organizationId,
+      userId,
+      action: 'COURSE_UNPUBLISHED',
+      entityType: 'Course',
+      entityId: courseId,
+      newValues: { status: CourseStatus.DRAFT },
+    });
+
+    return updated;
+  }
+
+  public async duplicateCourse(courseId: string, userId: string, userRole: string) {
+    const course = await this.assertCourseOwnership(courseId, userId, userRole);
+
+    const duplicated = await this.trainerRepository.duplicateCourse(courseId, userId);
+    if (!duplicated) {
+      throw new NotFoundError('Course duplication failed');
+    }
+
+    await this.trainerRepository.logAudit({
+      organizationId: course.organizationId,
+      userId,
+      action: 'COURSE_DUPLICATED',
+      entityType: 'Course',
+      entityId: duplicated.id,
+      newValues: { title: duplicated.title, originalCourseId: courseId },
+    });
+
+    return duplicated;
+  }
+
+  public async getCourseAnalytics(courseId: string, userId: string, userRole: string) {
+    await this.assertCourseOwnership(courseId, userId, userRole);
+    const analytics = await this.trainerRepository.getCourseAnalytics(courseId);
+    if (!analytics) {
+      throw new NotFoundError('Course analytics not found');
+    }
+    return analytics;
   }
 
   /**
@@ -707,15 +800,15 @@ export class TrainerService {
         progress: e.progressPercentage,
         status: e.status,
         enrolledAt: e.enrolledAt.toISOString(),
-        skills: e.user.userSkills.map((us: any) => ({
+        skills: (e.user.userSkills || []).map((us: any) => ({
           name: us.skill.name,
           level: us.proficiencyLevel,
         })),
-        competencies: e.user.userCompetencies.map((uc: any) => ({
+        competencies: (e.user.userCompetencies || []).map((uc: any) => ({
           name: uc.competency.name,
           level: uc.currentLevel,
         })),
-        skillGapsCount: e.user.skillGaps.length,
+        skillGapsCount: (e.user.skillGaps || []).length,
       })),
       pagination: {
         page,
@@ -767,7 +860,7 @@ export class TrainerService {
           })),
         })),
       })),
-      competencies: trainee.userCompetencies.map((uc: any) => ({
+      competencies: (trainee.userCompetencies || []).map((uc: any) => ({
         id: uc.competency.id,
         name: uc.competency.name,
         category: uc.competency.category,
@@ -775,7 +868,7 @@ export class TrainerService {
         confidenceScore: uc.confidenceScore,
         source: uc.source,
       })),
-      skillGaps: trainee.skillGaps.map((sg: any) => ({
+      skillGaps: (trainee.skillGaps || []).map((sg: any) => ({
         id: sg.id,
         competencyName: sg.competency.name,
         currentLevel: sg.currentLevel,
@@ -784,7 +877,7 @@ export class TrainerService {
         priority: sg.priority,
         status: sg.status,
       })),
-      assessments: trainee.assessmentAttempts.map((a: any) => ({
+      assessments: (trainee.assessmentAttempts || []).map((a: any) => ({
         id: a.id,
         assessmentTitle: a.assessment.title,
         subject: a.assessment.subject,
@@ -793,6 +886,34 @@ export class TrainerService {
         passed: a.passed,
         status: a.status,
         submittedAt: a.submittedAt ? a.submittedAt.toISOString() : null,
+      })),
+      topicCompetencies: ((detail as any)?.topicCompetencies || []).map((tc: any) => ({
+        topicId: tc.topicId,
+        topicTitle: tc.topic?.name || tc.topicTitle || 'Topic',
+        courseId: tc.topic?.courseId || tc.courseId || '',
+        competencyScore: Math.round(tc.competencyScore),
+        confidenceScore: Math.round(tc.confidenceScore * 100),
+        forgettingRisk: Math.round(tc.forgettingRisk * 100),
+        priorityScore: Math.round(tc.priorityScore),
+        stability: tc.stability,
+        retention: Math.round(tc.retention * 100),
+        lastReviewedAt: tc.lastReviewedAt ? (tc.lastReviewedAt.toISOString ? tc.lastReviewedAt.toISOString() : tc.lastReviewedAt) : null,
+      })),
+      learningEvents: ((detail as any)?.learningEvents || []).map((le: any) => ({
+        id: le.id,
+        topicTitle: le.topic?.name || le.topicTitle || 'Course Topic',
+        eventType: le.eventType,
+        correct: le.correct,
+        occurredAt: le.occurredAt ? (le.occurredAt.toISOString ? le.occurredAt.toISOString() : le.occurredAt) : new Date().toISOString(),
+      })),
+      revisionActivity: ((detail as any)?.revisionSessions || (detail as any)?.revisionActivity || []).map((rs: any) => ({
+        id: rs.id,
+        status: rs.status,
+        itemCount: rs.itemCount,
+        correctCount: rs.correctCount,
+        score: rs.score,
+        startedAt: rs.startedAt ? (rs.startedAt.toISOString ? rs.startedAt.toISOString() : rs.startedAt) : new Date().toISOString(),
+        completedAt: rs.completedAt ? (rs.completedAt.toISOString ? rs.completedAt.toISOString() : rs.completedAt) : null,
       })),
     };
   }

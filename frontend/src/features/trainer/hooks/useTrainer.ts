@@ -149,6 +149,41 @@ export const useSubmitCourseForApproval = (courseId: string) => {
   });
 };
 
+export const usePublishCourse = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => trainerApi.publishCourse(courseId),
+    onSuccess: (_, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'courses'] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'dashboard'] });
+    },
+  });
+};
+
+export const useUnpublishCourse = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => trainerApi.unpublishCourse(courseId),
+    onSuccess: (_, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'courses'] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'dashboard'] });
+    },
+  });
+};
+
+export const useDuplicateCourse = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => trainerApi.duplicateCourse(courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'courses'] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'dashboard'] });
+    },
+  });
+};
+
 export const useCreateModule = (courseId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -335,5 +370,16 @@ export const useTrainerFeedback = () => {
       isAuthenticated &&
       (user?.role === 'TRAINER' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'),
     staleTime: 60 * 1000,
+  });
+};
+
+export const useCourseAnalytics = (courseId: string) => {
+  const { isAuthenticated } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['trainer', 'course-analytics', courseId],
+    queryFn: () => trainerApi.getCourseAnalytics(courseId),
+    enabled: isAuthenticated && Boolean(courseId),
+    staleTime: 30 * 1000,
   });
 };

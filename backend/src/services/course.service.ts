@@ -318,6 +318,156 @@ export class CourseService {
         return this.courseRepository.updateStatus(id, CourseStatus.PUBLISHED, new Date());
     }
 
+    public async unpublishCourse(id: string, userCtx: UserContext): Promise<Course> {
+        const course = await this.getCourseById(id, userCtx);
+
+        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
+        const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
+
+        if (!isOwnerTrainer && !isAdmin) {
+            throw new ForbiddenError('You do not have permission to unpublish this course');
+        }
+
+        if (course.status !== CourseStatus.PUBLISHED) {
+            throw new ConflictError('Only published courses can be unpublished');
+        }
+
+        return this.courseRepository.updateStatus(id, CourseStatus.DRAFT);
+    }
+
+    public async duplicateCourse(id: string, userCtx: UserContext): Promise<Course> {
+        const course = await this.getCourseById(id, userCtx);
+
+        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
+        const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
+
+        if (!isOwnerTrainer && !isAdmin) {
+            throw new ForbiddenError('You do not have permission to duplicate this course');
+        }
+
+        const prismaClient = (await import('../database/client')).default;
+        const fullCourse = await prismaClient.course.findUnique({
+            where: { id },
+            include: {
+                modules: {
+                    include: { lessons: true },
+                    orderBy: { orderIndex: 'asc' },
+                },
+                courseCompetencies: true,
+            },
+        });
+
+        if (!fullCourse) throw new NotFoundError('Course not found');
+
+        const baseSlug = `${fullCourse.slug}-copy-${Date.now()}`;
+        const newTitle = `Copy of ${fullCourse.title}`;
+
+        const clonedCourse = await prismaClient.$transaction(async (tx) => {
+            const created = await tx.course.create({
+                data: {
+                    organizationId: fullCourse.organizationId,
+                    trainerId: userCtx.userId,
+                    title: newTitle,
+                    slug: baseSlug,
+                    description: fullCourse.description,
+                    thumbnailUrl: fullCourse.thumbnailUrl,
+                    category: fullCourse.category,
+                    difficulty: fullCourse.difficulty,
+                    durationMinutes: fullCourse.durationMinutes,
+                    status: CourseStatus.DRAFT,
+                    overview: fullCourse.overview,
+                    targetAudience: fullCourse.targetAudience,
+                    learningOutcomes: fullCourse.learningOutcomes || undefined,
+                    prerequisitesText: fullCourse.prerequisitesText,
+                    glossary: fullCourse.glossary || undefined,
+                    references: fullCourse.references || undefined,
+                },
+            });
+
+            for (const mod of fullCourse.modules) {
+                const createdMod = await tx.courseModule.create({
+                    data: {
+                        courseId: created.id,
+                        title: mod.title,
+                        description: mod.description,
+                        orderIndex: mod.orderIndex,
+                    },
+                });
+
+                for (const lesson of mod.lessons) {
+                    await tx.lesson.create({
+                        data: {
+                            moduleId: createdMod.id,
+                            title: lesson.title,
+                            description: lesson.description,
+                            contentType: lesson.contentType,
+                            content: lesson.content,
+                            resourceUrl: lesson.resourceUrl,
+                            durationMinutes: lesson.durationMinutes,
+                            orderIndex: lesson.orderIndex,
+                            isPreview: lesson.isPreview,
+                            learningObjectives: lesson.learningObjectives || undefined,
+                            keyTakeaways: lesson.keyTakeaways || undefined,
+                        },
+                    });
+                }
+            }
+
+            for (const cc of fullCourse.courseCompetencies) {
+                await tx.courseCompetency.create({
+                    data: {
+                        courseId: created.id,
+                        competencyId: cc.competencyId,
+                        targetLevel: cc.targetLevel,
+                    },
+                });
+            }
+
+            return created;
+        });
+
+        return clonedCourse;
+    }
+
+    public async deleteCourse(id: string, userCtx: UserContext): Promise<{ message: string; archived: boolean }> {
+        const course = await this.getCourseById(id, userCtx);
+
+        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
+        const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
+
+        if (!isOwnerTrainer && !isAdmin) {
+            throw new ForbiddenError('You do not have permission to delete this course');
+        }
+
+        const prismaClient = (await import('../database/client')).default;
+        const enrollmentCount = await prismaClient.enrollment.count({
+            where: { courseId: id },
+        });
+
+        if (enrollmentCount > 0) {
+            await prismaClient.course.update({
+                where: { id },
+                data: {
+                    status: CourseStatus.ARCHIVED,
+                    deletedAt: new Date(),
+                },
+            });
+            return {
+                message: `Course has ${enrollmentCount} historical/active enrollment(s) and was safely archived to preserve trainee records.`,
+                archived: true,
+            };
+        }
+
+        await prismaClient.course.delete({
+            where: { id },
+        });
+
+        return {
+            message: 'Course deleted successfully.',
+            archived: false,
+        };
+    }
+
     public async saveDraft(id: string, draftData: any, userCtx: UserContext): Promise<any> {
         const course = await this.getCourseById(id, userCtx);
 

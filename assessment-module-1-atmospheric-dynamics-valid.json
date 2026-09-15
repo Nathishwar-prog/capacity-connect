@@ -1,0 +1,307 @@
+{
+  "schemaVersion": "1.0",
+  "assessment": {
+    "title": "Advanced Atmospheric Dynamics & NWP — Module 1 Assessment",
+    "description": "Comprehensive institutional assessment covering atmospheric dynamics, vorticity equations, baroclinic systems, and numerical weather prediction fundamentals.",
+    "instructions": "Answer all 15 questions. For single choice and true/false questions, select exactly one answer. For multiple choice questions, select all applicable options.",
+    "durationMinutes": 45,
+    "passingPercentage": 70,
+    "attemptsAllowed": 2,
+    "shuffleQuestions": false,
+    "shuffleOptions": false,
+    "subject": "Atmospheric Dynamics",
+    "course": {
+      "courseTitle": "Forecasters Training Course"
+    },
+    "module": {
+      "moduleTitle": "Advanced Atmospheric Dynamics & NWP"
+    },
+    "lesson": {
+      "lessonTitle": "Circulation Theorems and Pressure Systems"
+    },
+    "questions": [
+      {
+        "externalId": "ATM-M1-001",
+        "questionType": "SINGLE_CHOICE",
+        "question": "Which physical force primarily balances the horizontal pressure gradient force in unaccelerated geostrophic flow in the Northern Hemisphere extra-tropics?",
+        "options": [
+          { "id": "A", "text": "Coriolis force" },
+          { "id": "B", "text": "Centrifugal force" },
+          { "id": "C", "text": "Molecular friction" },
+          { "id": "D", "text": "Buoyancy force" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "In geostrophic balance, the horizontal pressure gradient force is exactly balanced by the horizontal Coriolis force directed perpendicular and to the right of the wind velocity in the Northern Hemisphere.",
+        "points": 1,
+        "difficulty": "EASY",
+        "tags": ["atmospheric-dynamics", "geostrophic-balance"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-002",
+        "questionType": "SINGLE_CHOICE",
+        "question": "Under which condition is the Rossby number (Ro = U / (f*L)) sufficiently small to justify the quasi-geostrophic approximation in synoptic-scale meteorology?",
+        "options": [
+          { "id": "A", "text": "Ro << 1 (typically order 0.1)" },
+          { "id": "B", "text": "Ro >> 1 (typically order 10)" },
+          { "id": "C", "text": "Ro exactly equals 1" },
+          { "id": "D", "text": "Ro is negative and large" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "A small Rossby number (Ro << 1) indicates that Coriolis accelerations dominate inertial advective accelerations, which is the foundational criterion for quasi-geostrophic scaling at synoptic scales.",
+        "points": 1,
+        "difficulty": "MEDIUM",
+        "tags": ["rossby-number", "quasi-geostrophic"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-003",
+        "questionType": "SINGLE_CHOICE",
+        "question": "According to the thermal wind relation, vertical shear of the geostrophic wind is directly proportional to which field?",
+        "options": [
+          { "id": "A", "text": "Horizontal gradient of mean layer temperature" },
+          { "id": "B", "text": "Vertical lapse rate of potential temperature" },
+          { "id": "C", "text": "Surface pressure tendency" },
+          { "id": "D", "text": "Absolute humidity divergence" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "The thermal wind equation demonstrates that vertical variation of geostrophic wind is parallel to mean isotherms, with magnitude proportional to the horizontal temperature gradient across the layer.",
+        "points": 1,
+        "difficulty": "MEDIUM",
+        "tags": ["thermal-wind", "baroclinicity"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-004",
+        "questionType": "SINGLE_CHOICE",
+        "question": "In a hydrostatic atmosphere, what is the rate of change of pressure with respect to geopotential height (-dp/dz)?",
+        "options": [
+          { "id": "A", "text": "rho * g" },
+          { "id": "B", "text": "rho / g" },
+          { "id": "C", "text": "-rho * g" },
+          { "id": "D", "text": "g / rho" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "The hydrostatic balance equation states that dp/dz = -rho * g, meaning the upward vertical pressure gradient force balances the downward gravitational force per unit volume.",
+        "points": 1,
+        "difficulty": "EASY",
+        "tags": ["hydrostatic-balance"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-005",
+        "questionType": "SINGLE_CHOICE",
+        "question": "According to Kelvin's Circulation Theorem, what happens to absolute circulation around a closed material curve in an inviscid, barotropic fluid?",
+        "options": [
+          { "id": "A", "text": "It remains strictly constant in time (dC/dt = 0)" },
+          { "id": "B", "text": "It increases exponentially due to planetary rotation" },
+          { "id": "C", "text": "It is always zero at the equator" },
+          { "id": "D", "text": "It oscillates with the Brunt-Vaisala frequency" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "Kelvin's circulation theorem dictates that in an inviscid, barotropic fluid under conservative body forces, the circulation around a closed material loop is conserved following the fluid motion.",
+        "points": 1,
+        "difficulty": "HARD",
+        "tags": ["kelvin-circulation", "vorticity"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-006",
+        "questionType": "SINGLE_CHOICE",
+        "question": "In the vertical component of the vorticity equation, what is the effect of horizontal convergence on absolute vorticity?",
+        "options": [
+          { "id": "A", "text": "It increases absolute vorticity through vertical column stretching" },
+          { "id": "B", "text": "It decreases absolute vorticity through column shrinking" },
+          { "id": "C", "text": "It has zero effect on vorticity" },
+          { "id": "D", "text": "It immediately converts relative vorticity to potential vorticity" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "The divergence/stretching term -(zeta + f)*div(V) shows that horizontal convergence (negative divergence) acts as a positive source term, intensifying absolute vorticity as the vortex column stretches vertically.",
+        "points": 1,
+        "difficulty": "MEDIUM",
+        "tags": ["vorticity-equation", "stretching-term"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-007",
+        "questionType": "SINGLE_CHOICE",
+        "question": "Within the planetary boundary layer, how does surface friction alter the surface wind direction relative to geostrophic wind in the Northern Hemisphere?",
+        "options": [
+          { "id": "A", "text": "It causes the wind to cross isobars toward lower pressure" },
+          { "id": "B", "text": "It causes the wind to cross isobars toward higher pressure" },
+          { "id": "C", "text": "It has no impact on wind direction" },
+          { "id": "D", "text": "It rotates the wind exactly 180 degrees opposite to geostrophic flow" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "Surface friction retards wind speed, weakening the Coriolis force relative to the pressure gradient force and causing an ageostrophic cross-isobaric component directed toward lower pressure (Ekman spiral effect).",
+        "points": 1,
+        "difficulty": "MEDIUM",
+        "tags": ["planetary-boundary-layer", "ekman-spiral"],
+        "competencies": ["Physical Meteorology"]
+      },
+      {
+        "externalId": "ATM-M1-008",
+        "questionType": "SINGLE_CHOICE",
+        "question": "In Numerical Weather Prediction (NWP), what condition must explicit finite difference advection schemes satisfy to remain numerically stable?",
+        "options": [
+          { "id": "A", "text": "Courant-Friedrichs-Lewy (CFL) criterion (c * dt / dx <= 1)" },
+          { "id": "B", "text": "Rayleigh-Benard convection threshold" },
+          { "id": "C", "text": "Richardson number Ri > 10" },
+          { "id": "D", "text": "Barotropic governor condition" }
+        ],
+        "correctAnswer": {
+          "type": "OPTION",
+          "value": "A"
+        },
+        "explanation": "The CFL condition requires that the numerical domain of dependence contain the physical domain of dependence (c * dt / dx <= 1), preventing unbounded amplification of high-frequency numerical waves.",
+        "points": 1,
+        "difficulty": "HARD",
+        "tags": ["nwp", "cfl-condition", "numerical-methods"],
+        "competencies": ["Numerical Weather Prediction"]
+      },
+      {
+        "externalId": "ATM-M1-009",
+        "questionType": "MULTIPLE_CHOICE",
+        "question": "Which of the following atmospheric conditions directly contribute to baroclinic cyclogenesis in mid-latitudes?",
+        "options": [
+          { "id": "A", "text": "Strong horizontal temperature advection" },
+          { "id": "B", "text": "Upper-tropospheric positive vorticity advection ahead of a 500 hPa trough" },
+          { "id": "C", "text": "Vertical wind shear in accordance with thermal wind balance" },
+          { "id": "D", "text": "Completely uniform barotropic temperature distribution" }
+        ],
+        "correctAnswer": {
+          "type": "OPTIONS",
+          "value": ["A", "B", "C"]
+        },
+        "explanation": "Baroclinic cyclogenesis requires baroclinicity (horizontal temperature gradients giving vertical wind shear), differential thermal advection, and upper-level divergence generated by positive vorticity advection aloft. Uniform barotropic distribution precludes baroclinic growth.",
+        "points": 2,
+        "difficulty": "HARD",
+        "tags": ["cyclogenesis", "baroclinic-instability", "synoptic-meteorology"],
+        "competencies": ["Synoptic Meteorology"]
+      },
+      {
+        "externalId": "ATM-M1-010",
+        "questionType": "MULTIPLE_CHOICE",
+        "question": "Which fundamental prognostic equations constitute the hydrostatic primitive equation set utilized in operational global NWP models?",
+        "options": [
+          { "id": "A", "text": "Horizontal momentum equations (Navier-Stokes)" },
+          { "id": "B", "text": "Thermodynamic energy equation" },
+          { "id": "C", "text": "Continuity equation (conservation of mass)" },
+          { "id": "D", "text": "Moisture / water vapor conservation equation" }
+        ],
+        "correctAnswer": {
+          "type": "OPTIONS",
+          "value": ["A", "B", "C", "D"]
+        },
+        "explanation": "The operational primitive equations comprise the horizontal momentum equations, continuity equation, thermodynamic energy conservation equation, hydrostatic equation, and water substance continuity equation.",
+        "points": 2,
+        "difficulty": "MEDIUM",
+        "tags": ["nwp", "primitive-equations", "computational-meteorology"],
+        "competencies": ["Numerical Weather Prediction"]
+      },
+      {
+        "externalId": "ATM-M1-011",
+        "questionType": "MULTIPLE_CHOICE",
+        "question": "Which of the following are distinct physical characteristics of planetary-scale Rossby waves in the mid-latitude westerlies?",
+        "options": [
+          { "id": "A", "text": "Their restoring mechanism is the meridional gradient of planetary vorticity (beta = df/dy)" },
+          { "id": "B", "text": "Their phase speed is westward relative to the mean background zonal flow" },
+          { "id": "C", "text": "Shorter wavelength Rossby waves exhibit faster eastward propagation relative to the ground" },
+          { "id": "D", "text": "They cannot exist without acoustic compression" }
+        ],
+        "correctAnswer": {
+          "type": "OPTIONS",
+          "value": ["A", "B", "C"]
+        },
+        "explanation": "Rossby waves are vorticity waves restored by beta = df/dy with dispersion relation c = U - beta / k^2. The phase speed is westward relative to mean flow U, meaning stationary waves occur when U = beta / k^2. They are anelastic and filtered from sound waves.",
+        "points": 2,
+        "difficulty": "HARD",
+        "tags": ["rossby-waves", "planetary-waves", "atmospheric-dynamics"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-012",
+        "questionType": "MULTIPLE_CHOICE",
+        "question": "In the atmospheric boundary layer, which mechanisms generate turbulent kinetic energy (TKE)?",
+        "options": [
+          { "id": "A", "text": "Mechanical shear production due to vertical wind gradient" },
+          { "id": "B", "text": "Convective buoyancy production from surface solar heating" },
+          { "id": "C", "text": "Viscous dissipation into heat (destruction of TKE)" },
+          { "id": "D", "text": "Turbulent transport and pressure correlation" }
+        ],
+        "correctAnswer": {
+          "type": "OPTIONS",
+          "value": ["A", "B", "D"]
+        },
+        "explanation": "TKE is generated by wind shear production and positive buoyancy flux during daytime heating, and redistributed by transport. Viscous dissipation acts strictly as a sink of TKE.",
+        "points": 2,
+        "difficulty": "MEDIUM",
+        "tags": ["boundary-layer", "turbulence", "tke"],
+        "competencies": ["Physical Meteorology"]
+      },
+      {
+        "externalId": "ATM-M1-013",
+        "questionType": "TRUE_FALSE",
+        "question": "The Coriolis parameter f = 2*omega*sin(phi) equals exactly zero at the equator (phi = 0 deg) and reaches its maximum value of approximately 1.458e-4 s^-1 at the geographical poles.",
+        "correctAnswer": {
+          "type": "BOOLEAN",
+          "value": true
+        },
+        "explanation": "Because sin(0) = 0, the vertical component of the Earth's rotation vector vanishes at the equator. At the poles, sin(90 deg) = 1, giving f = 2 * (7.292e-5 s^-1) = 1.458e-4 s^-1.",
+        "points": 1,
+        "difficulty": "EASY",
+        "tags": ["coriolis-parameter", "planetary-vorticity"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-014",
+        "questionType": "TRUE_FALSE",
+        "question": "In steady-state frictionless geostrophic flow, the wind blows directly across isobars from high pressure toward low pressure.",
+        "correctAnswer": {
+          "type": "BOOLEAN",
+          "value": false
+        },
+        "explanation": "In pure geostrophic flow without friction, the Coriolis force balances the pressure gradient force perpendicular to the motion, causing the wind to blow strictly parallel to isobars (geostrophic wind), not across them.",
+        "points": 1,
+        "difficulty": "EASY",
+        "tags": ["geostrophic-wind", "isobars"],
+        "competencies": ["Atmospheric Dynamics"]
+      },
+      {
+        "externalId": "ATM-M1-015",
+        "questionType": "TRUE_FALSE",
+        "question": "In a truly barotropic atmosphere, surfaces of constant pressure (isobaric surfaces) coincide everywhere with surfaces of constant density (isopycnic surfaces).",
+        "correctAnswer": {
+          "type": "BOOLEAN",
+          "value": true
+        },
+        "explanation": "By definition, a barotropic atmosphere has density as a function of pressure alone (rho = rho(p)). Consequently, surfaces of constant pressure and constant density are parallel and coincide, precluding thermal wind shear.",
+        "points": 1,
+        "difficulty": "MEDIUM",
+        "tags": ["barotropic-atmosphere", "circulation-theorems"],
+        "competencies": ["Atmospheric Dynamics"]
+      }
+    ]
+  }
+}

@@ -97,6 +97,32 @@ export class CourseController {
         });
     };
 
+    public unpublishCourse = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const course = await this.courseService.unpublishCourse(req.params.id, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course unpublished and reverted to draft status',
+            data: course,
+        });
+    };
+
+    public duplicateCourse = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const course = await this.courseService.duplicateCourse(req.params.id, userCtx);
+        return ResponseHelper.created(res, course, 'Course duplicated successfully');
+    };
+
+    public deleteCourse = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const result = await this.courseService.deleteCourse(req.params.id, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: result.message,
+            data: result,
+        });
+    };
+
     public validateCourse = async (req: Request, res: Response): Promise<Response> => {
         const userCtx = req.user as any;
         const validation = await this.courseService.validateCourse(req.params.id, userCtx);

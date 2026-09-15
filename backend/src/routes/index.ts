@@ -18,6 +18,7 @@ import topicRouter from './topic.routes';
 import { revisionSessionRouter } from './revision-session.routes';
 import { learningEventRouter } from './learning-event.routes';
 import { analyticsRouter } from './analytics.routes';
+import roleRouter from './role.routes';
 
 const router = Router();
 
@@ -177,6 +178,7 @@ router.use('/resources', resourceRouter);
 router.use('/trainer/monitoring', trainerMonitoringRouter);
 router.use('/trainer', trainerRouter);
 router.use('/trainee', traineeRouter);
+router.use('/roles', roleRouter);
 router.use('/assessments', assessmentRouter);
 router.use('/revision', revisionRouter);
 router.use('/revision-sessions', revisionSessionRouter);

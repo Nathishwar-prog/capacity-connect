@@ -146,6 +146,41 @@ export class CourseStructureController {
         });
     };
 
+    // ── Trainee Course Viewer Handlers ─────────────────────────────────────────
+
+    public getCourseOutline = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const { courseId } = req.params;
+        const outline = await this.courseStructureService.getCourseOutline(courseId, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course outline retrieved successfully',
+            data: outline,
+        });
+    };
+
+    public getLessonDetail = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const { courseId, lessonId } = req.params;
+        const lesson = await this.courseStructureService.getLessonDetail(courseId, lessonId, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Lesson content retrieved successfully',
+            data: lesson,
+        });
+    };
+
+    public completeLesson = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const { courseId, lessonId } = req.params;
+        const result = await this.courseStructureService.completeLesson(courseId, lessonId, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Lesson marked as complete successfully',
+            data: result,
+        });
+    };
+
     // ── Resource Association ───────────────────────────────────────────────────
 
     public attachResource = async (req: Request, res: Response): Promise<Response> => {

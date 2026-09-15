@@ -1,5 +1,5 @@
 import prisma from '../database/client';
-import { CourseStatus, AttemptStatus, Prisma } from '@prisma/client';
+import { CourseStatus, AttemptStatus, Prisma, Role } from '@prisma/client';
 
 export class TrainerRepository {
   /**
@@ -128,9 +128,30 @@ export class TrainerRepository {
       skip?: number;
       take?: number;
     },
+    userRole?: string,
+    organizationId?: string,
   ) {
+    const isAdmin = userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN;
+
+    // Course scope:
+    // - Super Admin: all platform courses
+    // - Admin: all courses in organization (or all if org not set)
+    // - Trainer: courses authored by trainer OR belonging to trainer's organization
+    const baseFilter: Prisma.CourseWhereInput = isAdmin
+      ? organizationId && userRole !== Role.SUPER_ADMIN
+        ? { organizationId }
+        : {}
+      : organizationId
+      ? {
+          OR: [
+            { trainerId },
+            { organizationId },
+          ],
+        }
+      : { trainerId };
+
     const whereClause: Prisma.CourseWhereInput = {
-      trainerId,
+      ...baseFilter,
       ...(filters.status && { status: filters.status }),
       ...(filters.search && {
         OR: [
@@ -141,6 +162,9 @@ export class TrainerRepository {
       }),
     };
 
+    const skip = filters.skip !== undefined && filters.skip !== null ? Number(filters.skip) || 0 : 0;
+    const take = filters.take !== undefined && filters.take !== null ? Number(filters.take) || 10 : 10;
+
     const [total, courses] = await Promise.all([
       prisma.course.count({ where: whereClause }),
       prisma.course.findMany({
@@ -150,7 +174,7 @@ export class TrainerRepository {
             select: {
               id: true,
               title: true,
-              lessons: { select: { id: true } },
+              lessons: { select: { id: true, title: true } },
             },
           },
           enrollments: {
@@ -165,8 +189,8 @@ export class TrainerRepository {
           },
         },
         orderBy: { updatedAt: 'desc' },
-        skip: filters.skip || 0,
-        take: filters.take || 10,
+        skip,
+        take,
       }),
     ]);
 
@@ -243,6 +267,135 @@ export class TrainerRepository {
     return prisma.course.delete({
       where: { id: courseId },
     });
+  }
+
+  /**
+   * Unpublish course (revert status to DRAFT)
+   */
+  public async unpublishCourse(courseId: string) {
+    return prisma.course.update({
+      where: { id: courseId },
+      data: {
+        status: CourseStatus.DRAFT,
+      },
+    });
+  }
+
+  /**
+   * Duplicate course
+   */
+  public async duplicateCourse(courseId: string, trainerId: string) {
+    const fullCourse = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        modules: {
+          include: { lessons: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+        courseCompetencies: true,
+      },
+    });
+
+    if (!fullCourse) return null;
+
+    const baseSlug = `${fullCourse.slug}-copy-${Date.now()}`;
+    const newTitle = `Copy of ${fullCourse.title}`;
+
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const created = await tx.course.create({
+        data: {
+          organizationId: fullCourse.organizationId,
+          trainerId,
+          title: newTitle,
+          slug: baseSlug,
+          description: fullCourse.description,
+          thumbnailUrl: fullCourse.thumbnailUrl,
+          category: fullCourse.category,
+          difficulty: fullCourse.difficulty,
+          durationMinutes: fullCourse.durationMinutes,
+          status: CourseStatus.DRAFT,
+          overview: fullCourse.overview,
+          targetAudience: fullCourse.targetAudience,
+          learningOutcomes: fullCourse.learningOutcomes || undefined,
+          prerequisitesText: fullCourse.prerequisitesText,
+          glossary: fullCourse.glossary || undefined,
+          references: fullCourse.references || undefined,
+        },
+      });
+
+      for (const mod of fullCourse.modules) {
+        const createdMod = await tx.courseModule.create({
+          data: {
+            courseId: created.id,
+            title: mod.title,
+            description: mod.description,
+            orderIndex: mod.orderIndex,
+          },
+        });
+
+        for (const lesson of mod.lessons) {
+          await tx.lesson.create({
+            data: {
+              moduleId: createdMod.id,
+              title: lesson.title,
+              description: lesson.description,
+              contentType: lesson.contentType,
+              content: lesson.content,
+              resourceUrl: lesson.resourceUrl,
+              durationMinutes: lesson.durationMinutes,
+              orderIndex: lesson.orderIndex,
+              isPreview: lesson.isPreview,
+              learningObjectives: lesson.learningObjectives || undefined,
+              keyTakeaways: lesson.keyTakeaways || undefined,
+            },
+          });
+        }
+      }
+
+      for (const cc of fullCourse.courseCompetencies) {
+        await tx.courseCompetency.create({
+          data: {
+            courseId: created.id,
+            competencyId: cc.competencyId,
+            targetLevel: cc.targetLevel,
+          },
+        });
+      }
+
+      return created;
+    });
+  }
+
+  /**
+   * Safe deletion: archive/soft-delete if enrollments exist, otherwise delete
+   */
+  public async deleteCourseSafely(courseId: string) {
+    const enrollmentCount = await prisma.enrollment.count({
+      where: { courseId },
+    });
+
+    if (enrollmentCount > 0) {
+      await prisma.course.update({
+        where: { id: courseId },
+        data: {
+          status: CourseStatus.ARCHIVED,
+          deletedAt: new Date(),
+        },
+      });
+      return {
+        archived: true,
+        message: `Course has ${enrollmentCount} enrollment(s) and was safely archived to preserve learning records.`,
+      };
+    }
+
+    await prisma.course.delete({
+      where: { id: courseId },
+    });
+
+    return {
+      archived: false,
+      message: 'Course draft deleted successfully.',
+    };
   }
 
   /**
@@ -538,7 +691,223 @@ export class TrainerRepository {
       },
     });
 
-    return { trainee, enrollments: relevantEnrollments };
+    // 3. Adaptive Revision Engine data scoped to trainer's courses
+    const courseTopics = await prisma.learningTopic.findMany({
+      where: { courseId: { in: courseIds } },
+      select: { id: true },
+    });
+    const topicIds = courseTopics.map((t: { id: string }) => t.id);
+
+    const topicCompetencies = topicIds.length > 0
+      ? await prisma.userTopicCompetency.findMany({
+          where: {
+            userId: traineeId,
+            topicId: { in: topicIds },
+          },
+          include: {
+            topic: { select: { id: true, name: true, courseId: true } },
+          },
+          orderBy: { priorityScore: 'desc' },
+        })
+      : [];
+
+    const learningEvents = topicIds.length > 0
+      ? await prisma.learningEvent.findMany({
+          where: {
+            userId: traineeId,
+            OR: [
+              { courseId: { in: courseIds } },
+              { topicId: { in: topicIds } },
+            ],
+          },
+          include: {
+            topic: { select: { id: true, name: true } },
+          },
+          orderBy: { occurredAt: 'desc' },
+          take: 20,
+        })
+      : [];
+
+    const revisionSessions = await prisma.revisionSession.findMany({
+      where: {
+        userId: traineeId,
+        courseId: { in: courseIds },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    return {
+      trainee,
+      enrollments: relevantEnrollments,
+      topicCompetencies,
+      learningEvents,
+      revisionSessions,
+    };
+  }
+
+  /**
+   * Course-Level Analytics for Trainer
+   */
+  public async getCourseAnalytics(courseId: string) {
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        modules: {
+          include: {
+            lessons: {
+              include: {
+                lessonProgress: true,
+              },
+            },
+          },
+          orderBy: { orderIndex: 'asc' },
+        },
+        assessments: {
+          include: {
+            attempts: true,
+          },
+        },
+        courseCompetencies: {
+          include: {
+            competency: true,
+          },
+        },
+        learningTopics: {
+          include: {
+            competencyMappings: {
+              include: { competency: true },
+            },
+          },
+        },
+        enrollments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                department: { select: { name: true } },
+              },
+            },
+          },
+          orderBy: { enrolledAt: 'desc' },
+        },
+      },
+    });
+
+    if (!course) return null;
+
+    const totalEnrollments = course.enrollments.length;
+    const completedCount = course.enrollments.filter((e: any) => e.status === 'COMPLETED').length;
+    const inProgressCount = course.enrollments.filter((e: any) => e.status === 'IN_PROGRESS').length;
+    const enrolledCount = course.enrollments.filter((e: any) => e.status === 'ENROLLED').length;
+    const completionRate = totalEnrollments > 0 ? Math.round((completedCount / totalEnrollments) * 100) : 0;
+    const avgProgress = totalEnrollments > 0
+      ? Math.round(course.enrollments.reduce((acc: number, e: any) => acc + e.progressPercentage, 0) / totalEnrollments)
+      : 0;
+
+    // Assessment calculations
+    const allAttempts = course.assessments
+      .flatMap((a: any) => a.attempts)
+      .filter((att: any) => att.status === AttemptStatus.SUBMITTED && att.percentage !== null);
+
+    const totalAttempts = allAttempts.length;
+    const passedAttempts = allAttempts.filter((att: any) => att.passed).length;
+    const passRate = totalAttempts > 0 ? Math.round((passedAttempts / totalAttempts) * 100) : 0;
+    const avgScore = totalAttempts > 0
+      ? Math.round(allAttempts.reduce((acc: number, curr: any) => acc + (curr.percentage || 0), 0) / totalAttempts)
+      : 0;
+
+    // Module breakdown
+    const moduleBreakdown = course.modules.map((m: any) => {
+      const lessonIds = m.lessons.map((l: any) => l.id);
+      const totalLessonProgress = m.lessons.flatMap((l: any) => l.lessonProgress);
+      const completedProgress = totalLessonProgress.filter((lp: any) => lp.completed).length;
+      const expectedTotal = lessonIds.length * Math.max(1, totalEnrollments);
+      const moduleCompletionRate = expectedTotal > 0 ? Math.round((completedProgress / expectedTotal) * 100) : 0;
+
+      return {
+        id: m.id,
+        title: m.title,
+        orderIndex: m.orderIndex,
+        lessonCount: m.lessons.length,
+        completionRate: Math.min(100, moduleCompletionRate),
+      };
+    });
+
+    // Topic retention and revision insights
+    const topicIds = course.learningTopics.map((t: any) => t.id);
+    const userTopicCompetencies = topicIds.length > 0
+      ? await prisma.userTopicCompetency.findMany({
+          where: { topicId: { in: topicIds } },
+          include: { topic: true },
+        })
+      : [];
+
+    const avgCompetencyScore = userTopicCompetencies.length > 0
+      ? Math.round(userTopicCompetencies.reduce((acc: number, curr: any) => acc + curr.competencyScore, 0) / userTopicCompetencies.length)
+      : 75;
+
+    const avgForgettingRisk = userTopicCompetencies.length > 0
+      ? Math.round(userTopicCompetencies.reduce((acc: number, curr: any) => acc + curr.forgettingRisk, 0) / userTopicCompetencies.length * 100)
+      : 20;
+
+    const priorityTopics = userTopicCompetencies
+      .filter((utc: any) => utc.priorityScore > 60 || utc.forgettingRisk > 0.4)
+      .slice(0, 5)
+      .map((utc: any) => ({
+        topicId: utc.topicId,
+        title: utc.topic.name,
+        competencyScore: Math.round(utc.competencyScore),
+        forgettingRisk: Math.round(utc.forgettingRisk * 100),
+        priorityScore: Math.round(utc.priorityScore),
+      }));
+
+    return {
+      course: {
+        id: course.id,
+        title: course.title,
+        slug: course.slug,
+        status: course.status,
+        difficulty: course.difficulty,
+        category: course.category,
+        durationMinutes: course.durationMinutes,
+        publishedAt: course.publishedAt?.toISOString() || null,
+        updatedAt: course.updatedAt.toISOString(),
+      },
+      kpis: {
+        totalEnrollments,
+        activeLearners: inProgressCount + enrolledCount,
+        completedLearners: completedCount,
+        completionRate,
+        averageProgress: avgProgress,
+        totalAttempts,
+        passRate,
+        averageScore: avgScore,
+        competencyAttainment: avgCompetencyScore,
+        averageForgettingRisk: avgForgettingRisk,
+      },
+      moduleBreakdown,
+      competencies: course.courseCompetencies.map((cc: any) => ({
+        id: cc.competency.id,
+        name: cc.competency.name,
+        targetLevel: cc.targetLevel,
+      })),
+      priorityTopics,
+      enrolledTrainees: course.enrollments.slice(0, 50).map((e: any) => ({
+        enrollmentId: e.id,
+        traineeId: e.user.id,
+        name: `${e.user.firstName} ${e.user.lastName || ''}`.trim(),
+        email: e.user.email,
+        department: e.user.department?.name || 'Observational Meteorology',
+        progress: e.progressPercentage,
+        status: e.status,
+        enrolledAt: e.enrolledAt.toISOString(),
+        lastAccessedAt: e.lastAccessedAt?.toISOString() || null,
+      })),
+    };
   }
 
   /**

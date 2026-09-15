@@ -19,6 +19,12 @@ export class AssessmentRepository {
                 course: {
                     select: { id: true, title: true, trainerId: true },
                 },
+                module: {
+                    select: { id: true, title: true },
+                },
+                lesson: {
+                    select: { id: true, title: true },
+                },
                 trainer: {
                     select: { id: true, firstName: true, lastName: true, email: true },
                 },
@@ -26,12 +32,23 @@ export class AssessmentRepository {
         });
     }
 
-    async findById(id: string): Promise<(Assessment & { questions: (AssessmentQuestion & { options: QuestionOption[] })[] }) | null> {
+    async findById(id: string): Promise<(Assessment & {
+        course: { id: string; title: string; trainerId: string; status: string } | null;
+        module: { id: string; title: string } | null;
+        lesson: { id: string; title: string } | null;
+        questions: (AssessmentQuestion & { options: QuestionOption[] })[];
+    }) | null> {
         return this.db.assessment.findUnique({
             where: { id },
             include: {
                 course: {
                     select: { id: true, title: true, trainerId: true, status: true },
+                },
+                module: {
+                    select: { id: true, title: true },
+                },
+                lesson: {
+                    select: { id: true, title: true },
                 },
                 trainer: {
                     select: { id: true, firstName: true, lastName: true, email: true },
@@ -52,6 +69,66 @@ export class AssessmentRepository {
         return this.db.assessment.update({
             where: { id },
             data,
+            include: {
+                course: {
+                    select: { id: true, title: true, trainerId: true, status: true },
+                },
+                module: {
+                    select: { id: true, title: true },
+                },
+                lesson: {
+                    select: { id: true, title: true },
+                },
+                trainer: {
+                    select: { id: true, firstName: true, lastName: true, email: true },
+                },
+            },
+        });
+    }
+
+    async syncQuestions(
+        assessmentId: string,
+        questions: Array<{
+            id?: string;
+            questionText: string;
+            questionType: any;
+            marks: number;
+            orderIndex?: number;
+            explanation?: string | null;
+            options: Array<{
+                id?: string;
+                optionText: string;
+                isCorrect: boolean;
+                orderIndex?: number;
+            }>;
+        }>,
+    ): Promise<void> {
+        await this.db.$transaction(async (tx) => {
+            // Delete existing questions and options for this assessment to cleanly recreate
+            await tx.assessmentQuestion.deleteMany({
+                where: { assessmentId },
+            });
+
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                await tx.assessmentQuestion.create({
+                    data: {
+                        assessmentId,
+                        questionText: q.questionText,
+                        questionType: q.questionType,
+                        marks: q.marks,
+                        orderIndex: q.orderIndex ?? i + 1,
+                        explanation: q.explanation || null,
+                        options: {
+                            create: q.options.map((opt, optIdx) => ({
+                                optionText: opt.optionText,
+                                isCorrect: Boolean(opt.isCorrect),
+                                orderIndex: opt.orderIndex ?? optIdx + 1,
+                            })),
+                        },
+                    },
+                });
+            }
         });
     }
 
@@ -63,18 +140,22 @@ export class AssessmentRepository {
 
     async findMany(params: {
         courseId?: string;
+        moduleId?: string;
+        lessonId?: string;
         trainerId?: string;
         status?: AssessmentStatus;
         search?: string;
         page: number;
         limit: number;
     }): Promise<{ data: Assessment[]; total: number; page: number; limit: number; totalPages: number }> {
-        const { courseId, trainerId, status, search, page, limit } = params;
+        const { courseId, moduleId, lessonId, trainerId, status, search, page, limit } = params;
         const skip = (page - 1) * limit;
 
         const where: Prisma.AssessmentWhereInput = {};
 
         if (courseId) where.courseId = courseId;
+        if (moduleId) where.moduleId = moduleId;
+        if (lessonId) where.lessonId = lessonId;
         if (trainerId) where.trainerId = trainerId;
         if (status) where.status = status;
         if (search) {
@@ -93,6 +174,12 @@ export class AssessmentRepository {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     course: {
+                        select: { id: true, title: true },
+                    },
+                    module: {
+                        select: { id: true, title: true },
+                    },
+                    lesson: {
                         select: { id: true, title: true },
                     },
                     trainer: {

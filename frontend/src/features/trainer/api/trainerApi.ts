@@ -12,6 +12,7 @@ import {
   TrainerFeedbackItem,
   CourseModuleItem,
   LessonItem,
+  CourseAnalyticsData,
 } from '../types/trainer.types';
 
 export const trainerApi = {
@@ -100,6 +101,23 @@ export const trainerApi = {
 
   submitCourseForApproval: async (courseId: string) => {
     const res = await apiClient.post<ApiResponse<any>>(`/trainer/courses/${courseId}/submit`);
+    return res.data.data;
+  },
+
+  unpublishCourse: async (courseId: string) => {
+    const res = await apiClient.post<ApiResponse<any>>(`/trainer/courses/${courseId}/unpublish`);
+    return res.data.data;
+  },
+
+  duplicateCourse: async (courseId: string) => {
+    const res = await apiClient.post<ApiResponse<any>>(`/trainer/courses/${courseId}/duplicate`);
+    return res.data.data;
+  },
+
+  getCourseAnalytics: async (courseId: string): Promise<CourseAnalyticsData> => {
+    const res = await apiClient.get<ApiResponse<CourseAnalyticsData>>(
+      `/trainer/courses/${courseId}/analytics`,
+    );
     return res.data.data;
   },
 
@@ -228,6 +246,34 @@ export const trainerApi = {
 
   createAssessment: async (data: any) => {
     const res = await apiClient.post<ApiResponse<any>>('/trainer/assessments', data);
+    return res.data.data;
+  },
+
+  updateAssessment: async (assessmentId: string, data: any) => {
+    const res = await apiClient.patch<ApiResponse<any>>(`/assessments/${assessmentId}`, data);
+    return res.data.data;
+  },
+
+  validateAssessmentImport: async (payload: any, mappingOverride?: any) => {
+    const res = await apiClient.post<ApiResponse<any>>('/trainer/assessments/import/validate', {
+      payload,
+      mappingOverride,
+    });
+    return res.data.data;
+  },
+
+  confirmAssessmentImport: async (data: {
+    payload: any;
+    fileName?: string;
+    fileSize?: number;
+    mappingOverride?: any;
+  }) => {
+    const res = await apiClient.post<ApiResponse<any>>('/trainer/assessments/import/confirm', data);
+    return res.data.data;
+  },
+
+  getAssessmentImportTemplate: async () => {
+    const res = await apiClient.get<ApiResponse<any>>('/trainer/assessments/import/template');
     return res.data.data;
   },
 

@@ -4,6 +4,10 @@ import mammoth from 'mammoth';
 import * as pdfParseModule from 'pdf-parse';
 import prisma from '../database/client';
 import logger from '../logger/winston.logger';
+import { documentExtractorService } from './document-extractor.service';
+import { courseStructureAnalyzer } from './document-structure-analyzer.service';
+import { llmValidationService } from './llm-validation.service';
+import { CourseCandidate } from '../types/course-candidate';
 
 export interface ContentBlockProvenance {
     sourceDocumentId?: string;
@@ -135,6 +139,7 @@ export interface ParsedCourseHierarchy {
     };
     warnings: string[];
     reviewItemsCount: number;
+    candidate?: CourseCandidate;
 }
 
 export class DocumentParserService {
@@ -159,55 +164,120 @@ export class DocumentParserService {
 
         logger.info(`Starting document parsing: type=${fileType}, documentId=${sourceDocumentId}`);
 
-        let rawSections: Array<{ title: string; level: number; text: string; page?: number; html?: string }> = [];
-
-        if (fileType === 'DOCX') {
-            rawSections = await this.parseDocx(fileBuffer);
-        } else {
-            rawSections = await this.parsePdf(fileBuffer);
-        }
-
-        if (rawSections.length === 0) {
-            throw new Error('Could not extract any recognizable sections from the uploaded document.');
-        }
-
-        // 1. Detect Course Title
-        const courseTitle = this.extractCourseTitle(rawSections, originalFileName);
-
-        // 2. Detect & Extract Table of Contents (TOC) with duplicate suppression
-        const { detectedTOC, filteredSections } = this.detectAndFilterTOC(rawSections);
-
-        // 3. Classify Special Sections (Overview, Target Audience, Outcomes, Prerequisites, Glossary, References)
-        const { specialSections, contentSections } = this.classifySpecialSections(filteredSections);
-
-        // 4. Segment into Modules and Lessons
-        const { modules, warnings, reviewItemsCount } = this.segmentModulesAndLessons(
-            contentSections,
-            sourceDocumentId,
-            courseTitle
+        // 1. Multi-Stage Document Extraction & Block Normalization (with native check & OCR gating)
+        const normalizedDoc = await documentExtractorService.extract(
+            fileBuffer,
+            fileType,
+            sourceDocumentId || 'doc',
+            originalFileName
         );
+
+        // 2. Deterministic Multi-Signal Structure Analysis & TOC Deduplication
+        const candidate = courseStructureAnalyzer.analyze(normalizedDoc);
+
+        // 3. LLM Structured Validation (validates boundaries & integrity)
+        const validationResult = await llmValidationService.validateCandidate(candidate, normalizedDoc);
+
+        // Merge validation results
+        candidate.validation.valid = validationResult.valid;
+        candidate.confidence.overallConfidence = validationResult.confidence;
+        if (validationResult.warnings.length > 0) {
+            candidate.validation.warnings = Array.from(
+                new Set([...candidate.validation.warnings, ...validationResult.warnings])
+            );
+        }
+
+        // 4. Map Candidate to ParsedCourseHierarchy
+        const specialSections: CourseSpecialSections = {
+            overview: candidate.course.description,
+            targetAudience: candidate.course.targetAudience.join('\n'),
+            learningOutcomes: candidate.course.learningOutcomes,
+            prerequisitesText: candidate.course.prerequisites.join('\n'),
+            glossary: candidate.glossary,
+            references: candidate.references.map((r) => ({ title: r.title, notes: r.citation })),
+        };
+
+        const modules: ExtractedModule[] = candidate.modules.map((m) => {
+            const lessons: ExtractedLesson[] = m.lessons.map((l) => {
+                const contentBlocks: ContentBlock[] = l.content.map((c, idx) => ({
+                    id: `blk-${m.order}-${l.order}-${idx + 1}`,
+                    type: (c.type === 'heading' ? 'heading' : c.type === 'list' ? 'bullet_list' : 'paragraph') as any,
+                    content: c.text,
+                    provenance: c.provenance,
+                }));
+
+                const knowledgeChecks: ExtractedKnowledgeCheck[] = [];
+                if (l.knowledgeCheck && l.knowledgeCheck.question) {
+                    knowledgeChecks.push({
+                        id: `kc-${m.order}-${l.order}`,
+                        questionText: l.knowledgeCheck.question,
+                        questionType: 'SINGLE_CHOICE',
+                        options: [
+                            {
+                                id: 'opt-A',
+                                optionText: l.knowledgeCheck.answer,
+                                isCorrect: true,
+                                orderIndex: 0,
+                            },
+                        ],
+                        explanation: l.knowledgeCheck.answer,
+                        marks: 1.0,
+                        confidence: 0.95,
+                        provenance: l.knowledgeCheck.provenance,
+                    });
+                }
+
+                return {
+                    id: `les-${m.order}-${l.order}`,
+                    title: l.title,
+                    subtitle: l.subtitle,
+                    orderIndex: l.order - 1,
+                    durationMinutes: l.durationMinutes || 45,
+                    description:
+                        contentBlocks[0]?.content
+                            ? String(contentBlocks[0].content).substring(0, 150) + '...'
+                            : undefined,
+                    learningObjectives: l.learningObjectives,
+                    contentBlocks,
+                    keyTakeaways: m.keyTakeaways,
+                    knowledgeChecks,
+                    suggestedTopics: [],
+                    provenance: l.provenance,
+                    sourceProvenance: l.provenance,
+                    needsReview: l.needsReview,
+                    status: l.needsReview ? 'NEEDS_REVIEW' : 'READY',
+                };
+            });
+
+            return {
+                id: `mod-${m.order}`,
+                title: m.title,
+                orderIndex: m.order - 1,
+                description: m.overview,
+                lessons,
+                provenance: m.provenance,
+            };
+        });
 
         // 5. Semantic Topic Extraction & Competency Mapping
         const { globalTopics, topicPrerequisites } = await this.extractAndMapTopics(modules, specialSections);
-
-        // 6. Compute overall confidence
-        const overallConfidence = this.calculateOverallConfidence(modules, reviewItemsCount);
-
-        logger.info(
-            `Parsed course hierarchy successfully: modules=${modules.length}, topics=${globalTopics.length}, confidence=${overallConfidence.toFixed(2)}`
-        );
 
         const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
         const totalKnowledgeChecks = modules.reduce(
             (acc, m) => acc + m.lessons.reduce((lAcc, l) => lAcc + l.knowledgeChecks.length, 0),
             0
         );
-        const category = this.inferCategory(courseTitle, globalTopics);
+        const category = candidate.course.category || this.inferCategory(candidate.course.title, globalTopics);
+        const overallConfidence = candidate.confidence.overallConfidence;
+
+        logger.info(
+            `Parsed course hierarchy successfully: modules=${modules.length}, lessons=${totalLessons}, confidence=${overallConfidence.toFixed(2)}`
+        );
 
         return {
-            title: courseTitle,
+            title: candidate.course.title,
             course: {
-                title: courseTitle,
+                title: candidate.course.title,
                 category,
                 difficulty: 'INTERMEDIATE',
             },
@@ -215,7 +285,7 @@ export class DocumentParserService {
             difficulty: 'INTERMEDIATE',
             specialSections,
             modules,
-            detectedTOC,
+            detectedTOC: candidate.validation.expectedLessons > 0 ? [{ title: 'Table of Contents', level: 1 }] : [],
             globalTopics,
             topicPrerequisites,
             overallConfidence,
@@ -229,15 +299,16 @@ export class DocumentParserService {
                 totalReferences: specialSections.references?.length || 0,
                 overallConfidence,
             },
-            warnings,
-            reviewItemsCount,
+            warnings: candidate.validation.warnings,
+            reviewItemsCount: candidate.validation.warnings.length,
+            candidate,
         };
     }
 
     /**
      * Deterministic DOCX parser using Mammoth
      */
-    private async parseDocx(
+    public async parseDocx(
         buffer: Buffer
     ): Promise<Array<{ title: string; level: number; text: string; page?: number; html?: string }>> {
         const htmlResult = await mammoth.convertToHtml({ buffer });
@@ -315,7 +386,7 @@ export class DocumentParserService {
     /**
      * Deterministic PDF parser using pdf-parse
      */
-    private async parsePdf(
+    public async parsePdf(
         buffer: Buffer
     ): Promise<Array<{ title: string; level: number; text: string; page?: number; html?: string }>> {
         const PDFParseClass = (pdfParseModule as any).PDFParse || (pdfParseModule as any).default?.PDFParse;
@@ -485,7 +556,7 @@ export class DocumentParserService {
     /**
      * Extract or infer course title
      */
-    private extractCourseTitle(
+    public extractCourseTitle(
         sections: Array<{ title: string; level: number; text: string }>,
         originalFileName?: string
     ): string {
@@ -533,7 +604,7 @@ export class DocumentParserService {
     /**
      * Detect Table of Contents (TOC) and suppress it from duplicating course content
      */
-    private detectAndFilterTOC(
+    public detectAndFilterTOC(
         sections: Array<{ title: string; level: number; text: string; page?: number; html?: string }>
     ): {
         detectedTOC: Array<{ title: string; level: number; page?: number }>;
@@ -574,7 +645,7 @@ export class DocumentParserService {
     /**
      * Classify Special Sections (Overview, Target Audience, Outcomes, Prerequisites, Glossary, References)
      */
-    private classifySpecialSections(
+    public classifySpecialSections(
         sections: Array<{ title: string; level: number; text: string; page?: number; html?: string }>
     ): {
         specialSections: CourseSpecialSections;
@@ -637,7 +708,7 @@ export class DocumentParserService {
     /**
      * Segment content into Modules and Lessons
      */
-    private segmentModulesAndLessons(
+    public segmentModulesAndLessons(
         sections: Array<{ title: string; level: number; text: string; page?: number; html?: string }>,
         sourceDocumentId?: string,
         courseTitle?: string
@@ -1263,7 +1334,7 @@ export class DocumentParserService {
         return undefined;
     }
 
-    private calculateOverallConfidence(modules: ExtractedModule[], reviewItemsCount: number): number {
+    public calculateOverallConfidence(modules: ExtractedModule[], reviewItemsCount: number): number {
         if (modules.length === 0) return 0.5;
 
         let totalScore = 0;

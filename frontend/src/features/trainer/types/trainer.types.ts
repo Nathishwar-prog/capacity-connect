@@ -345,6 +345,90 @@ export interface TraineeDetailData {
     status: string;
     submittedAt: string | null;
   }>;
+  topicCompetencies?: Array<{
+    topicId: string;
+    topicTitle: string;
+    courseId: string;
+    competencyScore: number;
+    confidenceScore: number;
+    forgettingRisk: number;
+    priorityScore: number;
+    stability: number;
+    retention: number;
+    lastReviewedAt: string | null;
+  }>;
+  learningEvents?: Array<{
+    id: string;
+    topicTitle: string;
+    eventType: string;
+    correct: boolean | null;
+    occurredAt: string;
+  }>;
+  revisionActivity?: Array<{
+    id: string;
+    status: string;
+    itemCount: number;
+    correctCount: number;
+    score: number | null;
+    startedAt: string;
+    completedAt: string | null;
+  }>;
+}
+
+export interface CourseAnalyticsData {
+  course: {
+    id: string;
+    title: string;
+    slug: string;
+    status: CourseStatus;
+    difficulty: CourseDifficulty;
+    category?: string;
+    durationMinutes: number;
+    publishedAt: string | null;
+    updatedAt: string;
+  };
+  kpis: {
+    totalEnrollments: number;
+    activeLearners: number;
+    completedLearners: number;
+    completionRate: number;
+    averageProgress: number;
+    totalAttempts: number;
+    passRate: number;
+    averageScore: number;
+    competencyAttainment: number;
+    averageForgettingRisk: number;
+  };
+  moduleBreakdown: Array<{
+    id: string;
+    title: string;
+    orderIndex: number;
+    lessonCount: number;
+    completionRate: number;
+  }>;
+  competencies: Array<{
+    id: string;
+    name: string;
+    targetLevel: number;
+  }>;
+  priorityTopics: Array<{
+    topicId: string;
+    title: string;
+    competencyScore: number;
+    forgettingRisk: number;
+    priorityScore: number;
+  }>;
+  enrolledTrainees: Array<{
+    enrollmentId: string;
+    traineeId: string;
+    name: string;
+    email: string;
+    department: string;
+    progress: number;
+    status: string;
+    enrolledAt: string;
+    lastAccessedAt: string | null;
+  }>;
 }
 
 export interface TrainerAssessmentItem {

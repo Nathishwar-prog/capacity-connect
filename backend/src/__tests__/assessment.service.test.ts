@@ -206,6 +206,7 @@ describe('AssessmentService Unit & Integration Test Suite', () => {
   describe('2. Correct Answer Protection (Sanitization)', () => {
     it('strips isCorrect flags and explanations when fetched by a trainee', async () => {
       mockAssessmentRepo.findById.mockResolvedValue(sampleAssessment);
+      mockEnrollmentRepo.findByUserAndCourse.mockResolvedValue({ id: 'enr-1' } as any);
 
       const result = await service.getAssessmentById(assessmentId, traineeUserId, Role.TRAINEE);
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AppShell } from '@/components/layout/AppShell';
 import {
@@ -20,6 +21,8 @@ import {
   CheckCircle2,
   FileQuestion,
   Loader2,
+  FileUp,
+  Edit3,
 } from 'lucide-react';
 
 export default function TrainerAssessmentsPage() {
@@ -33,6 +36,7 @@ export default function TrainerAssessmentsPage() {
 }
 
 function TrainerAssessmentsContent() {
+  const router = useRouter();
   const { data: assessments, isLoading, refetch } = useTrainerAssessments();
   const { data: coursesData } = useTrainerCourses();
   const createAssessmentMutation = useCreateAssessment();
@@ -134,13 +138,25 @@ function TrainerAssessmentsContent() {
           </p>
         </div>
 
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold"
-        >
-          <PlusCircle className="w-4 h-4 mr-1.5" />
-          <span>New Assessment</span>
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Button
+            onClick={() => setShowCreateModal((prev) => !prev)}
+            variant={showCreateModal ? "secondary" : "default"}
+            className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-sm"
+          >
+            <PlusCircle className="w-4 h-4 mr-1.5" />
+            <span>Create Manually</span>
+          </Button>
+
+          <Button
+            onClick={() => router.push('/trainer/assessments/import')}
+            variant="outline"
+            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50/80 bg-white text-xs font-bold shadow-sm"
+          >
+            <FileUp className="w-4 h-4 mr-1.5" />
+            <span>Import from JSON</span>
+          </Button>
+        </div>
       </div>
 
       {/* Create Assessment Form / Modal */}
@@ -300,9 +316,16 @@ function TrainerAssessmentsContent() {
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             Build standardized tests and questionnaires to evaluate trainee competency benchmarks.
           </p>
-          <Button size="sm" onClick={() => setShowCreateModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
-            Create First Assessment
-          </Button>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Button size="sm" onClick={() => setShowCreateModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
+              <PlusCircle className="w-3.5 h-3.5 mr-1" />
+              Create Manually
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => router.push('/trainer/assessments/import')} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold">
+              <FileUp className="w-3.5 h-3.5 mr-1" />
+              Import from JSON
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -343,6 +366,21 @@ function TrainerAssessmentsContent() {
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
                   <span>{a.attemptCount} total submissions</span>
                   <span className="font-bold text-emerald-600">{a.passedCount} passed</span>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {a.status === 'DRAFT' ? 'Draft • Unpublished' : 'Published • Active'}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => router.push(`/trainer/assessments/${a.id}/builder`)}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 h-7 px-2.5"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 mr-1" />
+                    <span>Open in Builder</span>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

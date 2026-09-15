@@ -513,17 +513,28 @@ model AuditLog {
 // ==============================================================================
 
 model TraineeProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  designation       String?
-  bio               String?
-  interests         String[] @default([])
-  profileCompletion Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                           String       @id @default(uuid())
+  userId                       String       @unique
+  designation                  String?
+  bio                          String?
+  interests                    String[]     @default([])
+  profileCompletion            Int          @default(0)
+  targetRoleId                 String?
+  profileCompleted             Boolean      @default(false)
+  initialAssessmentCompleted   Boolean      @default(false)
+  competencyProfileInitialized Boolean      @default(false)
+  learningGoals                String[]     @default([])
+  preferredLearningMode        String?
+  preferredLanguage            String?
+  availableHoursPerWeek        Int?         @default(5)
+  preferredTrainerMode         String?
+  createdAt                    DateTime     @default(now())
+  updatedAt                    DateTime     @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRole RoleProfile? @relation(fields: [targetRoleId], references: [id], onDelete: SetNull)
 
+  @@index([targetRoleId])
   @@map("trainee_profiles")
 }
 
@@ -534,6 +545,9 @@ model TrainerProfile {
   organizationName String?
   bio              String
   yearsExperience  Int      @default(0)
+  isAvailable      Boolean  @default(true)
+  averageRating    Float    @default(4.8)
+  totalReviews     Int      @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -813,8 +827,9 @@ model CourseModule {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons Lesson[]
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  assessments Assessment[]
 
   @@index([courseId, orderIndex])
   @@map("course_modules")
@@ -841,6 +856,7 @@ model Lesson {
   lessonProgress  LessonProgress[]
   lessonResources LessonResource[]
   lessonTopics    LessonTopic[]
+  assessments     Assessment[]
 
   @@index([moduleId, orderIndex])
   @@map("lessons")
@@ -962,6 +978,8 @@ model LessonResource {
 model Assessment {
   id              String           @id @default(uuid())
   courseId        String?
+  moduleId        String?
+  lessonId        String?
   trainerId       String
   title           String
   description     String?
@@ -969,6 +987,7 @@ model Assessment {
   assessmentType  AssessmentType   @default(MCQ)
   durationMinutes Int?
   passingScore    Float            @default(60.0)
+  isDiagnostic    Boolean          @default(false)
   startAt         DateTime?
   deadline        DateTime?
   status          AssessmentStatus @default(DRAFT)
@@ -976,12 +995,16 @@ model Assessment {
   updatedAt       DateTime         @updatedAt
 
   course    Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  module    CourseModule?        @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  lesson    Lesson?              @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   trainer   User                 @relation("TrainerAssessments", fields: [trainerId], references: [id], onDelete: Restrict)
   questions AssessmentQuestion[]
   attempts  AssessmentAttempt[]
   feedbacks Feedback[]
 
   @@index([courseId])
+  @@index([moduleId])
+  @@index([lessonId])
   @@index([trainerId])
   @@index([deadline])
   @@index([status])
@@ -1087,6 +1110,7 @@ model Competency {
   recommendations             Recommendation[]
   trainerMatches              TrainerMatch[]
   topicCompetencies           LearningTopicCompetency[]
+  roleCompetencies            RoleCompetency[]
 
   // AI Skill Gap Analyzer relations
   prerequisites               CompetencyPrerequisite[]     @relation("CompetencyPrerequisites")
@@ -1097,6 +1121,41 @@ model Competency {
   @@index([category])
   @@index([code])
   @@map("competencies")
+}
+
+model RoleProfile {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  department  String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roleCompetencies RoleCompetency[]
+  traineeProfiles  TraineeProfile[]
+
+  @@map("role_profiles")
+}
+
+model RoleCompetency {
+  id            String                 @id @default(uuid())
+  roleId        String
+  competencyId  String
+  requiredLevel Int                    @default(1)
+  importance    Float                  @default(80.0)
+  criticality   RequirementCriticality @default(CORE)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  role       RoleProfile @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  competency Competency  @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  @@unique([roleId, competencyId])
+  @@index([roleId])
+  @@index([competencyId])
+  @@map("role_competencies")
 }
 
 model CompetencyLevel {

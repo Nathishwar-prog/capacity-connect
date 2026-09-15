@@ -92,18 +92,35 @@ router.get(
     asyncHandler(courseController.getCourse),
 );
 
+// Get Course-Specific Recommended Mentors & Trainers
+router.get(
+    '/:id/trainers',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(async (req, res) => {
+        const { id } = req.params;
+        const { trainerMatchingService } = await import('../services/trainer-matching.service');
+        const { ResponseHelper } = await import('../errors/response.helper');
+        const result = await trainerMatchingService.matchTrainersForCourse(id);
+        return ResponseHelper.success({
+            res,
+            message: 'Course-specific recommended mentors retrieved successfully',
+            data: result,
+        });
+    }),
+);
+
 // Course Health Validation
 router.get(
     '/:id/validate',
     requirePermission(Permissions.COURSES_READ),
-    asyncHandler(courseImportController.validateCourse),
+    asyncHandler(courseController.validateCourse),
 );
 
 // Autosave Draft
 router.patch(
     '/:id/draft',
     requirePermission(Permissions.COURSES_UPDATE),
-    asyncHandler(courseImportController.saveDraft),
+    asyncHandler(courseController.saveDraft),
 );
 
 // Topics & Competency Mappings for Builder
@@ -146,11 +163,11 @@ router.patch(
     asyncHandler(courseController.updateCourse),
 );
 
-// Archive Course
+// Delete / Archive Course
 router.delete(
     '/:id',
     requirePermission(Permissions.COURSES_ARCHIVE),
-    asyncHandler(courseController.archiveCourse),
+    asyncHandler(courseController.deleteCourse),
 );
 
 // Submit Course
@@ -178,16 +195,53 @@ router.post(
 router.post(
     '/:id/publish',
     requirePermission(Permissions.COURSES_PUBLISH),
-    asyncHandler(courseImportController.publishCourse),
+    asyncHandler(courseController.publishCourse),
+);
+
+// Unpublish Course
+router.post(
+    '/:id/unpublish',
+    requirePermission(Permissions.COURSES_PUBLISH),
+    asyncHandler(courseController.unpublishCourse),
+);
+
+// Duplicate Course
+router.post(
+    '/:id/duplicate',
+    requirePermission(Permissions.COURSES_CREATE),
+    asyncHandler(courseController.duplicateCourse),
 );
 
 // ── Course Structure Routes ──────────────────────────────────────────────────
 
-// Get full course hierarchy
+// Get full course hierarchy (for builder/editor)
 router.get(
     '/:courseId/structure',
     requirePermission(Permissions.COURSES_READ),
     asyncHandler(courseStructureController.getCourseStructure),
+);
+
+// ── Trainee Course Viewer Endpoints ──────────────────────────────────────────
+
+// 1. Lightweight Course Outline + Trainee Progress Summary (<15KB)
+router.get(
+    '/:courseId/outline',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseStructureController.getCourseOutline),
+);
+
+// 2. Detailed Lesson Content (Lazy loaded on demand)
+router.get(
+    '/:courseId/lessons/:lessonId',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseStructureController.getLessonDetail),
+);
+
+// 3. Complete Lesson (Idempotent optimistic update + adaptive learning event)
+router.post(
+    '/:courseId/lessons/:lessonId/complete',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseStructureController.completeLesson),
 );
 
 // Modules

@@ -35,6 +35,7 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
       id: dbUser.id,
       email: dbUser.email,
       role: dbUser.role,
+      organizationId: dbUser.organizationId,
       permissions: payload.permissions || [],
     };
     next();

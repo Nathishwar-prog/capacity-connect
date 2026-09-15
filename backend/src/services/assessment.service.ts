@@ -68,6 +68,86 @@ export class AssessmentService {
     }
 
     // ==========================================
+    // Section 9: Pre-Publish Validation
+    // ==========================================
+
+    private async validateForPublishing(assessment: any, updateInput?: any) {
+        const title = updateInput?.title !== undefined ? updateInput.title : assessment.title;
+        if (!title || title.trim().length < 3) {
+            throw new BadRequestError('Assessment title must be at least 3 characters long to publish');
+        }
+
+        const courseId = updateInput?.courseId !== undefined ? updateInput.courseId : assessment.courseId;
+        const moduleId = updateInput?.moduleId !== undefined ? updateInput.moduleId : assessment.moduleId;
+        const lessonId = updateInput?.lessonId !== undefined ? updateInput.lessonId : assessment.lessonId;
+
+        if (courseId) {
+            const course = await prisma.course.findUnique({ where: { id: courseId } });
+            if (!course) {
+                throw new BadRequestError(`Referenced Course with ID ${courseId} does not exist`);
+            }
+        }
+
+        if (moduleId) {
+            const moduleRecord = await prisma.courseModule.findUnique({ where: { id: moduleId } });
+            if (!moduleRecord) {
+                throw new BadRequestError(`Referenced Module with ID ${moduleId} does not exist`);
+            }
+            if (courseId && moduleRecord.courseId !== courseId) {
+                throw new BadRequestError(`Referenced Module ${moduleId} does not belong to Course ${courseId}`);
+            }
+        }
+
+        if (lessonId) {
+            const lessonRecord = await prisma.lesson.findUnique({ where: { id: lessonId } });
+            if (!lessonRecord) {
+                throw new BadRequestError(`Referenced Lesson with ID ${lessonId} does not exist`);
+            }
+            if (moduleId && lessonRecord.moduleId !== moduleId) {
+                throw new BadRequestError(`Referenced Lesson ${lessonId} does not belong to Module ${moduleId}`);
+            }
+        }
+
+        const questions = assessment.questions;
+        if (!questions || questions.length === 0) {
+            throw new BadRequestError('Cannot publish an assessment with no questions');
+        }
+
+        const validTypes = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'];
+        const placeholderRegex = /^(n\/?a|todo|tbd|none|null|nil|undefined|fixme|pending|placeholder|test|na|\s*)$/i;
+
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions[i];
+            const qNum = i + 1;
+
+            if (!q.questionText || q.questionText.trim().length === 0) {
+                throw new BadRequestError(`Question ${qNum}: prompt cannot be empty`);
+            }
+
+            if (!validTypes.includes(q.questionType)) {
+                throw new BadRequestError(`Question ${qNum}: invalid question type "${q.questionType}"`);
+            }
+
+            if (!q.marks || q.marks <= 0) {
+                throw new BadRequestError(`Question ${qNum}: points/marks must be greater than 0`);
+            }
+
+            if (!q.options || q.options.length < 2) {
+                throw new BadRequestError(`Question ${qNum}: must have at least 2 options`);
+            }
+
+            const hasCorrectOption = q.options.some((opt: any) => opt.isCorrect === true);
+            if (!hasCorrectOption) {
+                throw new BadRequestError(`Question ${qNum}: must have at least one correct option selected`);
+            }
+
+            if (!q.explanation || placeholderRegex.test(q.explanation.trim())) {
+                throw new BadRequestError(`Question ${qNum}: must provide a substantive explanation for post-submission feedback`);
+            }
+        }
+    }
+
+    // ==========================================
     // Assessment CRUD Operations
     // ==========================================
 
@@ -89,6 +169,8 @@ export class AssessmentService {
         return this.repository.create({
             trainerId: userId,
             courseId: input.courseId || null,
+            moduleId: input.moduleId || null,
+            lessonId: input.lessonId || null,
             title: input.title,
             description: input.description || null,
             subject: input.subject,
@@ -112,6 +194,13 @@ export class AssessmentService {
             if (assessment.status !== AssessmentStatus.PUBLISHED) {
                 throw new ForbiddenError('Assessment is not published');
             }
+            // Enforce course enrollment authorization (Section 24)
+            if (assessment.courseId) {
+                const enrollment = await this.enrollmentRepo.findByUserAndCourse(userId, assessment.courseId);
+                if (!enrollment) {
+                    throw new ForbiddenError('You must be enrolled in the course to access this assessment');
+                }
+            }
             return this.sanitizeAssessmentForTrainee(assessment);
         }
 
@@ -128,7 +217,7 @@ export class AssessmentService {
     }
 
     async updateAssessment(id: string, userId: string, userRole: Role, input: UpdateAssessmentInput) {
-        const assessment = await this.repository.findById(id);
+        let assessment = await this.repository.findById(id);
         if (!assessment) {
             throw new NotFoundError(`Assessment with ID ${id} not found`);
         }
@@ -137,7 +226,20 @@ export class AssessmentService {
             throw new ForbiddenError('You are not authorized to update this assessment');
         }
 
+        // Sync questions if provided from the builder
+        if (Array.isArray(input.questions)) {
+            await this.repository.syncQuestions(id, input.questions as any);
+            // Refresh assessment with updated questions
+            assessment = await this.repository.findById(id);
+        }
+
+        // Section 9: Validate requirements before publishing
+        if (input.status === AssessmentStatus.PUBLISHED) {
+            await this.validateForPublishing(assessment, input);
+        }
+
         const updateData: any = { ...input };
+        delete updateData.questions; // Remove questions array from assessment table update
         if (input.startAt) updateData.startAt = new Date(input.startAt);
         if (input.deadline) updateData.deadline = new Date(input.deadline);
 
@@ -166,6 +268,8 @@ export class AssessmentService {
 
         const result = await this.repository.findMany({
             courseId: query.courseId,
+            moduleId: query.moduleId,
+            lessonId: query.lessonId,
             trainerId,
             status,
             search: query.search,
@@ -451,7 +555,12 @@ export class AssessmentService {
 
         // Calculate percentage and pass/fail state
         const percentage = totalPossibleMarks > 0 ? parseFloat(((totalScore / totalPossibleMarks) * 100).toFixed(2)) : 0;
-        const passed = totalScore >= assessment.passingScore;
+        // Determine whether passingScore represents a percentage (e.g. 70%) or raw marks (e.g. 6.0 out of 10)
+        const isPercentageThreshold = assessment.passingScore > totalPossibleMarks;
+        const passingThresholdMarks = isPercentageThreshold
+            ? (assessment.passingScore / 100) * totalPossibleMarks
+            : assessment.passingScore;
+        const passed = totalPossibleMarks > 0 && totalScore >= passingThresholdMarks;
         const timeTakenSeconds = Math.floor((now.getTime() - attempt.startedAt.getTime()) / 1000);
 
         const finalizedAttempt = await this.repository.finalizeAttemptSubmission(attemptId, {
@@ -463,16 +572,17 @@ export class AssessmentService {
             answers: processedAnswers,
         });
 
-        // Trigger Learning Intelligence Pipeline:
+        // Trigger Learning Intelligence Pipeline asynchronously in background:
         // AssessmentAttempt -> LearningEvents -> TopicCompetency -> MemoryStability ->
         // ErrorPatterns -> GroupAggregation -> CompetencyResults -> SkillGapUpdate
-        try {
-            const { learningPipelineService } = await import('./learning-pipeline.service');
-            await learningPipelineService.processAssessmentSubmission(finalizedAttempt.id, userId);
-        } catch (pipelineErr) {
-            const logger = (await import('../logger/winston.logger')).default;
-            logger.error(`Error in learning intelligence pipeline for attempt ${attemptId}:`, pipelineErr);
-        }
+        import('./learning-pipeline.service')
+            .then(({ learningPipelineService }) => {
+                learningPipelineService.processAssessmentSubmission(finalizedAttempt.id, userId).catch(async (pipelineErr) => {
+                    const logger = (await import('../logger/winston.logger')).default;
+                    logger.error(`Error in learning intelligence pipeline for attempt ${attemptId}:`, pipelineErr);
+                });
+            })
+            .catch(() => {});
 
         return {
             result: {

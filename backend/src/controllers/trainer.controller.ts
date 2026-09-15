@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { TrainerService } from '../services/trainer.service';
+import { assessmentImportService } from '../services/assessment-import.service';
 import { ResponseHelper } from '../errors/response.helper';
 
 export class TrainerController {
@@ -43,7 +44,12 @@ export class TrainerController {
 
   // Courses
   public getCourses = async (req: Request, res: Response): Promise<Response> => {
-    const data = await this.trainerService.getCourses(req.user!.userId, req.query as any);
+    const data = await this.trainerService.getCourses(
+      req.user!.userId,
+      req.query as any,
+      req.user!.role,
+      req.user!.organizationId,
+    );
     return ResponseHelper.success({ res, message: 'Trainer courses retrieved', data });
   };
 
@@ -94,6 +100,59 @@ export class TrainerController {
     return ResponseHelper.success({
       res,
       message: 'Course submitted for institutional approval successfully',
+      data,
+    });
+  };
+
+  public publishCourse = async (req: Request, res: Response): Promise<Response> => {
+    const data = await this.trainerService.publishCourse(
+      req.params.courseId,
+      req.user!.userId,
+      req.user!.role,
+    );
+    return ResponseHelper.success({
+      res,
+      message: 'Course published successfully and available to trainees',
+      data,
+    });
+  };
+
+  public unpublishCourse = async (req: Request, res: Response): Promise<Response> => {
+    const data = await this.trainerService.unpublishCourse(
+      req.params.courseId,
+      req.user!.userId,
+      req.user!.role,
+    );
+    return ResponseHelper.success({
+      res,
+      message: 'Course unpublished and reverted to draft status',
+      data,
+    });
+  };
+
+  public duplicateCourse = async (req: Request, res: Response): Promise<Response> => {
+    const data = await this.trainerService.duplicateCourse(
+      req.params.courseId,
+      req.user!.userId,
+      req.user!.role,
+    );
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: 'Course duplicated successfully',
+      data,
+    });
+  };
+
+  public getCourseAnalytics = async (req: Request, res: Response): Promise<Response> => {
+    const data = await this.trainerService.getCourseAnalytics(
+      req.params.courseId,
+      req.user!.userId,
+      req.user!.role,
+    );
+    return ResponseHelper.success({
+      res,
+      message: 'Course analytics retrieved successfully',
       data,
     });
   };
@@ -280,4 +339,47 @@ export class TrainerController {
     const data = await this.trainerService.getFeedback(req.user!.userId);
     return ResponseHelper.success({ res, message: 'Trainer feedback retrieved', data });
   };
+
+  // Assessment JSON Import
+  public getAssessmentImportTemplate = async (_req: Request, res: Response): Promise<Response> => {
+    const template = assessmentImportService.getTemplateJson();
+    return ResponseHelper.success({ res, message: 'Assessment JSON template retrieved', data: template });
+  };
+
+  public validateAssessmentImport = async (req: Request, res: Response): Promise<Response> => {
+    const payload = req.body.payload || req.body;
+    const mappingOverride = req.body.mappingOverride;
+    const data = await assessmentImportService.validateAssessmentImport(
+      req.user!.userId,
+      req.user!.role as any,
+      payload,
+      mappingOverride,
+      req.user!.organizationId,
+    );
+    return ResponseHelper.success({ res, message: 'Assessment validation complete', data });
+  };
+
+  public confirmAssessmentImport = async (req: Request, res: Response): Promise<Response> => {
+    const fileMetadata = {
+      fileName: req.body.fileName || 'assessment-import.json',
+      fileSize: req.body.fileSize,
+    };
+    const payload = req.body.payload || req.body;
+    const mappingOverride = req.body.mappingOverride;
+    const data = await assessmentImportService.confirmAssessmentImport(
+      req.user!.userId,
+      req.user!.role as any,
+      payload,
+      fileMetadata,
+      mappingOverride,
+      req.user!.organizationId,
+    );
+    return ResponseHelper.success({
+      res,
+      statusCode: 201,
+      message: data.message,
+      data,
+    });
+  };
 }
+
