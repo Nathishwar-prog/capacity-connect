@@ -73,6 +73,10 @@ export class CourseService {
             throw new ForbiddenError('Trainees cannot create courses');
         }
 
+        if (user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Admins cannot create courses. Only trainers are permitted to author training curricula.');
+        }
+
         // Enforce ownership and org
         if (dto.organizationId !== user.organizationId) {
             throw new ForbiddenError('Cannot create course outside your organization');
@@ -98,6 +102,15 @@ export class CourseService {
             await this.courseRepository.updatePrerequisites(createdCourse.id, prerequisites);
         }
 
+        await this.logAudit({
+            organizationId: user.organizationId,
+            userId: userCtx.userId,
+            action: 'COURSE_CREATED',
+            entityType: 'COURSE',
+            entityId: createdCourse.id,
+            newValues: { title: createdCourse.title, status: createdCourse.status },
+        });
+
         return createdCourse;
     }
 
@@ -108,6 +121,10 @@ export class CourseService {
         const user = await this.userRepository.findById(userCtx.userId);
         if (!user) throw new ForbiddenError('User not found');
 
+        if (user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Admins cannot modify course content. Admin responsibility is review and publishing.');
+        }
+
         if (course.organizationId !== user.organizationId) {
             throw new ForbiddenError('Cannot modify course outside your organization');
         }
@@ -116,14 +133,17 @@ export class CourseService {
             throw new ForbiddenError('Trainers can only modify their own courses');
         }
 
-        // Check status 
-        const restrictedStatuses: CourseStatus[] = [CourseStatus.PENDING_APPROVAL, CourseStatus.PUBLISHED, CourseStatus.ARCHIVED];
+        // Check status - only DRAFT and REJECTED courses can be updated
+        const restrictedStatuses: CourseStatus[] = [
+            CourseStatus.SUBMITTED,
+            CourseStatus.PENDING_APPROVAL,
+            CourseStatus.UNDER_REVIEW,
+            CourseStatus.APPROVED,
+            CourseStatus.PUBLISHED,
+            CourseStatus.ARCHIVED,
+        ];
         if (restrictedStatuses.includes(course.status)) {
-            throw new ConflictError(`Cannot update course while in ${course.status} state`);
-        }
-
-        if (dto.title) {
-            // Simple slug regeneration or check omitted, expecting slug to be immutable or checked
+            throw new ConflictError(`Cannot update course while in ${course.status} state. If rejected, you may edit and resubmit.`);
         }
 
         if (dto.prerequisites) {
@@ -142,6 +162,10 @@ export class CourseService {
     public async submitCourse(id: string, userCtx: UserContext): Promise<Course> {
         const course = await this.getCourseById(id, userCtx);
 
+        if (userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Admins cannot submit courses. Only trainers can submit courses for review.');
+        }
+
         if (userCtx.role === Role.TRAINER && course.trainerId !== userCtx.userId) {
             throw new ForbiddenError('Trainers can only submit their own courses');
         }
@@ -150,9 +174,41 @@ export class CourseService {
             throw new ConflictError('Only draft or rejected courses can be submitted');
         }
 
-        // Add logic here to check if required fields are present
+        // Validate course before submission
+        const validation = await this.validateCourse(id, userCtx);
+        if (!validation.isValid) {
+            throw new BadRequestError(`Cannot submit course with validation errors: ${validation.errors.join('; ')}`);
+        }
 
-        return this.courseRepository.updateStatus(id, CourseStatus.PENDING_APPROVAL);
+        const updated = await this.courseRepository.updateStatus(id, CourseStatus.SUBMITTED, {
+            submittedAt: new Date(),
+        });
+
+        await this.logAudit({
+            organizationId: course.organizationId,
+            userId: userCtx.userId,
+            action: 'COURSE_SUBMITTED',
+            entityType: 'COURSE',
+            entityId: id,
+            oldValues: { status: course.status },
+            newValues: { status: CourseStatus.SUBMITTED },
+        });
+
+        return updated;
+    }
+
+    public async setUnderReview(id: string, userCtx: UserContext): Promise<Course> {
+        const course = await this.getCourseById(id, userCtx);
+
+        if (userCtx.role !== Role.ADMIN && userCtx.role !== Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Only Admins can mark courses as under review');
+        }
+
+        if (course.status !== CourseStatus.SUBMITTED && course.status !== CourseStatus.PENDING_APPROVAL) {
+            return course;
+        }
+
+        return this.courseRepository.updateStatus(id, CourseStatus.UNDER_REVIEW);
     }
 
     public async approveCourse(id: string, userCtx: UserContext): Promise<Course> {
@@ -162,25 +218,120 @@ export class CourseService {
             throw new ForbiddenError('Only Admins can approve courses');
         }
 
-        if (course.status !== CourseStatus.PENDING_APPROVAL) {
-            throw new ConflictError('Course is not pending approval');
+        const validApprovalStatuses: CourseStatus[] = [
+            CourseStatus.SUBMITTED,
+            CourseStatus.PENDING_APPROVAL,
+            CourseStatus.UNDER_REVIEW,
+        ];
+        if (!validApprovalStatuses.includes(course.status)) {
+            throw new ConflictError(`Course with status ${course.status} cannot be approved. It must be SUBMITTED or UNDER_REVIEW.`);
         }
 
-        return this.courseRepository.updateStatus(id, CourseStatus.PUBLISHED, new Date());
+        // Completeness validation check
+        const validation = await this.validateCourse(id, userCtx);
+        if (!validation.isValid) {
+            throw new BadRequestError(`Course cannot be approved due to validation errors: ${validation.errors.join('; ')}`);
+        }
+
+        const updated = await this.courseRepository.updateStatus(id, CourseStatus.APPROVED, {
+            approvedAt: new Date(),
+            approvedById: userCtx.userId,
+        });
+
+        // Send Notification to Trainer
+        try {
+            const { NotificationService } = await import('./notification.service');
+            const notifService = new NotificationService();
+            await notifService.createNotification({
+                userId: course.trainerId,
+                title: 'Course Approved',
+                message: `Your course "${course.title}" has been approved by curriculum administration and is now eligible for publication.`,
+                type: 'COURSE' as any,
+                entityType: 'COURSE',
+                entityId: id,
+            });
+        } catch (err) {
+            console.error('Failed to dispatch course approval notification:', err);
+        }
+
+        await this.logAudit({
+            organizationId: course.organizationId,
+            userId: userCtx.userId,
+            action: 'COURSE_APPROVED',
+            entityType: 'COURSE',
+            entityId: id,
+            oldValues: { status: course.status },
+            newValues: { status: CourseStatus.APPROVED },
+        });
+
+        return updated;
     }
 
-    public async rejectCourse(id: string, userCtx: UserContext): Promise<Course> {
+    public async rejectCourse(id: string, reasonOrCtx: string | UserContext, maybeCtx?: UserContext): Promise<Course> {
+        let rejectionReason: string;
+        let userCtx: UserContext;
+
+        if (typeof reasonOrCtx === 'string') {
+            rejectionReason = reasonOrCtx;
+            userCtx = maybeCtx!;
+        } else {
+            userCtx = reasonOrCtx;
+            rejectionReason = 'Course requires revision prior to curriculum approval.';
+        }
+
         const course = await this.getCourseById(id, userCtx);
 
         if (userCtx.role !== Role.ADMIN && userCtx.role !== Role.SUPER_ADMIN) {
             throw new ForbiddenError('Only Admins can reject courses');
         }
 
-        if (course.status !== CourseStatus.PENDING_APPROVAL) {
-            throw new ConflictError('Course is not pending approval');
+        const validRejectionStatuses: CourseStatus[] = [
+            CourseStatus.SUBMITTED,
+            CourseStatus.PENDING_APPROVAL,
+            CourseStatus.UNDER_REVIEW,
+            CourseStatus.APPROVED,
+        ];
+        if (!validRejectionStatuses.includes(course.status)) {
+            throw new ConflictError(`Course with status ${course.status} cannot be rejected.`);
         }
 
-        return this.courseRepository.updateStatus(id, CourseStatus.REJECTED);
+        if (!rejectionReason || rejectionReason.trim().length === 0) {
+            throw new BadRequestError('A rejection reason must be provided explaining what needs revision.');
+        }
+
+        const updated = await this.courseRepository.updateStatus(id, CourseStatus.REJECTED, {
+            rejectionReason: rejectionReason.trim(),
+            rejectedAt: new Date(),
+            rejectedById: userCtx.userId,
+        });
+
+        // Send Notification to Trainer
+        try {
+            const { NotificationService } = await import('./notification.service');
+            const notifService = new NotificationService();
+            await notifService.createNotification({
+                userId: course.trainerId,
+                title: 'Course Revision Required (Rejected)',
+                message: `Your course "${course.title}" was not approved during review. Administrator feedback: "${rejectionReason.trim()}". Please revise and resubmit.`,
+                type: 'COURSE' as any,
+                entityType: 'COURSE',
+                entityId: id,
+            });
+        } catch (err) {
+            console.error('Failed to dispatch course rejection notification:', err);
+        }
+
+        await this.logAudit({
+            organizationId: course.organizationId,
+            userId: userCtx.userId,
+            action: 'COURSE_REJECTED',
+            entityType: 'COURSE',
+            entityId: id,
+            oldValues: { status: course.status },
+            newValues: { status: CourseStatus.REJECTED, rejectionReason: rejectionReason.trim() },
+        });
+
+        return updated;
     }
 
     public async validateCourse(id: string, userCtx: UserContext): Promise<{
@@ -197,32 +348,45 @@ export class CourseService {
             throw new ForbiddenError('You do not have access to this organization course');
         }
 
-        const fullCourse = await (await import('../database/client')).default.course.findUnique({
-            where: { id },
-            include: {
-                modules: {
-                    include: {
-                        lessons: {
-                            include: {
-                                lessonTopics: { include: { topic: true } },
+        let fullCourse: any = null;
+        try {
+            fullCourse = await (await import('../database/client')).default.course.findUnique({
+                where: { id },
+                include: {
+                    modules: {
+                        include: {
+                            lessons: {
+                                include: {
+                                    lessonTopics: { include: { topic: true } },
+                                },
+                            },
+                        },
+                        orderBy: { orderIndex: 'asc' },
+                    },
+                    assessments: {
+                        include: {
+                            questions: {
+                                include: { options: true },
                             },
                         },
                     },
-                    orderBy: { orderIndex: 'asc' },
+                    learningTopics: true,
+                    courseCompetencies: { include: { competency: true } },
                 },
-                assessments: {
-                    include: {
-                        questions: {
-                            include: { options: true },
-                        },
-                    },
-                },
-                learningTopics: true,
-                courseCompetencies: { include: { competency: true } },
-            },
-        });
+            });
+        } catch {
+            // fallback
+        }
+
+        if (!fullCourse) {
+            fullCourse = course;
+        }
 
         if (!fullCourse) throw new NotFoundError('Course not found');
+
+        fullCourse.modules = fullCourse.modules || [];
+        fullCourse.assessments = fullCourse.assessments || [];
+        fullCourse.learningTopics = fullCourse.learningTopics || [];
 
         const errors: string[] = [];
         const warnings: string[] = [];
@@ -239,11 +403,11 @@ export class CourseService {
         if (fullCourse.modules.length === 0) {
             errors.push('Course must have at least one module.');
         } else {
-            fullCourse.modules.forEach((mod, mIdx) => {
+            fullCourse.modules.forEach((mod: any, mIdx: number) => {
                 if (mod.lessons.length === 0) {
                     errors.push(`Module ${mIdx + 1} ("${mod.title}") contains no lessons.`);
                 } else {
-                    mod.lessons.forEach((les, lIdx) => {
+                    mod.lessons.forEach((les: any, lIdx: number) => {
                         const hasContent = les.content && les.content.length > 10;
                         const hasObjectives = Array.isArray(les.learningObjectives) && (les.learningObjectives as any).length > 0;
                         if (!hasContent && !hasObjectives) {
@@ -258,12 +422,12 @@ export class CourseService {
 
         // Assessment Checks
         if (fullCourse.assessments.length > 0) {
-            fullCourse.assessments.forEach((ass) => {
-                ass.questions.forEach((q, qIdx) => {
+            fullCourse.assessments.forEach((ass: any) => {
+                ass.questions.forEach((q: any, qIdx: number) => {
                     if (q.options.length < 2) {
                         errors.push(`Assessment question #${qIdx + 1} must have at least 2 options.`);
                     }
-                    const correctCount = q.options.filter((o) => o.isCorrect).length;
+                    const correctCount = q.options.filter((o: any) => o.isCorrect).length;
                     if (correctCount === 0) {
                         errors.push(`Assessment question #${qIdx + 1} has no correct answer selected.`);
                     }
@@ -299,12 +463,14 @@ export class CourseService {
     public async publishCourse(id: string, userCtx: UserContext): Promise<Course> {
         const course = await this.getCourseById(id, userCtx);
 
-        // Allow Admins, Super Admins, or the Trainer who owns the course
-        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
         const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
+        if (!isAdmin) {
+            throw new ForbiddenError('Only administrators can publish courses. Trainers must submit courses for admin review.');
+        }
 
-        if (!isOwnerTrainer && !isAdmin) {
-            throw new ForbiddenError('You do not have permission to publish this course');
+        // A course must be APPROVED before it can be published
+        if (course.status !== CourseStatus.APPROVED) {
+            throw new ConflictError(`Cannot publish course with status '${course.status}'. A course must be approved by an administrator before it can be published.`);
         }
 
         // Run pre-flight health check
@@ -315,34 +481,80 @@ export class CourseService {
             );
         }
 
-        return this.courseRepository.updateStatus(id, CourseStatus.PUBLISHED, new Date());
+        const updated = await this.courseRepository.updateStatus(id, CourseStatus.PUBLISHED, {
+            publishedAt: new Date(),
+            publishedById: userCtx.userId,
+        });
+
+        // Send Notification to Trainer
+        try {
+            const { NotificationService } = await import('./notification.service');
+            const notifService = new NotificationService();
+            await notifService.createNotification({
+                userId: course.trainerId,
+                title: 'Course Published',
+                message: `Your course "${course.title}" has been published by curriculum administration and is now active in the Trainee Course Catalog.`,
+                type: 'COURSE' as any,
+                entityType: 'COURSE',
+                entityId: id,
+            });
+        } catch (err) {
+            console.error('Failed to dispatch course publication notification:', err);
+        }
+
+        await this.logAudit({
+            organizationId: course.organizationId,
+            userId: userCtx.userId,
+            action: 'COURSE_PUBLISHED',
+            entityType: 'COURSE',
+            entityId: id,
+            oldValues: { status: course.status },
+            newValues: { status: CourseStatus.PUBLISHED },
+        });
+
+        return updated;
     }
 
     public async unpublishCourse(id: string, userCtx: UserContext): Promise<Course> {
         const course = await this.getCourseById(id, userCtx);
 
-        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
         const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
-
-        if (!isOwnerTrainer && !isAdmin) {
-            throw new ForbiddenError('You do not have permission to unpublish this course');
+        if (!isAdmin) {
+            throw new ForbiddenError('Only administrators can unpublish courses.');
         }
 
         if (course.status !== CourseStatus.PUBLISHED) {
             throw new ConflictError('Only published courses can be unpublished');
         }
 
-        return this.courseRepository.updateStatus(id, CourseStatus.DRAFT);
+        const updated = await this.courseRepository.updateStatus(id, CourseStatus.UNPUBLISHED, {
+            unpublishedAt: new Date(),
+            unpublishedById: userCtx.userId,
+        });
+
+        await this.logAudit({
+            organizationId: course.organizationId,
+            userId: userCtx.userId,
+            action: 'COURSE_UNPUBLISHED',
+            entityType: 'COURSE',
+            entityId: id,
+            oldValues: { status: CourseStatus.PUBLISHED },
+            newValues: { status: CourseStatus.UNPUBLISHED },
+        });
+
+        return updated;
     }
 
     public async duplicateCourse(id: string, userCtx: UserContext): Promise<Course> {
         const course = await this.getCourseById(id, userCtx);
 
-        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
-        const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
+        if (userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Admins cannot duplicate or author courses.');
+        }
 
-        if (!isOwnerTrainer && !isAdmin) {
-            throw new ForbiddenError('You do not have permission to duplicate this course');
+        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
+        if (!isOwnerTrainer) {
+            throw new ForbiddenError('Trainers can only duplicate their own courses');
         }
 
         const prismaClient = (await import('../database/client')).default;
@@ -471,11 +683,17 @@ export class CourseService {
     public async saveDraft(id: string, draftData: any, userCtx: UserContext): Promise<any> {
         const course = await this.getCourseById(id, userCtx);
 
-        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
-        const isAdmin = userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN;
+        if (userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Admins cannot edit course drafts. Only the authoring trainer can edit courses.');
+        }
 
-        if (!isOwnerTrainer && !isAdmin) {
-            throw new ForbiddenError('You do not have permission to edit this course draft');
+        const isOwnerTrainer = userCtx.role === Role.TRAINER && course.trainerId === userCtx.userId;
+        if (!isOwnerTrainer) {
+            throw new ForbiddenError('Trainers can only edit their own courses');
+        }
+
+        if (course.status !== CourseStatus.DRAFT && course.status !== CourseStatus.REJECTED) {
+            throw new ConflictError(`Cannot edit course while in ${course.status} state. A course under review or approved cannot be modified.`);
         }
 
         const prismaClient = (await import('../database/client')).default;
@@ -716,6 +934,76 @@ export class CourseService {
         }
 
         return this.courseRepository.archive(id);
+    }
+
+    public async getAdminStats(userCtx: UserContext) {
+        if (userCtx.role !== Role.ADMIN && userCtx.role !== Role.SUPER_ADMIN) {
+            throw new ForbiddenError('Only administrators can access curriculum statistics');
+        }
+        const user = await this.userRepository.findById(userCtx.userId);
+        if (this.courseRepository.getAdminStats) {
+            return this.courseRepository.getAdminStats(user?.organizationId);
+        }
+        return { totalCourses: 0, pendingReview: 0, approved: 0, published: 0, rejected: 0, unpublished: 0, draft: 0 };
+    }
+
+    public async getCourseForReview(id: string, userCtx: UserContext): Promise<any> {
+        if (userCtx.role !== Role.ADMIN && userCtx.role !== Role.SUPER_ADMIN && userCtx.role !== Role.TRAINER) {
+            throw new ForbiddenError('Access denied to course review console');
+        }
+
+        const course = await this.courseRepository.findById(id);
+        if (!course) throw new NotFoundError('Course not found');
+
+        const user = await this.userRepository.findById(userCtx.userId);
+        if (!user || user.organizationId !== course.organizationId) {
+            throw new ForbiddenError('You do not have access to this organization course');
+        }
+
+        if (userCtx.role === Role.TRAINER && course.trainerId !== userCtx.userId) {
+            throw new ForbiddenError('Trainers can only review their own courses');
+        }
+
+        // If Admin is opening a SUBMITTED or PENDING_APPROVAL course, mark as UNDER_REVIEW
+        if ((userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN) &&
+            (course.status === CourseStatus.SUBMITTED || course.status === CourseStatus.PENDING_APPROVAL)) {
+            await this.courseRepository.updateStatus(id, CourseStatus.UNDER_REVIEW);
+            course.status = CourseStatus.UNDER_REVIEW;
+        }
+
+        const validation = await this.validateCourse(id, userCtx);
+
+        return {
+            course,
+            validation,
+        };
+    }
+
+    private async logAudit(data: {
+        organizationId?: string | null;
+        userId?: string | null;
+        action: string;
+        entityType: string;
+        entityId?: string | null;
+        oldValues?: any;
+        newValues?: any;
+    }) {
+        try {
+            const prismaClient = (await import('../database/client')).default;
+            await prismaClient.auditLog.create({
+                data: {
+                    organizationId: data.organizationId,
+                    userId: data.userId,
+                    action: data.action,
+                    entityType: data.entityType,
+                    entityId: data.entityId,
+                    oldValues: data.oldValues,
+                    newValues: data.newValues,
+                },
+            });
+        } catch (err) {
+            console.error('AuditLog creation notice:', err);
+        }
     }
 
     private async validatePrerequisites(prerequisiteIds: string[], organizationId: string, currentCourseId?: string) {

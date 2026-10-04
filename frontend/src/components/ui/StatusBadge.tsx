@@ -65,6 +65,27 @@ const statusConfig: Record<
     dot: 'bg-amber-500',
     border: 'border-amber-200',
   },
+  SUBMITTED: {
+    label: 'Submitted',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    dot: 'bg-amber-500',
+    border: 'border-amber-200',
+  },
+  UNDER_REVIEW: {
+    label: 'Under Review',
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-700',
+    dot: 'bg-indigo-500',
+    border: 'border-indigo-200',
+  },
+  UNPUBLISHED: {
+    label: 'Unpublished',
+    bg: 'bg-zinc-100',
+    text: 'text-zinc-600',
+    dot: 'bg-zinc-400',
+    border: 'border-zinc-200',
+  },
   DRAFT: {
     label: 'Draft',
     bg: 'bg-slate-100',

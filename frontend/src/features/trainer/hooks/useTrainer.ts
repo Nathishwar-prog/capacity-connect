@@ -149,6 +149,18 @@ export const useSubmitCourseForApproval = (courseId: string) => {
   });
 };
 
+export const useSubmitCourse = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => trainerApi.submitCourseForApproval(courseId),
+    onSuccess: (_, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'courses'] });
+      queryClient.invalidateQueries({ queryKey: ['trainer', 'dashboard'] });
+    },
+  });
+};
+
 export const usePublishCourse = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -44,6 +44,7 @@ interface UserDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onChangeRole?: (userId: string, currentRole: string) => void;
+  onApprove?: (userId: string) => void;
 }
 
 export const UserDrawer: React.FC<UserDrawerProps> = ({
@@ -51,6 +52,7 @@ export const UserDrawer: React.FC<UserDrawerProps> = ({
   isOpen,
   onClose,
   onChangeRole,
+  onApprove,
 }) => {
   // Close on Escape
   useEffect(() => {
@@ -248,16 +250,29 @@ export const UserDrawer: React.FC<UserDrawerProps> = ({
 
           {/* Footer Action */}
           <div className="p-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-3">
-            {onChangeRole && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onChangeRole(user.id, user.role)}
-                className="text-xs"
-              >
-                Change Role
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {onApprove && user.status === 'PENDING' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => onApprove(user.id)}
+                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                  Approve Account
+                </Button>
+              )}
+              {onChangeRole && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onChangeRole(user.id, user.role)}
+                  className="text-xs"
+                >
+                  Change Role
+                </Button>
+              )}
+            </div>
             <Link
               href={`/profile?userId=${user.id}`}
               onClick={onClose}

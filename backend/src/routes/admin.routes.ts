@@ -13,11 +13,15 @@ import {
 } from '../validators/admin-user.validation';
 import { asyncHandler } from '../errors/async.handler';
 
+import { AnnouncementController } from '../controllers/announcement.controller';
+import { createAnnouncementSchema } from '../validators/announcement.validation';
+
 const router = Router();
 
 const userRepository = new UserRepository();
 const adminUserService = new AdminUserService(userRepository);
 const adminUserController = new AdminUserController(adminUserService);
+const announcementController = new AnnouncementController();
 
 // All Admin User Management routes require authentication and administrative role
 router.use(authenticate);
@@ -32,6 +36,17 @@ router.get(
   requirePermission(Permissions.USER_READ),
   validate({ query: adminUserQuerySchema }),
   asyncHandler(adminUserController.getUsers),
+);
+
+/**
+ * GET /admin/users/pending
+ * Retrieve pending users awaiting administrative verification and approval
+ */
+router.get(
+  '/users/pending',
+  requirePermission(Permissions.USER_READ),
+  validate({ query: adminUserQuerySchema }),
+  asyncHandler(adminUserController.getPendingUsers),
 );
 
 /**
@@ -96,12 +111,53 @@ router.patch(
 );
 
 /**
+ * POST /admin/announcements
+ * Create and dispatch announcement to targeted audience (ALL, TRAINEES, TRAINERS)
+ */
+router.post(
+  '/announcements',
+  validate({ body: createAnnouncementSchema }),
+  asyncHandler(announcementController.createAnnouncement),
+);
+
+/**
+ * GET /admin/announcements
+ * List historical announcements
+ */
+router.get('/announcements', asyncHandler(announcementController.getAnnouncements));
+
+/**
+ * GET /admin/announcements/:id
+ * Retrieve announcement by ID
+ */
+router.get('/announcements/:id', asyncHandler(announcementController.getAnnouncementById));
+
+/**
  * Administrative Audit Log Sub-Router
  * GET /admin/audit-logs
  * GET /admin/audit-logs/:id
  */
 import { auditRouter } from './audit.routes';
 router.use('/audit-logs', auditRouter);
+
+/**
+ * Capacity Building Sub-Router
+ * /admin/capacity-building/overview
+ * /admin/capacity-building/trainees
+ * /admin/capacity-building/trainers
+ * /admin/capacity-building/resources
+ */
+import { adminCapacityBuildingRouter } from './admin-capacity-building.routes';
+router.use('/capacity-building', adminCapacityBuildingRouter);
+
+/**
+ * Platform Executive Analytics & AI Query Sub-Router
+ * /admin/analytics/dashboard
+ * /admin/analytics/ai/query
+ * /admin/analytics/export
+ */
+import { adminAnalyticsRouter } from './admin-analytics.routes';
+router.use('/analytics', adminAnalyticsRouter);
 
 export default router;
 export { router as adminRouter };

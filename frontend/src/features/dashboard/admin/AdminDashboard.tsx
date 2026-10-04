@@ -600,7 +600,7 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="pt-2 text-right">
               <Link
-                href="/admin/ai-insights"
+                href="/admin/analytics?askAi=true"
                 className="text-xs font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
               >
                 <span>View Detailed Algorithmic Methodology</span>

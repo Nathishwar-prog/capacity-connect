@@ -39,3 +39,11 @@ export const listCoursesQuerySchema = z.object({
     ]).optional(),
     search: z.string().optional(),
 });
+
+export const rejectCourseSchema = z.object({
+    reason: z.string().min(3, 'Rejection reason must be at least 3 characters').optional(),
+    rejectionReason: z.string().min(3, 'Rejection reason must be at least 3 characters').optional(),
+}).refine(data => Boolean(data.reason || data.rejectionReason), {
+    message: 'A rejection reason is required',
+});
+

@@ -121,10 +121,10 @@ function AdvancedCourseBuilderContent() {
   const [validationResult, setValidationResult] = useState<any | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Publish Modal State
-  const [showPublishModal, setShowPublishModal] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  // Submission Modal State
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
   // Topics & Competencies for the course
   const [courseTopics, setCourseTopics] = useState<any[]>([]);
@@ -278,22 +278,22 @@ function AdvancedCourseBuilderContent() {
     setAutosaveStatus('DIRTY');
   };
 
-  // Publish Action
-  const handlePublish = async () => {
-    setIsPublishing(true);
-    setPublishMessage(null);
+  // Submit for Admin Review Action
+  const handleSubmitForReview = async () => {
+    setIsSubmitting(true);
+    setSubmitMessage(null);
 
     try {
-      await trainerApi.publishCourse(courseId);
-      setShowPublishModal(false);
-      setCourseMetadata((prev) => ({ ...prev, status: 'PUBLISHED' }));
+      await trainerApi.submitCourseForApproval(courseId);
+      setShowSubmitModal(false);
+      setCourseMetadata((prev) => ({ ...prev, status: 'SUBMITTED' }));
       refetch();
     } catch (err: any) {
-      setPublishMessage(
-        err?.response?.data?.message || 'Publication failed. Please resolve all blocking errors.'
+      setSubmitMessage(
+        err?.response?.data?.message || 'Submission failed. Please resolve all blocking errors.'
       );
     } finally {
-      setIsPublishing(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -494,6 +494,11 @@ function AdvancedCourseBuilderContent() {
     ),
   }));
 
+  const isDraft = courseMetadata.status === 'DRAFT';
+  const isRejected = courseMetadata.status === 'REJECTED';
+  const isEditable = isDraft || isRejected;
+  const isLocked = !isEditable;
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] overflow-hidden animate-in fade-in duration-300">
       {/* =========================================================================
@@ -519,6 +524,10 @@ function AdvancedCourseBuilderContent() {
                 className={`text-[10px] font-bold ${
                   courseMetadata.status === 'PUBLISHED'
                     ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+                    : isRejected
+                    ? 'border-rose-300 text-rose-700 bg-rose-50'
+                    : isLocked
+                    ? 'border-amber-300 text-amber-700 bg-amber-50'
                     : 'border-slate-300 text-slate-700 bg-slate-100'
                 }`}
               >
@@ -531,26 +540,28 @@ function AdvancedCourseBuilderContent() {
         {/* Autosave and Action Buttons */}
         <div className="flex items-center gap-3">
           {/* Autosave Status Indicator */}
-          <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5 pr-2">
-            {autosaveStatus === 'SAVING' && (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
-                <span>Saving draft...</span>
-              </>
-            )}
-            {autosaveStatus === 'SAVED' && (
-              <>
-                <Check className="w-3 h-3 text-emerald-600" />
-                <span>Saved just now</span>
-              </>
-            )}
-            {autosaveStatus === 'DIRTY' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span>Unsaved changes</span>
-              </>
-            )}
-          </div>
+          {isEditable && (
+            <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5 pr-2">
+              {autosaveStatus === 'SAVING' && (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
+                  <span>Saving draft...</span>
+                </>
+              )}
+              {autosaveStatus === 'SAVED' && (
+                <>
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span>Saved just now</span>
+                </>
+              )}
+              {autosaveStatus === 'DIRTY' && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span>Unsaved changes</span>
+                </>
+              )}
+            </div>
+          )}
 
           <Link href={`/trainer/courses/${courseId}/preview`} target="_blank">
             <Button variant="outline" size="sm" className="text-xs h-8 gap-1 font-semibold">
@@ -559,27 +570,66 @@ function AdvancedCourseBuilderContent() {
             </Button>
           </Link>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveDraft}
-            disabled={autosaveStatus === 'SAVING'}
-            className="text-xs h-8 gap-1.5 font-semibold"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>Save Draft</span>
-          </Button>
+          {isEditable && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveDraft}
+              disabled={autosaveStatus === 'SAVING'}
+              className="text-xs h-8 gap-1.5 font-semibold"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Save Draft</span>
+            </Button>
+          )}
 
-          <Button
-            size="sm"
-            onClick={() => setShowPublishModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5 font-bold shadow-sm"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Publish Course</span>
-          </Button>
+          {isEditable && (
+            <Button
+              size="sm"
+              onClick={() => setShowSubmitModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5 font-bold shadow-sm"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{isRejected ? 'Resubmit for Review' : 'Submit for Review'}</span>
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Governance Status Banner: Locked / Under Review */}
+      {isLocked && (
+        <div className="bg-amber-50/90 border-b border-amber-200 px-5 py-2 flex items-center justify-between text-xs text-amber-900 shrink-0">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Curriculum Governance ({courseMetadata.status}):</strong> Content structure is locked while under administrative review or active publication.
+            </span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+            Read-Only Mode
+          </span>
+        </div>
+      )}
+
+      {/* Rejection Feedback Alert Banner */}
+      {isRejected && (
+        <div className="bg-rose-50 border-b border-rose-200 px-5 py-2.5 flex items-center justify-between text-xs text-rose-900 shrink-0 gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <div className="truncate">
+              <strong>Admin Feedback:</strong> &quot;{rawCourse?.rejectionReason || 'Please address feedback and resubmit.'}&quot;
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setShowSubmitModal(true)}
+            className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-7 shrink-0 gap-1"
+          >
+            <Send className="w-3 h-3" />
+            <span>Resubmit</span>
+          </Button>
+        </div>
+      )}
 
       {/* =========================================================================
           MAIN 3-COLUMN WORKSPACE
@@ -1197,27 +1247,27 @@ function AdvancedCourseBuilderContent() {
       </div>
 
       {/* =========================================================================
-          PUBLISH PRE-FLIGHT CHECKLIST MODAL
+          SUBMIT FOR ADMIN REVIEW PRE-FLIGHT CHECKLIST MODAL
           ========================================================================= */}
-      {showPublishModal && (
+      {showSubmitModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
           <Card className="max-w-md w-full border-slate-200 shadow-xl bg-white overflow-hidden">
             <CardHeader className="bg-slate-50 border-b border-slate-100 pb-3">
               <CardTitle className="text-sm font-black text-slate-900 flex items-center gap-2">
                 <Send className="w-4 h-4 text-indigo-600" />
-                Publish Course to Trainees
+                Submit Course for Admin Review
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
-              {publishMessage && (
+              {submitMessage && (
                 <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{publishMessage}</span>
+                  <span>{submitMessage}</span>
                 </div>
               )}
 
               <p className="text-xs text-slate-600">
-                Publishing will make <strong className="text-slate-900">{courseMetadata.title}</strong> visible in the trainee course catalog and available for enrollment.
+                Submitting <strong className="text-slate-900">{courseMetadata.title}</strong> will place it in the Curriculum Governance Review queue. An administrator will inspect all modules, lessons, and assessments before publication.
               </p>
 
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
@@ -1243,26 +1293,26 @@ function AdvancedCourseBuilderContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={isPublishing}
-                  onClick={() => setShowPublishModal(false)}
+                  disabled={isSubmitting}
+                  onClick={() => setShowSubmitModal(false)}
                   className="text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   size="sm"
-                  disabled={isPublishing}
-                  onClick={handlePublish}
+                  disabled={isSubmitting}
+                  onClick={handleSubmitForReview}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5 shadow-sm"
                 >
-                  {isPublishing ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Publishing...
+                      Submitting...
                     </>
                   ) : (
                     <>
-                      Confirm & Publish
+                      Confirm & Submit for Review
                       <Check className="w-3.5 h-3.5" />
                     </>
                   )}

@@ -64,8 +64,12 @@ enum CourseDifficulty {
 enum CourseStatus {
   DRAFT
   PENDING_APPROVAL
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
   PUBLISHED
   REJECTED
+  UNPUBLISHED
   ARCHIVED
 }
 
@@ -381,6 +385,10 @@ model User {
 
   // Learning & Instruction
   taughtCourses      Course[]            @relation("TrainerCourses")
+  approvedCourses    Course[]            @relation("CourseApprovedBy")
+  rejectedCourses    Course[]            @relation("CourseRejectedBy")
+  publishedCourses   Course[]            @relation("CoursePublishedBy")
+  unpublishedCourses Course[]            @relation("CourseUnpublishedBy")
   enrollments        Enrollment[]
   lessonProgress     LessonProgress[]
   uploadedResources  Resource[]          @relation("ResourceUploader")
@@ -705,7 +713,16 @@ model Course {
   difficulty      CourseDifficulty @default(BEGINNER)
   durationMinutes Int              @default(0)
   status          CourseStatus     @default(DRAFT)
+  rejectionReason String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  approvedById    String?
+  rejectedAt      DateTime?
+  rejectedById    String?
   publishedAt     DateTime?
+  publishedById   String?
+  unpublishedAt   DateTime?
+  unpublishedById String?
   overview        String?
   targetAudience  String?
   learningOutcomes Json?
@@ -720,6 +737,10 @@ model Course {
   // Relations
   organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   trainer            User               @relation("TrainerCourses", fields: [trainerId], references: [id], onDelete: Restrict)
+  approvedBy         User?              @relation("CourseApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedBy         User?              @relation("CourseRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  publishedBy        User?              @relation("CoursePublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  unpublishedBy      User?              @relation("CourseUnpublishedBy", fields: [unpublishedById], references: [id], onDelete: SetNull)
   modules            CourseModule[]
   enrollments        Enrollment[]
   courseResources    CourseResource[]
@@ -1522,6 +1543,7 @@ model Announcement {
   createdBy      String
   title          String
   content        String
+  targetAudience String             @default("ALL")
   type           AnnouncementType   @default(GENERAL)
   status         AnnouncementStatus @default(DRAFT)
   publishedAt    DateTime?

@@ -98,17 +98,17 @@ export class AuthService {
       organizationId = defaultOrg.id;
     }
 
-    if (dto.role && dto.role !== Role.TRAINEE) {
+    if (dto.role && dto.role !== Role.TRAINEE && dto.role !== Role.TRAINER) {
       throw new BadRequestError(
-        'Public self-registration is strictly restricted to Trainee accounts. Trainer and Administrative roles must be provisioned by an administrator.',
+        'Public self-registration is strictly restricted to Trainee and Trainer accounts. Administrative roles must be provisioned by an administrator.',
       );
     }
 
     const passwordHash = await PasswordUtils.hash(dto.password);
-    // Public self-registration is strictly restricted to TRAINEE accounts
-    const assignedRole = Role.TRAINEE;
+    // Assign requested role (TRAINER or TRAINEE, default TRAINEE)
+    const assignedRole = dto.role === Role.TRAINER ? Role.TRAINER : Role.TRAINEE;
 
-    // Create user in APPROVED status so trainee can sign in immediately
+    // Create user in PENDING status requiring administrator verification and approval
     const user = await this.authRepository.createPendingUser({
       email: dto.email,
       passwordHash,
@@ -118,7 +118,7 @@ export class AuthService {
       organizationId,
       departmentId: dto.departmentId,
       role: assignedRole,
-      status: UserStatus.APPROVED,
+      status: UserStatus.PENDING,
       ipAddress,
       userAgent,
     });
@@ -133,11 +133,12 @@ export class AuthService {
       const verificationSubject = 'Welcome to Capacity Connect — Verify Your Email';
       const verificationBody = `
         <h2>Welcome to Capacity Connect, ${user.firstName}!</h2>
-        <p>Your Trainee account for the MoES/IMD Digital Capacity Building Portal is active and ready for login.</p>
+        <p>Your ${assignedRole === Role.TRAINER ? 'Trainer' : 'Trainee'} account for the MoES/IMD Digital Capacity Building Portal is pending administrative approval.</p>
         <p>Please verify your official email address using the following token:</p>
         <div style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 14px; word-break: break-all;">
           ${verificationToken}
         </div>
+        <p>Once verified and approved by an administrator, you will be able to sign in.</p>
       `;
 
       await mailService.sendEmail(user.email, verificationSubject, verificationBody);
@@ -156,8 +157,9 @@ export class AuthService {
 
     const permissions = permissionsMap[user.role] || [];
     return {
-      message: 'Registration successful! You may now sign in with your credentials.',
-      requiresApproval: false,
+      message:
+        'Registration successful! Your account is pending administrative approval. You will be able to sign in once an administrator approves your account.',
+      requiresApproval: true,
       user: this.mapToAuthUser(user, permissions),
     };
   }

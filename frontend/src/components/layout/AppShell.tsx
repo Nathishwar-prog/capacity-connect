@@ -37,12 +37,17 @@ import {
   CheckCircle2,
   AlertTriangle,
   HelpCircle,
+  Megaphone,
+  Clock,
 } from 'lucide-react';
 import useAuthStore from '@/store/auth';
 import { useLogout } from '@/features/auth';
 import { TraineeOnboardingModal } from '@/features/auth';
 import { ROLE_METADATA, CanonicalRole } from '@/constants/roles';
 import { GlobalSearchModal } from '@/components/ui/GlobalSearchModal';
+import { useNotifications } from '@/features/notifications/hooks/useNotifications';
+import { AppNotification } from '@/features/notifications/api/notificationApi';
+import { FloatingAiAssistant } from '@/components/analytics/FloatingAiAssistant';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -68,6 +73,28 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [activeNotification, setActiveNotification] = useState<AppNotification | null>(null);
+  const { notifications, unreadCount, markAsRead, isMarkingAsRead, markAllAsRead } = useNotifications();
+
+  const getRelativeTimeString = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+      if (diffInSeconds < 60) return 'Just now';
+      const diffInMinutes = Math.floor(diffInSeconds / 60);
+      if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      if (diffInHours < 24) return `${diffInHours}h ago`;
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays === 1) return 'Yesterday';
+      if (diffInDays < 7) return `${diffInDays}d ago`;
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
 
   // Restore sidebar collapsed preference
   useEffect(() => {
@@ -128,6 +155,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const isActive = (path: string) => {
     if (path === '/dashboard/admin' && pathname === '/dashboard/admin') return true;
+    if (path === '/admin/capacity-building' && pathname === '/admin/capacity-building') return true;
+    if (path === '/admin/capacity-building' && pathname !== '/admin/capacity-building') return false;
     if (path === '/dashboard/trainer' && (pathname === '/dashboard/trainer' || pathname === '/trainer/dashboard')) return true;
     if (path === '/dashboard/trainee' && (pathname === '/dashboard/trainee' || pathname === '/trainee/dashboard')) return true;
     if (path === '/users' && pathname.startsWith('/users')) return true;
@@ -154,18 +183,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           items: [
             {
               href: '/dashboard/admin',
-              label: 'Governance Dashboard',
+              label: 'Dashboard',
               icon: LayoutDashboard,
+            },
+            {
+              href: '/admin/announcements',
+              label: 'Announcements',
+              icon: Megaphone,
             },
             {
               href: '/users',
               label: 'User Directory',
               icon: Users,
-            },
-            {
-              href: '/admin/roles',
-              label: 'Roles & Permissions',
-              icon: ShieldCheck,
             },
           ],
         },
@@ -193,17 +222,22 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           title: 'Capacity Building',
           items: [
             {
-              href: '/admin/trainers',
-              label: 'Trainers',
-              icon: GraduationCap,
+              href: '/admin/capacity-building',
+              label: 'Program Overview',
+              icon: BarChart3,
             },
             {
-              href: '/admin/trainees',
+              href: '/admin/capacity-building/trainees',
               label: 'Trainees',
               icon: UserCheck,
             },
             {
-              href: '/admin/resources',
+              href: '/admin/capacity-building/trainers',
+              label: 'Trainers',
+              icon: GraduationCap,
+            },
+            {
+              href: '/admin/capacity-building/learning-resources',
               label: 'Learning Resources',
               icon: Library,
             },
@@ -216,11 +250,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               href: '/admin/analytics',
               label: 'Analytics',
               icon: BarChart3,
-            },
-            {
-              href: '/admin/ai-insights',
-              label: 'AI Insights',
-              icon: Sparkles,
             },
           ],
         },
@@ -448,14 +477,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       if (pathname.startsWith('/admin/assessments')) {
         return { root: 'Learning Governance', current: 'Assessments Oversight' };
       }
-      if (pathname.startsWith('/admin/trainers')) {
-        return { root: 'Capacity Building', current: 'Domain Trainers Directory' };
+      if (pathname === '/admin/capacity-building') {
+        return { root: 'Capacity Building', current: 'Program Overview & Health' };
       }
-      if (pathname.startsWith('/admin/trainees')) {
-        return { root: 'Capacity Building', current: 'Capacity Trainees Cohort' };
+      if (pathname.startsWith('/admin/capacity-building/trainees') || pathname.startsWith('/admin/trainees')) {
+        return { root: 'Capacity Building', current: 'Trainees Directory & Progress' };
       }
-      if (pathname.startsWith('/admin/resources')) {
-        return { root: 'Capacity Building', current: 'Learning Resources' };
+      if (pathname.startsWith('/admin/capacity-building/trainers') || pathname.startsWith('/admin/trainers')) {
+        return { root: 'Capacity Building', current: 'Trainers & Faculty Workload' };
+      }
+      if (pathname.startsWith('/admin/capacity-building/learning-resources') || pathname.startsWith('/admin/resources')) {
+        return { root: 'Capacity Building', current: 'Learning Resources & Assets' };
       }
       if (pathname.startsWith('/admin/analytics')) {
         return { root: 'Intelligence', current: 'Analytics Command Center' };
@@ -510,7 +542,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const breadcrumb = getBreadcrumb();
 
   return (
-    <div className="flex h-full min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="h-screen w-full overflow-hidden flex bg-slate-50 text-slate-900 font-sans">
       {/* Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
@@ -519,11 +551,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         />
       )}
 
-      {/* Sidebar Navigation */}
+      {/* Fixed Sidebar Navigation with Independent Internal Scrolling */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 border-r border-slate-200 bg-white flex flex-col shadow-xs transition-all duration-200 lg:static lg:translate-x-0 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${isCollapsed ? 'w-18' : 'w-64'}`}
+        className={`fixed inset-y-0 left-0 z-40 lg:z-30 border-r border-slate-200 bg-white flex flex-col shadow-xs transition-all duration-200 h-screen ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${isCollapsed ? 'w-20' : 'w-64'}`}
       >
         {/* Brand Header */}
         <div className={`h-16 flex items-center justify-between border-b border-slate-100 ${isCollapsed ? 'px-3' : 'px-5'}`}>
@@ -699,10 +731,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Content Top Bar */}
-        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center px-4 sm:px-8 justify-between shrink-0">
+      {/* Main Content Area — Offset for fixed sidebar and takes full viewport height */}
+      <main
+        className={`flex-1 flex flex-col h-screen min-w-0 overflow-hidden transition-all duration-200 ${
+          isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+        }`}
+      >
+        {/* Fixed Top Bar (Pinned to top of main workspace, never scrolls away) */}
+        <header className="h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md flex items-center px-4 sm:px-8 justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
             {/* Mobile menu toggle */}
             <button
@@ -744,75 +780,115 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 aria-label="Open notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="w-2 h-2 rounded-full bg-indigo-600 absolute top-2 right-2 ring-2 ring-white" />
+                {unreadCount > 0 && (
+                  <span className="min-w-4 h-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center absolute -top-0.5 -right-0.5 ring-2 ring-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-88 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 space-y-3 animate-in fade-in duration-150">
-                  <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100">
-                    <span className="text-xs font-extrabold text-slate-900">Notifications</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
-                      3 New
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 text-xs max-h-80 overflow-y-auto">
-                    <div className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors space-y-1 cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                          Approvals
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setNotificationsOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute right-0 mt-2.5 w-[380px] max-w-[calc(100vw-24px)] rounded-2xl bg-white border border-slate-200/90 shadow-2xl shadow-slate-900/10 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900 tracking-tight">
+                          Notifications
                         </span>
-                        <span className="text-[10px] text-slate-400">2m ago</span>
+                        {unreadCount > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100/60 whitespace-nowrap">
+                            {unreadCount} New
+                          </span>
+                        )}
                       </div>
-                      <p className="font-bold text-slate-900 text-[11px]">
-                        Trainer approval requested
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        Dr. E. N. Rajagopal submitted application for NWP domain.
-                      </p>
+                      {unreadCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => markAllAsRead()}
+                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer whitespace-nowrap transition-colors"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors space-y-1 cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
-                          Training
-                        </span>
-                        <span className="text-[10px] text-slate-400">18m ago</span>
-                      </div>
-                      <p className="font-bold text-slate-900 text-[11px]">
-                        Course submitted for approval
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        Operational Weather Forecasting & Synoptic Analysis ready for review.
-                      </p>
+                    {/* Scrollable Notification List */}
+                    <div className="p-3 space-y-2 max-h-[380px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="py-10 px-4 text-center text-slate-400 space-y-2">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                            <Bell className="w-5 h-5 opacity-40" />
+                          </div>
+                          <p className="text-xs font-medium text-slate-600">No notifications yet</p>
+                          <p className="text-[11px] text-slate-400 max-w-[220px] mx-auto">
+                            Announcements and portal updates will appear here when dispatched.
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => {
+                              setActiveNotification(n);
+                              setNotificationsOpen(false);
+                            }}
+                            className={`p-3.5 rounded-xl transition-all space-y-1.5 cursor-pointer border text-left ${
+                              !n.isRead
+                                ? 'bg-indigo-50/40 border-indigo-100/90 hover:bg-indigo-50/70 shadow-2xs'
+                                : 'bg-white border-slate-100/90 hover:bg-slate-50 hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                {!n.isRead && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0" />
+                                )}
+                                <span
+                                  className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                                    n.type === 'ANNOUNCEMENT'
+                                      ? 'bg-purple-100 text-purple-700'
+                                      : n.type === 'COURSE'
+                                        ? 'bg-sky-100 text-sky-700'
+                                        : 'bg-slate-100 text-slate-700'
+                                  }`}
+                                >
+                                  {n.type}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                                {getRelativeTimeString(n.createdAt)}
+                              </span>
+                            </div>
+                            <p className="font-bold text-slate-900 text-xs leading-snug">
+                              {n.title}
+                            </p>
+                            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
+                              {n.message}
+                            </p>
+                          </div>
+                        ))
+                      )}
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors space-y-1 cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                          Competencies
-                        </span>
-                        <span className="text-[10px] text-slate-400">1h ago</span>
-                      </div>
-                      <p className="font-bold text-slate-900 text-[11px]">
-                        Competency model updated
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        Radar Meteorology framework recalibrated with WMO guidelines.
-                      </p>
+                    {/* Footer */}
+                    <div className="p-3 border-t border-slate-100 bg-slate-50/60 text-center">
+                      <Link
+                        href={isAdmin ? '/admin/announcements' : '/dashboard/trainee'}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                      >
+                        <span>{isAdmin ? 'Manage Announcements' : 'View Activity Dashboard'}</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
                   </div>
-
-                  <div className="pt-2 border-t border-slate-100 text-center">
-                    <Link
-                      href="/admin/audit-logs"
-                      onClick={() => setNotificationsOpen(false)}
-                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800"
-                    >
-                      View All Platform Activity →
-                    </Link>
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
@@ -885,8 +961,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           </div>
         </header>
 
-        {/* Scrollable Workspace */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8">{children}</div>
+        {/* Scrollable Workspace — Independently scrolls without moving header or sidebar */}
+        <div id="admin-main-scroll" className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 focus:outline-none">
+          {children}
+        </div>
       </main>
 
       {/* Trainee Onboarding Modal */}
@@ -900,6 +978,102 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
+
+      {/* Notification Details Modal */}
+      {activeNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md ${
+                    activeNotification.type === 'ANNOUNCEMENT'
+                      ? 'bg-purple-100 text-purple-700'
+                      : activeNotification.type === 'COURSE'
+                        ? 'bg-sky-100 text-sky-700'
+                        : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {activeNotification.type}
+                </span>
+                <span className="text-[11px] font-medium text-slate-400">
+                  {getRelativeTimeString(activeNotification.createdAt)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveNotification(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
+                {activeNotification.title}
+              </h2>
+              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span>
+                  {new Date(activeNotification.createdAt).toLocaleString('en-US', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-700 whitespace-pre-line leading-relaxed max-h-72 overflow-y-auto font-medium">
+              {activeNotification.message}
+            </div>
+
+            {/* Footer with Mark as Read (Database Deletion) & Close */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setActiveNotification(null)}
+                disabled={isMarkingAsRead}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await markAsRead(activeNotification.id);
+                    setActiveNotification(null);
+                  } catch {
+                    // handled by query
+                  }
+                }}
+                disabled={isMarkingAsRead}
+                className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              >
+                {isMarkingAsRead ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Marking as read...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Mark as Read</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating AI Assistant for Administrative Users */}
+      {isAdmin && <FloatingAiAssistant />}
     </div>
   );
 };

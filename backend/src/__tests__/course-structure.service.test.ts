@@ -495,12 +495,12 @@ describe('CourseStructureService', () => {
       ).rejects.toThrow(ConflictError);
     });
 
-    it('TC-114: should allow Admin to modify course structure across trainers', async () => {
+    it('TC-114: should forbid Admin from modifying course structure (Admin is reviewer, not author)', async () => {
       mockCourseRepo.findById.mockResolvedValue(makeCourse({ status: CourseStatus.DRAFT }));
-      mockModuleRepo.create.mockResolvedValue(makeModule({ title: 'Admin Module' }));
 
-      const result = await service.createModule('course-1', { title: 'Admin Module' }, adminCtx);
-      expect(result.title).toBe('Admin Module');
+      await expect(
+        service.createModule('course-1', { title: 'Admin Module' }, adminCtx),
+      ).rejects.toThrow(ForbiddenError);
     });
 
     it('TC-115: should allow Trainees to read PUBLISHED course structure', async () => {

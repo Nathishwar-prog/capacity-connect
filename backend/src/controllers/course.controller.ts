@@ -79,10 +79,11 @@ export class CourseController {
 
     public rejectCourse = async (req: Request, res: Response): Promise<Response> => {
         const userCtx = req.user as any;
-        const course = await this.courseService.rejectCourse(req.params.id, userCtx);
+        const reason = req.body?.reason || req.body?.rejectionReason || '';
+        const course = await this.courseService.rejectCourse(req.params.id, reason, userCtx);
         return ResponseHelper.success({
             res,
-            message: 'Course rejected',
+            message: 'Course rejected and returned to trainer for revision',
             data: course,
         });
     };
@@ -92,7 +93,7 @@ export class CourseController {
         const course = await this.courseService.publishCourse(req.params.id, userCtx);
         return ResponseHelper.success({
             res,
-            message: 'Course published',
+            message: 'Course published successfully and made available to trainees',
             data: course,
         });
     };
@@ -102,7 +103,37 @@ export class CourseController {
         const course = await this.courseService.unpublishCourse(req.params.id, userCtx);
         return ResponseHelper.success({
             res,
-            message: 'Course unpublished and reverted to draft status',
+            message: 'Course unpublished from trainee catalog',
+            data: course,
+        });
+    };
+
+    public getAdminStats = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const stats = await this.courseService.getAdminStats(userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Admin course statistics retrieved',
+            data: stats,
+        });
+    };
+
+    public getCourseForReview = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const reviewData = await this.courseService.getCourseForReview(req.params.id, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course review payload retrieved',
+            data: reviewData,
+        });
+    };
+
+    public setUnderReview = async (req: Request, res: Response): Promise<Response> => {
+        const userCtx = req.user as any;
+        const course = await this.courseService.setUnderReview(req.params.id, userCtx);
+        return ResponseHelper.success({
+            res,
+            message: 'Course marked as under review',
             data: course,
         });
     };

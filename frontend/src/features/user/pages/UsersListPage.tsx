@@ -29,7 +29,7 @@ import { Button } from '@/components/ui/Button';
 
 export const UsersListPage: React.FC = () => {
   const { showToast } = useToast();
-  const { updateUserRole, updateUserStatus, deleteUser } = useUser();
+  const { updateUserRole, updateUserStatus, deleteUser, approveUser } = useUser();
 
   // Filters & Pagination State
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,6 +166,23 @@ export const UsersListPage: React.FC = () => {
       refetch();
     } catch (err: any) {
       showToast('Failed to update account status.', 'error');
+    }
+  };
+
+  // Approve Pending User (Administrative Verification & Approval)
+  const handleApproveUser = async (user: User) => {
+    try {
+      await approveUser(user.id);
+      showToast(
+        `User ${user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.email} approved successfully.`,
+        'success',
+      );
+      if (drawerUser?.id === user.id) {
+        setDrawerUser((prev) => (prev ? { ...prev, status: 'APPROVED' } : null));
+      }
+      refetch();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Failed to approve user.', 'error');
     }
   };
 
@@ -478,6 +495,7 @@ export const UsersListPage: React.FC = () => {
         onSelectUser={handleSelectUser}
         onSelectAll={handleSelectAll}
         onViewUser={handleViewUser}
+        onApproveUser={handleApproveUser}
         onChangeRole={handleOpenRoleDialog}
         onToggleStatus={handleToggleStatus}
         onDeleteUser={handleDeleteUser}
@@ -525,6 +543,12 @@ export const UsersListPage: React.FC = () => {
         user={drawerUser}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
+        onApprove={(userId) => {
+          const userObj = usersList.find((u) => u.id === userId);
+          if (userObj) {
+            handleApproveUser(userObj);
+          }
+        }}
         onChangeRole={(userId, currentRole) => {
           const userObj = usersList.find((u) => u.id === userId);
           if (userObj) {

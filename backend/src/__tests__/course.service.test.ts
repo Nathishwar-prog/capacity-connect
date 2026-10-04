@@ -42,6 +42,17 @@ const makeCourse = (overrides: Partial<any> = {}): any => ({
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,
+  modules: [
+    {
+      id: 'mod-1',
+      title: 'Module 1',
+      lessons: [
+        { id: 'les-1', title: 'Lesson 1', content: 'Substantial lesson content here.' }
+      ],
+    }
+  ],
+  assessments: [],
+  learningTopics: [],
   ...overrides,
 });
 
@@ -198,14 +209,15 @@ describe('CourseService', () => {
       mockCourseRepo.findById.mockResolvedValue(makeCourse({ status: CourseStatus.DRAFT }));
       mockUserRepo.findById.mockResolvedValue(makeUser());
       mockCourseRepo.updateStatus.mockResolvedValue(
-        makeCourse({ status: CourseStatus.PENDING_APPROVAL }),
+        makeCourse({ status: CourseStatus.SUBMITTED }),
       );
 
       const result = await service.submitCourse('course-1', trainerCtx);
-      expect(result.status).toBe(CourseStatus.PENDING_APPROVAL);
+      expect(result.status).toBe(CourseStatus.SUBMITTED);
       expect(mockCourseRepo.updateStatus).toHaveBeenCalledWith(
         'course-1',
-        CourseStatus.PENDING_APPROVAL,
+        CourseStatus.SUBMITTED,
+        expect.any(Object),
       );
     });
 
@@ -213,13 +225,14 @@ describe('CourseService', () => {
       mockCourseRepo.findById.mockResolvedValue(makeCourse({ status: CourseStatus.REJECTED }));
       mockUserRepo.findById.mockResolvedValue(makeUser());
       mockCourseRepo.updateStatus.mockResolvedValue(
-        makeCourse({ status: CourseStatus.PENDING_APPROVAL }),
+        makeCourse({ status: CourseStatus.SUBMITTED }),
       );
 
       await service.submitCourse('course-1', trainerCtx);
       expect(mockCourseRepo.updateStatus).toHaveBeenCalledWith(
         'course-1',
-        CourseStatus.PENDING_APPROVAL,
+        CourseStatus.SUBMITTED,
+        expect.any(Object),
       );
     });
 
@@ -242,15 +255,15 @@ describe('CourseService', () => {
       );
       mockUserRepo.findById.mockResolvedValue(makeUser({ role: Role.ADMIN }));
       mockCourseRepo.updateStatus.mockResolvedValue(
-        makeCourse({ status: CourseStatus.PUBLISHED, publishedAt: new Date() }),
+        makeCourse({ status: CourseStatus.APPROVED, approvedAt: new Date() }),
       );
 
       const result = await service.approveCourse('course-1', adminCtx);
-      expect(result.status).toBe(CourseStatus.PUBLISHED);
+      expect(result.status).toBe(CourseStatus.APPROVED);
       expect(mockCourseRepo.updateStatus).toHaveBeenCalledWith(
         'course-1',
-        CourseStatus.PUBLISHED,
-        expect.any(Date),
+        CourseStatus.APPROVED,
+        expect.any(Object),
       );
     });
 
@@ -286,7 +299,7 @@ describe('CourseService', () => {
 
       const result = await service.rejectCourse('course-1', adminCtx);
       expect(result.status).toBe(CourseStatus.REJECTED);
-      expect(mockCourseRepo.updateStatus).toHaveBeenCalledWith('course-1', CourseStatus.REJECTED);
+      expect(mockCourseRepo.updateStatus).toHaveBeenCalledWith('course-1', CourseStatus.REJECTED, expect.any(Object));
     });
 
     it('should throw ForbiddenError if a Trainer tries to reject', async () => {

@@ -67,10 +67,10 @@ const STATIC_SEARCH_ITEMS: SearchItem[] = [
   },
   {
     id: 'act-7',
-    title: 'AI Insights & Skill Gaps',
-    subtitle: 'Workforce bottlenecks and explainable revision signals',
+    title: 'AI Insights & Executive Analyst',
+    subtitle: 'Interactive database query assistant & visual intelligence',
     category: 'Actions',
-    href: '/admin/ai-insights',
+    href: '/admin/analytics?askAi=true',
   },
   // Courses
   {

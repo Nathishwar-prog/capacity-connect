@@ -7,8 +7,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import {
   useTrainerCourses,
   useDeleteCourse,
-  usePublishCourse,
-  useUnpublishCourse,
+  useSubmitCourse,
   useDuplicateCourse,
   trainerApi,
   CourseStatus,
@@ -40,6 +39,9 @@ import {
   Sparkles,
   UploadCloud,
   FileText,
+  Send,
+  Lock,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function TrainerCoursesPage() {
@@ -59,12 +61,11 @@ function TrainerCoursesContent() {
 
   // Action modals state
   const [deleteModalCourse, setDeleteModalCourse] = useState<TrainerCourseListItem | null>(null);
-  const [publishModalCourse, setPublishModalCourse] = useState<TrainerCourseListItem | null>(null);
-  const [unpublishModalCourse, setUnpublishModalCourse] = useState<TrainerCourseListItem | null>(null);
+  const [submitModalCourse, setSubmitModalCourse] = useState<TrainerCourseListItem | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Pre-flight validation state for publish modal
+  // Pre-flight validation state for submit modal
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;
@@ -81,8 +82,7 @@ function TrainerCoursesContent() {
   });
 
   const deleteCourseMutation = useDeleteCourse();
-  const publishCourseMutation = usePublishCourse();
-  const unpublishCourseMutation = useUnpublishCourse();
+  const submitCourseMutation = useSubmitCourse();
   const duplicateCourseMutation = useDuplicateCourse();
 
   const courses = data?.courses || [];
@@ -95,9 +95,9 @@ function TrainerCoursesContent() {
     return true;
   });
 
-  // Open Publish Modal & Run Pre-flight Check
-  const openPublishModal = async (course: TrainerCourseListItem) => {
-    setPublishModalCourse(course);
+  // Open Submit Modal & Run Pre-flight Check
+  const openSubmitModal = async (course: TrainerCourseListItem) => {
+    setSubmitModalCourse(course);
     setIsValidating(true);
     setValidationResult(null);
 
@@ -115,44 +115,22 @@ function TrainerCoursesContent() {
     }
   };
 
-  // Confirm Publish
-  const handleConfirmPublish = async () => {
-    if (!publishModalCourse) return;
+  // Confirm Submit for Admin Review
+  const handleConfirmSubmit = async () => {
+    if (!submitModalCourse) return;
     setIsActionLoading(true);
     try {
-      await publishCourseMutation.mutateAsync(publishModalCourse.id);
+      await submitCourseMutation.mutateAsync(submitModalCourse.id);
       setActionFeedback({
         type: 'success',
-        message: `"${publishModalCourse.title}" has been published and is now available in the trainee course catalog.`,
+        message: `"${submitModalCourse.title}" has been submitted for institutional admin review.`,
       });
-      setPublishModalCourse(null);
+      setSubmitModalCourse(null);
       refetch();
     } catch (err: any) {
       setActionFeedback({
         type: 'error',
-        message: err?.response?.data?.message || 'Failed to publish course.',
-      });
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Confirm Unpublish
-  const handleConfirmUnpublish = async () => {
-    if (!unpublishModalCourse) return;
-    setIsActionLoading(true);
-    try {
-      await unpublishCourseMutation.mutateAsync(unpublishModalCourse.id);
-      setActionFeedback({
-        type: 'success',
-        message: `"${unpublishModalCourse.title}" has been unpublished and reverted to DRAFT status for editing.`,
-      });
-      setUnpublishModalCourse(null);
-      refetch();
-    } catch (err: any) {
-      setActionFeedback({
-        type: 'error',
-        message: err?.response?.data?.message || 'Failed to unpublish course.',
+        message: err?.response?.data?.message || 'Failed to submit course for review.',
       });
     } finally {
       setIsActionLoading(false);
@@ -343,9 +321,15 @@ function TrainerCoursesContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredCourses.map((course) => {
             const isDraft = course.status === 'DRAFT';
-            const isPending = course.status === 'PENDING_APPROVAL';
+            const isPending =
+              course.status === 'PENDING_APPROVAL' ||
+              course.status === 'SUBMITTED' ||
+              course.status === 'UNDER_REVIEW';
+            const isApproved = course.status === 'APPROVED';
             const isPublished = course.status === 'PUBLISHED';
+            const isRejected = course.status === 'REJECTED';
             const isArchived = course.status === 'ARCHIVED';
+            const isEditable = isDraft || isRejected;
 
             return (
               <Card
@@ -363,6 +347,8 @@ function TrainerCoursesContent() {
                           variant={
                             isPublished
                               ? 'success'
+                              : isApproved
+                              ? 'secondary'
                               : isPending
                               ? 'warning'
                               : isDraft
@@ -439,20 +425,56 @@ function TrainerCoursesContent() {
                     <span className="font-mono text-[10px]">ID: {course.id.slice(0, 8)}...</span>
                   </div>
 
+                  {/* Rejection Alert Banner */}
+                  {isRejected && course.rejectionReason && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-[11px] text-rose-800">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>Admin Rejection Feedback</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed whitespace-pre-wrap pl-5 text-rose-700">
+                        {course.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Governance Notice Banners */}
+                  {isPending && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Under Administrative Quality Review. Editing is locked.</span>
+                    </div>
+                  )}
+
+                  {isApproved && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Curriculum Approved by Admin. Awaiting publishing to catalog.</span>
+                    </div>
+                  )}
+
                   {/* State-Aware Action Buttons */}
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {/* Course Builder (Allowed for DRAFT, PENDING_APPROVAL, PUBLISHED) */}
+                      {/* Course Builder */}
                       {!isArchived && (
                         <Link href={`/trainer/courses/${course.id}/builder`}>
-                          <Button size="sm" variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold h-8">
+                          <Button
+                            size="sm"
+                            variant={isEditable ? 'default' : 'outline'}
+                            className={`text-xs font-bold h-8 ${
+                              isEditable
+                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                : 'text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
                             <FileEdit className="w-3.5 h-3.5 mr-1" />
-                            <span>Course Builder</span>
+                            <span>{isEditable ? 'Course Builder' : 'View Syllabus (Locked)'}</span>
                           </Button>
                         </Link>
                       )}
 
-                      {/* Course Preview (Always available for all states) */}
+                      {/* Course Preview */}
                       <Link href={`/trainer/courses/${course.id}/preview`}>
                         <Button size="sm" variant="outline" className="text-xs font-semibold h-8 text-slate-700 border-slate-300 hover:bg-slate-50">
                           <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
@@ -470,29 +492,15 @@ function TrainerCoursesContent() {
                         </Link>
                       )}
 
-                      {/* Publish button (DRAFT only) */}
-                      {isDraft && (
+                      {/* Submit / Resubmit for Review (DRAFT or REJECTED) */}
+                      {isEditable && (
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => openPublishModal(course)}
-                          className="text-xs font-semibold h-8 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                          onClick={() => openSubmitModal(course)}
+                          className="text-xs font-bold h-8 bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
                         >
-                          <Globe className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                          <span>Publish</span>
-                        </Button>
-                      )}
-
-                      {/* Unpublish button (PUBLISHED only) */}
-                      {isPublished && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setUnpublishModalCourse(course)}
-                          className="text-xs font-semibold h-8 text-amber-700 border-amber-300 hover:bg-amber-50"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 mr-1 text-amber-600" />
-                          <span>Unpublish</span>
+                          <Send className="w-3.5 h-3.5 mr-1" />
+                          <span>{isRejected ? 'Resubmit for Review' : 'Submit for Review'}</span>
                         </Button>
                       )}
                     </div>
@@ -528,22 +536,22 @@ function TrainerCoursesContent() {
         </div>
       )}
 
-      {/* ── 1. PRE-FLIGHT PUBLISH MODAL ────────────────────────────────────────── */}
-      {publishModalCourse && (
+      {/* ── 1. PRE-FLIGHT SUBMIT FOR REVIEW MODAL ─────────────────────────────── */}
+      {submitModalCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                  <Globe className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <Send className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Publish Course to Trainees</h3>
-                  <p className="text-xs text-slate-500">Automated pre-flight readiness checklist</p>
+                  <h3 className="text-base font-bold text-slate-900">Submit Course for Admin Review</h3>
+                  <p className="text-xs text-slate-500">Automated pre-submission readiness checklist</p>
                 </div>
               </div>
               <button
-                onClick={() => setPublishModalCourse(null)}
+                onClick={() => setSubmitModalCourse(null)}
                 className="text-slate-400 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
@@ -552,8 +560,8 @@ function TrainerCoursesContent() {
 
             <div>
               <p className="text-xs text-slate-600">
-                You are about to publish <strong className="text-slate-900 font-semibold">{publishModalCourse.title}</strong>.
-                Published courses become visible in the trainee catalog and open for enrollment.
+                You are submitting <strong className="text-slate-900 font-semibold">{submitModalCourse.title}</strong> for institutional accreditation and admin review.
+                Course structural editing will be locked while under review.
               </p>
             </div>
 
@@ -606,7 +614,7 @@ function TrainerCoursesContent() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPublishModalCourse(null)}
+                onClick={() => setSubmitModalCourse(null)}
                 disabled={isActionLoading}
                 className="text-xs font-semibold"
               >
@@ -614,62 +622,21 @@ function TrainerCoursesContent() {
               </Button>
               <Button
                 size="sm"
-                onClick={handleConfirmPublish}
+                onClick={handleConfirmSubmit}
                 disabled={isActionLoading || isValidating || (validationResult !== null && !validationResult.isValid)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-xs"
+                className="bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white shadow-xs"
               >
                 {isActionLoading ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                    <span>Publishing...</span>
+                    <span>Submitting...</span>
                   </>
                 ) : (
                   <>
-                    <Globe className="w-3.5 h-3.5 mr-1.5" />
-                    <span>Confirm & Publish</span>
+                    <Send className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Confirm & Submit for Review</span>
                   </>
                 )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. UNPUBLISH CONFIRMATION MODAL ────────────────────────────────────── */}
-      {unpublishModalCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-                <RotateCcw className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Unpublish Course?</h3>
-                <p className="text-xs text-slate-500">Revert course to draft status</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Unpublishing <strong className="text-slate-900 font-semibold">{unpublishModalCourse.title}</strong> will remove it from the trainee catalog. Trainees currently enrolled will retain access, but no new enrollments will be permitted until republished.
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setUnpublishModalCourse(null)}
-                disabled={isActionLoading}
-                className="text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleConfirmUnpublish}
-                disabled={isActionLoading}
-                className="bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white shadow-xs"
-              >
-                {isActionLoading ? 'Unpublishing...' : 'Confirm Unpublish'}
               </Button>
             </div>
           </div>

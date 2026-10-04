@@ -89,8 +89,10 @@ describe('Trainer Course Management & IDOR Security Isolation', () => {
   });
 
   describe('1. Course Ownership & Multi-Tenant IDOR Guard', () => {
-    it('TC-TCM-000: Trainer role must possess COURSES_PUBLISH and COURSES_DELETE permissions', () => {
-      expect(hasPermission(Role.TRAINER, [], Permissions.COURSES_PUBLISH)).toBe(true);
+    it('TC-TCM-000: Trainer role must possess COURSES_SUBMIT and COURSES_DELETE permissions, but not direct COURSES_PUBLISH', () => {
+      expect(hasPermission(Role.TRAINER, [], Permissions.COURSES_SUBMIT)).toBe(true);
+      expect(hasPermission(Role.TRAINER, [], Permissions.COURSES_PUBLISH)).toBe(false);
+      expect(hasPermission(Role.ADMIN, [], Permissions.COURSES_PUBLISH)).toBe(true);
       expect(hasPermission(Role.TRAINER, [], Permissions.COURSES_DELETE)).toBe(true);
       expect(hasPermission(Role.TRAINER, [], Permissions.COURSES_WRITE)).toBe(true);
       // Trainee role must NOT have publishing or deletion rights

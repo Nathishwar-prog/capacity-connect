@@ -56,12 +56,22 @@ export class UserRepository implements IUserRepository {
   public async findById(id: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { id },
+      include: {
+        department: true,
+        traineeProfile: true,
+        trainerProfile: true,
+      },
     });
   }
 
   public async findByEmail(email: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { email },
+      include: {
+        department: true,
+        traineeProfile: true,
+        trainerProfile: true,
+      },
     });
   }
 
@@ -69,6 +79,11 @@ export class UserRepository implements IUserRepository {
     return prisma.user.findMany({
       skip,
       take,
+      include: {
+        department: true,
+        traineeProfile: true,
+        trainerProfile: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -124,6 +139,11 @@ export class UserRepository implements IUserRepository {
         where,
         skip,
         take,
+        include: {
+          department: true,
+          traineeProfile: true,
+          trainerProfile: true,
+        },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.user.count({ where }),
@@ -189,9 +209,18 @@ export class UserRepository implements IUserRepository {
   }
 
   public async updateUserStatus(id: string, status: UserStatus): Promise<User> {
+    const data: Prisma.UserUpdateInput = { status };
+    if (status === UserStatus.APPROVED) {
+      data.emailVerified = true;
+    }
     return prisma.user.update({
       where: { id },
-      data: { status },
+      data,
+      include: {
+        department: true,
+        traineeProfile: true,
+        trainerProfile: true,
+      },
     });
   }
 

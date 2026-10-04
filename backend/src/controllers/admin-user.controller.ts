@@ -31,6 +31,18 @@ export class AdminUserController {
     });
   };
 
+  public getPendingUsers = async (req: Request, res: Response): Promise<Response> => {
+    const filters = req.query as unknown as AdminUserFilterDto;
+    const result = await this.adminUserService.getPendingUsers(filters);
+
+    return ResponseHelper.success({
+      res,
+      message: 'Pending users retrieved successfully',
+      data: result.users,
+      meta: result.meta as unknown as Record<string, unknown>,
+    });
+  };
+
   public getUserById = async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
     const user = await this.adminUserService.getUserById(id);

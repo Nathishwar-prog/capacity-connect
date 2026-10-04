@@ -39,6 +39,7 @@ import {
   Users,
   Target,
   Info,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface LessonResource {
@@ -324,8 +325,10 @@ function MentorCard({
 }
 
 export default function TraineeCourseDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id as string;
   const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -372,6 +375,14 @@ export default function TraineeCourseDetailPage() {
 
       let courseData: CourseDetail = courseRes.data?.data;
 
+      // Trainee Visibility Guard: Course MUST be published
+      if (!courseData || courseData.status !== 'PUBLISHED') {
+        setCourse(null);
+        setLoadError('This course is not currently published and is unavailable for learner access.');
+        setLoading(false);
+        return;
+      }
+
       // Pipeline Safeguard: If courseData has no modules, fetch structure directly from /courses/:id/structure
       if (!courseData?.modules || courseData.modules.length === 0) {
         try {
@@ -388,6 +399,7 @@ export default function TraineeCourseDetailPage() {
       }
 
       setCourse(courseData);
+      setLoadError(null);
 
       if (courseData?.modules?.length > 0) {
         setExpandedModule(courseData.modules[0].id);
@@ -444,8 +456,13 @@ export default function TraineeCourseDetailPage() {
       } catch {
         // Trainee not yet onboarded or recommendations unavailable
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load course details:', err);
+      setCourse(null);
+      setLoadError(
+        err?.response?.data?.message ||
+          'This course is not published or does not exist in the active catalog.'
+      );
     } finally {
       setLoading(false);
     }
@@ -536,7 +553,30 @@ export default function TraineeCourseDetailPage() {
             </Card>
           )}
 
-          {!loading && course && (
+          {!loading && (!course || loadError) && (
+            <Card className="p-10 text-center space-y-4 max-w-lg mx-auto bg-white border border-slate-200 rounded-3xl shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-base font-black text-slate-900">Course Unavailable</h2>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {loadError ||
+                    'This curriculum is currently not published or undergoing institutional accreditation review. Please check the public catalog for active courses.'}
+                </p>
+              </div>
+              <div className="pt-2">
+                <Link href="/trainee/courses">
+                  <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Return to Course Catalog</span>
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
+
+          {!loading && course && !loadError && (
             <div className="space-y-6">
               {/* Hero Banner */}
               <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-5">

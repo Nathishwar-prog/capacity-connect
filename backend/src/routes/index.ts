@@ -19,6 +19,7 @@ import { revisionSessionRouter } from './revision-session.routes';
 import { learningEventRouter } from './learning-event.routes';
 import { analyticsRouter } from './analytics.routes';
 import roleRouter from './role.routes';
+import { notificationRouter } from './notification.routes';
 
 const router = Router();
 
@@ -187,5 +188,6 @@ router.use('/topics', topicRouter);
 router.use('/skill-gaps', skillGapRouter);
 router.use('/recommendations', recommendationRouter);
 router.use('/analytics', analyticsRouter);
+router.use('/notifications', notificationRouter);
 
 export default router;

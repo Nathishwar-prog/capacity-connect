@@ -98,7 +98,8 @@ export default function TraineeCoursesCatalogPage() {
       c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.category?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
+    const isPublished = c.status === 'PUBLISHED';
+    return isPublished && matchesCat && matchesSearch;
   });
 
   return (

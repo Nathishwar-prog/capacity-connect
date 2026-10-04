@@ -15,6 +15,7 @@ import {
     createCourseSchema,
     updateCourseSchema,
     listCoursesQuerySchema,
+    rejectCourseSchema,
 } from '../validators/course.validation';
 import {
     createModuleSchema,
@@ -83,6 +84,13 @@ router.get(
     requirePermission(Permissions.COURSES_READ),
     validate({ query: listCoursesQuerySchema }),
     asyncHandler(courseController.listCourses),
+);
+
+// Admin Course Governance Metrics
+router.get(
+    '/stats/admin',
+    requirePermission(Permissions.COURSES_APPROVE),
+    asyncHandler(courseController.getAdminStats),
 );
 
 // Get Course by ID
@@ -177,6 +185,20 @@ router.post(
     asyncHandler(courseController.submitCourse),
 );
 
+// Review Course (Read-only Deep Inspection)
+router.get(
+    '/:id/review',
+    requirePermission(Permissions.COURSES_READ),
+    asyncHandler(courseController.getCourseForReview),
+);
+
+// Mark Course Under Review
+router.post(
+    '/:id/review',
+    requirePermission(Permissions.COURSES_APPROVE),
+    asyncHandler(courseController.setUnderReview),
+);
+
 // Approve Course
 router.post(
     '/:id/approve',
@@ -188,6 +210,7 @@ router.post(
 router.post(
     '/:id/reject',
     requirePermission(Permissions.COURSES_REJECT),
+    validate({ body: rejectCourseSchema }),
     asyncHandler(courseController.rejectCourse),
 );
 

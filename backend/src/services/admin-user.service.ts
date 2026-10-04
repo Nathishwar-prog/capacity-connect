@@ -65,11 +65,27 @@ export class AdminUserService {
   }
 
   /**
+   * Retrieves paginated list of pending users requiring administrative approval
+   */
+  public async getPendingUsers(filters: AdminUserFilterDto): Promise<PaginatedUsersResponseDto> {
+    return this.getUsers({
+      ...filters,
+      status: UserStatus.PENDING,
+    });
+  }
+
+  /**
    * Approves a pending user registration and logs the USER_APPROVED audit event
+   * Safe and idempotent: if user is already approved, returns existing approved record safely
    */
   public async approveUser(id: string, context: AdminActionContext): Promise<User> {
     const user = await this.getUserById(id);
     const oldStatus = user.status;
+
+    // Idempotent guard: if already approved, return early without error
+    if (oldStatus === UserStatus.APPROVED) {
+      return user;
+    }
 
     const updatedUser = await this.userRepository.updateUserStatus(id, UserStatus.APPROVED);
 

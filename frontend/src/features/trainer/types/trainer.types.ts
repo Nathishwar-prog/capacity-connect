@@ -1,5 +1,14 @@
 export type CourseDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
-export type CourseStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'REJECTED' | 'ARCHIVED';
+export type CourseStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'PUBLISHED'
+  | 'REJECTED'
+  | 'UNPUBLISHED'
+  | 'ARCHIVED';
 export type LessonContentType = 'VIDEO' | 'PDF' | 'ARTICLE' | 'QUIZ' | 'LINK' | 'DOCUMENT';
 
 export interface TrainerSkillExpertise {
@@ -232,6 +241,10 @@ export interface TrainerCourseDetail {
   durationMinutes: number;
   status: CourseStatus;
   publishedAt: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
   modules: CourseModuleItem[];
   courseCompetencies: CourseCompetencyItem[];
   prerequisites: Array<{
@@ -262,6 +275,10 @@ export interface TrainerCourseListItem {
   durationMinutes: number;
   status: CourseStatus;
   publishedAt: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
   moduleCount: number;
   lessonCount: number;
   enrolledCount: number;

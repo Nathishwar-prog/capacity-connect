@@ -56,30 +56,36 @@ export class CourseStructureService {
             throw new ForbiddenError('You do not have access to this organization course');
         }
 
-        // Trainee rules
-        if (userCtx.role === Role.TRAINEE) {
-            if (requireWrite) {
+        // Write restriction rules
+        if (requireWrite) {
+            if (userCtx.role === Role.ADMIN || userCtx.role === Role.SUPER_ADMIN) {
+                throw new ForbiddenError('Admins cannot create or modify course structure. Admin responsibility is review and publishing.');
+            }
+            if (userCtx.role === Role.TRAINEE) {
                 throw new ForbiddenError('Trainees cannot modify course structure');
             }
-            if (course.status !== CourseStatus.PUBLISHED) {
-                throw new ForbiddenError('You do not have access to unpublished courses');
+            if (userCtx.role === Role.TRAINER) {
+                if (course.trainerId !== userCtx.userId) {
+                    throw new ForbiddenError('Trainers can only modify their own courses');
+                }
+
+                const restrictedStatuses: CourseStatus[] = [
+                    CourseStatus.SUBMITTED,
+                    CourseStatus.PENDING_APPROVAL,
+                    CourseStatus.UNDER_REVIEW,
+                    CourseStatus.APPROVED,
+                    CourseStatus.PUBLISHED,
+                    CourseStatus.ARCHIVED,
+                ];
+                if (restrictedStatuses.includes(course.status)) {
+                    throw new ConflictError(`Cannot modify course structure while course is in ${course.status} state`);
+                }
             }
         }
 
-        // Trainer write rules
-        if (requireWrite && userCtx.role === Role.TRAINER) {
-            if (course.trainerId !== userCtx.userId) {
-                throw new ForbiddenError('Trainers can only modify their own courses');
-            }
-
-            const restrictedStatuses: CourseStatus[] = [
-                CourseStatus.PENDING_APPROVAL,
-                CourseStatus.PUBLISHED,
-                CourseStatus.ARCHIVED,
-            ];
-            if (restrictedStatuses.includes(course.status)) {
-                throw new ConflictError(`Cannot modify course structure while course is in ${course.status} state`);
-            }
+        // Trainee read rules
+        if (userCtx.role === Role.TRAINEE && course.status !== CourseStatus.PUBLISHED) {
+            throw new ForbiddenError('You do not have access to unpublished courses');
         }
 
         return course;
@@ -434,30 +440,32 @@ export class CourseStructureService {
         const completedSet = new Set(completedLessons.map((p) => p.lessonId));
 
         // Query published assessments mapped to this course (Section 11, 12, 13)
-        const assessments = await this.prisma.assessment.findMany({
-            where: {
-                courseId: course.id,
-                status: AssessmentStatus.PUBLISHED,
-            },
-            select: {
-                id: true,
-                title: true,
-                description: true,
-                subject: true,
-                durationMinutes: true,
-                passingScore: true,
-                moduleId: true,
-                lessonId: true,
-                _count: {
-                    select: { questions: true },
+        const assessments = this.prisma.assessment?.findMany
+            ? await this.prisma.assessment.findMany({
+                where: {
+                    courseId: course.id,
+                    status: AssessmentStatus.PUBLISHED,
                 },
-            },
-            orderBy: { createdAt: 'asc' },
-        });
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    subject: true,
+                    durationMinutes: true,
+                    passingScore: true,
+                    moduleId: true,
+                    lessonId: true,
+                    _count: {
+                        select: { questions: true },
+                    },
+                },
+                orderBy: { createdAt: 'asc' },
+            })
+            : [];
 
         // Query trainee's submitted attempts on these assessments
         const assessmentIds = assessments.map((a) => a.id);
-        const traineeAttempts = assessmentIds.length > 0
+        const traineeAttempts = (assessmentIds.length > 0 && this.prisma.assessmentAttempt?.findMany)
             ? await this.prisma.assessmentAttempt.findMany({
                 where: {
                     userId: userCtx.userId,

@@ -8,7 +8,8 @@ export interface ICourseRepository {
     findAll(params: CourseListParamsDto): Promise<{ courses: Course[]; total: number }>;
     create(data: Omit<CreateCourseDto, 'prerequisites'>): Promise<Course>;
     update(id: string, data: Omit<UpdateCourseDto, 'prerequisites'>): Promise<Course>;
-    updateStatus(id: string, status: CourseStatus, publishedAt?: Date | null): Promise<Course>;
+    updateStatus(id: string, status: CourseStatus, metadata?: any): Promise<Course>;
+    getAdminStats?(organizationId?: string): Promise<any>;
     archive(id: string): Promise<Course>;
     updatePrerequisites(courseId: string, prerequisiteIds: string[]): Promise<void>;
     getPrerequisites(courseId: string): Promise<Course[]>;
@@ -34,6 +35,38 @@ export class CourseRepository implements ICourseRepository {
                         trainerProfile: true,
                     }
                 },
+                approvedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    }
+                },
+                rejectedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    }
+                },
+                publishedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    }
+                },
+                unpublishedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    }
+                },
                 organization: {
                     select: {
                         id: true,
@@ -44,6 +77,15 @@ export class CourseRepository implements ICourseRepository {
                     include: {
                         competency: true,
                     }
+                },
+                assessments: {
+                    include: {
+                        questions: {
+                            include: {
+                                options: true,
+                            },
+                        },
+                    },
                 },
                 modules: {
                     orderBy: { orderIndex: 'asc' },
@@ -148,6 +190,17 @@ export class CourseRepository implements ICourseRepository {
                 include: {
                     trainer: { select: { id: true, firstName: true, lastName: true, email: true } },
                     organization: { select: { id: true, name: true } },
+                    approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    rejectedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    publishedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    unpublishedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    _count: {
+                        select: {
+                            enrollments: true,
+                            modules: true,
+                            assessments: true,
+                        },
+                    },
                     courseCompetencies: {
                         include: {
                             competency: true,
@@ -213,16 +266,77 @@ export class CourseRepository implements ICourseRepository {
         });
     }
 
-    public async updateStatus(id: string, status: CourseStatus, publishedAt?: Date | null): Promise<Course> {
+    public async updateStatus(
+        id: string,
+        status: CourseStatus,
+        metadata?: {
+            publishedAt?: Date | null;
+            publishedById?: string | null;
+            approvedAt?: Date | null;
+            approvedById?: string | null;
+            rejectedAt?: Date | null;
+            rejectedById?: string | null;
+            rejectionReason?: string | null;
+            submittedAt?: Date | null;
+            unpublishedAt?: Date | null;
+            unpublishedById?: string | null;
+        } | Date | null
+    ): Promise<Course> {
         const updateData: any = { status };
-        if (publishedAt !== undefined) {
-            updateData.publishedAt = publishedAt;
+        if (metadata instanceof Date || metadata === null) {
+            updateData.publishedAt = metadata;
+        } else if (metadata) {
+            Object.assign(updateData, metadata);
         }
 
         return prisma.course.update({
             where: { id },
             data: updateData,
+            include: {
+                trainer: true,
+                approvedBy: true,
+                rejectedBy: true,
+                publishedBy: true,
+            },
         });
+    }
+
+    public async getAdminStats(organizationId?: string): Promise<{
+        totalCourses: number;
+        pendingReview: number;
+        approved: number;
+        published: number;
+        rejected: number;
+        unpublished: number;
+        draft: number;
+    }> {
+        const baseWhere: any = { deletedAt: null };
+        if (organizationId) baseWhere.organizationId = organizationId;
+
+        const [totalCourses, pendingReview, approved, published, rejected, unpublished, draft] = await Promise.all([
+            prisma.course.count({ where: baseWhere }),
+            prisma.course.count({
+                where: {
+                    ...baseWhere,
+                    status: { in: [CourseStatus.SUBMITTED, CourseStatus.PENDING_APPROVAL, CourseStatus.UNDER_REVIEW] }
+                }
+            }),
+            prisma.course.count({ where: { ...baseWhere, status: CourseStatus.APPROVED } }),
+            prisma.course.count({ where: { ...baseWhere, status: CourseStatus.PUBLISHED } }),
+            prisma.course.count({ where: { ...baseWhere, status: CourseStatus.REJECTED } }),
+            prisma.course.count({ where: { ...baseWhere, status: CourseStatus.UNPUBLISHED } }),
+            prisma.course.count({ where: { ...baseWhere, status: CourseStatus.DRAFT } }),
+        ]);
+
+        return {
+            totalCourses,
+            pendingReview,
+            approved,
+            published,
+            rejected,
+            unpublished,
+            draft,
+        };
     }
 
     public async archive(id: string): Promise<Course> {

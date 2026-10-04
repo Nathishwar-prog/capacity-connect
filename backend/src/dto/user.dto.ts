@@ -30,6 +30,7 @@ export interface UserResponseDto {
   id: string;
   organizationId: string;
   departmentId: string | null;
+  department?: { id: string; name: string; code?: string } | null;
   email: string;
   firstName: string;
   lastName: string | null;
@@ -42,6 +43,20 @@ export interface UserResponseDto {
   createdAt: string;
   updatedAt: string;
   permissions?: string[];
+  traineeProfile?: {
+    id: string;
+    designation?: string | null;
+    bio?: string | null;
+    interests?: string[];
+    profileCompletion?: number;
+  } | null;
+  trainerProfile?: {
+    id: string;
+    designation?: string | null;
+    organizationName?: string | null;
+    bio?: string | null;
+    yearsExperience?: number;
+  } | null;
 }
 
 import { permissionsMap } from '../permissions';
@@ -50,12 +65,19 @@ export class UserDtoMapper {
   /**
    * Sanitizes database/domain user objects by stripping password and formatting fields
    */
-  public static toResponse(user: IUser, permissions?: string[]): UserResponseDto {
-    const perms = permissions || permissionsMap[user.role] || [];
+  public static toResponse(user: any, permissions?: string[]): UserResponseDto {
+    const perms = permissions || permissionsMap[user.role as Role] || [];
     return {
       id: user.id,
       organizationId: user.organizationId,
       departmentId: user.departmentId || null,
+      department: user.department
+        ? {
+            id: user.department.id,
+            name: user.department.name,
+            code: user.department.code,
+          }
+        : null,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName || null,
@@ -65,9 +87,11 @@ export class UserDtoMapper {
       status: user.status,
       emailVerified: user.emailVerified,
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+      updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
       permissions: perms,
+      traineeProfile: user.traineeProfile || null,
+      trainerProfile: user.trainerProfile || null,
     };
   }
 
