@@ -3,12 +3,17 @@ import { AdminAnalyticsService, AnalyticsFilterOptions } from '../services/admin
 import { ResponseHelper } from '../errors/response.helper';
 import { StatusCodes } from 'http-status-codes';
 
+import { SettingsRepository } from '../repositories/settings.repository';
+
 export class AdminAnalyticsController {
   private analyticsService: AdminAnalyticsService;
+  private settingsRepo: SettingsRepository;
 
   constructor(analyticsService?: AdminAnalyticsService) {
     this.analyticsService = analyticsService || new AdminAnalyticsService();
+    this.settingsRepo = new SettingsRepository();
   }
+
 
   /**
    * GET /api/v1/admin/analytics/dashboard
@@ -37,6 +42,14 @@ export class AdminAnalyticsController {
    * Process natural language analytical query and return text answer + dynamic visual chart
    */
   public queryAi = async (req: Request, res: Response): Promise<Response> => {
+    const settings = await this.settingsRepo.getSettings();
+    if (!settings.enableAiFeatures || !settings.enableAiAnalyticsAssistant) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'AI Analytics Assistant is currently disabled in System Settings.',
+      });
+    }
+
     const { prompt, context } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
@@ -47,6 +60,7 @@ export class AdminAnalyticsController {
     }
 
     const aiResult = await this.analyticsService.processNaturalLanguageQuery(prompt, context);
+
 
     return ResponseHelper.success({
       res,

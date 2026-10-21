@@ -3,7 +3,9 @@ import prisma from '../database/client';
 import { CreateAnnouncementDto } from '../validators/announcement.validation';
 import { NotFoundError } from '../errors/app-error';
 import { AuditService } from './audit.service';
+import { SettingsRepository } from '../repositories/settings.repository';
 import logger from '../logger/winston.logger';
+
 import appEventEmitter from '../events';
 
 export interface AdminActionContext {
@@ -81,24 +83,31 @@ export class AnnouncementService {
       },
     });
 
-    // 2. Resolve audience roles (only APPROVED members receive announcements)
+    // 2. Resolve audience roles based on announcement audience and System Notification Settings
+    const settingsRepo = new SettingsRepository();
+    const settings = await settingsRepo.getSettings();
+
     let roleFilter: Role[] = [];
-    if (dto.audience === 'ALL') {
-      roleFilter = [Role.TRAINEE, Role.TRAINER];
-    } else if (dto.audience === 'TRAINEES') {
-      roleFilter = [Role.TRAINEE];
-    } else if (dto.audience === 'TRAINERS') {
-      roleFilter = [Role.TRAINER];
+    if (settings.enableAnnouncementNotifications && settings.enableInAppNotifications) {
+      if (dto.audience === 'ALL') {
+        if (settings.notifyTraineesOnAnnouncement) roleFilter.push(Role.TRAINEE);
+        if (settings.notifyTrainersOnAnnouncement) roleFilter.push(Role.TRAINER);
+      } else if (dto.audience === 'TRAINEES') {
+        if (settings.notifyTraineesOnAnnouncement) roleFilter.push(Role.TRAINEE);
+      } else if (dto.audience === 'TRAINERS') {
+        if (settings.notifyTrainersOnAnnouncement) roleFilter.push(Role.TRAINER);
+      }
     }
 
-    const recipients = await prisma.user.findMany({
+    const recipients = roleFilter.length > 0 ? await prisma.user.findMany({
       where: {
         organizationId,
         status: UserStatus.APPROVED,
         role: { in: roleFilter },
       },
       select: { id: true },
-    });
+    }) : [];
+
 
     // 3. Batch insert notifications with duplicate protection and full content persistence
     let recipientCount = 0;

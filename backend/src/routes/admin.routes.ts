@@ -159,5 +159,13 @@ router.use('/capacity-building', adminCapacityBuildingRouter);
 import { adminAnalyticsRouter } from './admin-analytics.routes';
 router.use('/analytics', adminAnalyticsRouter);
 
+/**
+ * Platform Governance & Portal Settings Sub-Router
+ * /admin/settings
+ */
+import { settingsRouter } from './settings.routes';
+router.use('/settings', settingsRouter);
+
 export default router;
 export { router as adminRouter };
+

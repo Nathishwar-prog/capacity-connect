@@ -39,6 +39,11 @@ import {
   HelpCircle,
   Megaphone,
   Clock,
+  Building2,
+  Globe,
+  Cpu,
+  Server,
+  Shield,
 } from 'lucide-react';
 import useAuthStore from '@/store/auth';
 import { useLogout } from '@/features/auth';
@@ -48,6 +53,10 @@ import { GlobalSearchModal } from '@/components/ui/GlobalSearchModal';
 import { useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { AppNotification } from '@/features/notifications/api/notificationApi';
 import { FloatingAiAssistant } from '@/components/analytics/FloatingAiAssistant';
+import { settingsApi } from '@/features/settings/api/settingsApi';
+import { PublicPortalSettings } from '@/features/settings/types/settings.types';
+import { MaintenanceView } from './MaintenanceView';
+
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -74,7 +83,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [activeNotification, setActiveNotification] = useState<AppNotification | null>(null);
+  const [portalSettings, setPortalSettings] = useState<PublicPortalSettings | null>(null);
   const { notifications, unreadCount, markAsRead, isMarkingAsRead, markAllAsRead } = useNotifications();
+
+  useEffect(() => {
+    settingsApi.getPublicSettings().then(setPortalSettings).catch(() => {});
+  }, []);
+
 
   const getRelativeTimeString = (dateStr: string) => {
     try {
@@ -254,15 +269,55 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           ],
         },
         {
-          title: 'System',
+          title: 'Settings',
           items: [
             {
               href: '/admin/settings',
-              label: 'Settings',
+              label: 'Overview',
               icon: Settings,
             },
             {
-              href: '/admin/audit-logs',
+              href: '/admin/settings/portal',
+              label: 'Portal Settings',
+              icon: Building2,
+            },
+            {
+              href: '/admin/settings/learning',
+              label: 'Learning Settings',
+              icon: BookOpen,
+            },
+            {
+              href: '/admin/settings/notifications',
+              label: 'Notification Settings',
+              icon: Bell,
+            },
+            {
+              href: '/admin/settings/ai',
+              label: 'AI & Analytics',
+              icon: Brain,
+            },
+            {
+              href: '/admin/settings/security',
+              label: 'Security',
+              icon: Shield,
+            },
+            {
+              href: '/admin/settings/localization',
+              label: 'Localization',
+              icon: Globe,
+            },
+            {
+              href: '/admin/settings/integrations',
+              label: 'Integrations',
+              icon: Cpu,
+            },
+            {
+              href: '/admin/settings/system',
+              label: 'System & Maintenance',
+              icon: Server,
+            },
+            {
+              href: '/admin/settings/audit-logs',
               label: 'Audit Logs',
               icon: Activity,
             },
@@ -270,6 +325,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         },
       ];
     }
+
 
     if (userRole === 'TRAINER') {
       return [
@@ -541,6 +597,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const breadcrumb = getBreadcrumb();
 
+  if (portalSettings?.portalStatus === 'MAINTENANCE' && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+    return <MaintenanceView settings={portalSettings} />;
+  }
+
   return (
     <div className="h-screen w-full overflow-hidden flex bg-slate-50 text-slate-900 font-sans">
       {/* Mobile Drawer Backdrop */}
@@ -566,7 +626,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {!isCollapsed && (
               <div className="flex flex-col truncate">
                 <span className="font-extrabold tracking-tight text-slate-900 text-sm leading-tight truncate">
-                  Capacity Connect
+                  {portalSettings?.portalName || 'Capacity Connect'}
                 </span>
                 <span className="text-[10px] font-bold text-indigo-700 tracking-wide uppercase truncate">
                   MoES / IMD Portal
@@ -574,6 +634,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               </div>
             )}
           </div>
+
 
           <button
             onClick={() => setIsMobileOpen(false)}
@@ -737,8 +798,21 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
+        {portalSettings?.portalStatus === 'MAINTENANCE' && (
+          <div className="bg-amber-600 text-white px-4 py-1.5 text-xs font-bold flex items-center justify-between shadow-xs shrink-0 z-30">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-200 shrink-0" />
+              <span>Maintenance Mode Active: Normal user access is currently restricted.</span>
+            </div>
+            <Link href="/admin/settings/portal" className="underline text-amber-100 hover:text-white text-[11px] font-semibold">
+              Manage Portal Status →
+            </Link>
+          </div>
+        )}
+
         {/* Fixed Top Bar (Pinned to top of main workspace, never scrolls away) */}
         <header className="h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md flex items-center px-4 sm:px-8 justify-between shrink-0 z-20">
+
           <div className="flex items-center gap-3">
             {/* Mobile menu toggle */}
             <button

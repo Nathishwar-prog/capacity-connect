@@ -2067,3 +2067,135 @@ model SkillGapAnalysisItem {
   @@map("skill_gap_analysis_items")
 }
 
+// ==============================================================================
+// 14. SYSTEM & PORTAL SETTINGS
+// ==============================================================================
+
+model SystemSettings {
+  id                                    String    @id @default("default")
+
+  // Portal Information & Branding
+  portalName                            String    @default("Capacity Connect")
+  portalDescription                     String    @default("Digital Capacity Building and Learning Management Portal")
+  organizationName                      String    @default("Capacity Connect Consortium")
+  supportEmail                          String    @default("support@capacityconnect.io")
+  supportPhone                          String    @default("+91 11 2461 8200")
+  supportWebsite                        String    @default("https://capacityconnect.io")
+  logoUrl                               String    @default("/images/logo.png")
+  faviconUrl                            String    @default("/favicon.ico")
+  loginLogoUrl                          String    @default("/images/logo.png")
+  emailLogoUrl                          String    @default("/images/logo.png")
+  primaryColor                          String    @default("#4f46e5")
+  defaultTheme                          String    @default("light") // light, dark, system
+
+  // Portal Status & Maintenance
+  portalStatus                          String    @default("ACTIVE") // ACTIVE, MAINTENANCE
+  maintenanceTitle                      String    @default("Capacity Connect is temporarily unavailable")
+  maintenanceMessage                    String    @default("We are performing scheduled maintenance. Please try again later.")
+  estimatedMaintenanceEnd               DateTime?
+  technicalContact                      String    @default("tech@capacityconnect.io")
+  organizationAddress                   String    @default("Mausam Bhawan, Lodhi Road, New Delhi, India")
+  helpCenterUrl                         String    @default("https://capacityconnect.io/help")
+  privacyPolicyUrl                      String    @default("https://capacityconnect.io/privacy")
+  termsOfServiceUrl                     String    @default("https://capacityconnect.io/terms")
+
+  // Learning Policies
+  allowTrainerCourseCreation            Boolean   @default(true)
+  requireCourseApproval                 Boolean   @default(true)
+  requireCoursePublishing               Boolean   @default(true)
+  allowCourseUnpublishing               Boolean   @default(true)
+  completionPercentage                  Int       @default(80)
+  assessmentPassingScore                Int       @default(60)
+  certificateEligibility                Int       @default(75)
+  allowSelfEnrollment                   Boolean   @default(true)
+  allowTrainerEnrollment                Boolean   @default(true)
+  requireApprovalForEnrollment          Boolean   @default(false)
+  maxActiveCoursesPerTrainee            Int       @default(5)
+  allowReenrollment                     Boolean   @default(true)
+  requireTrainerApproval                Boolean   @default(true)
+  requireTrainerProfileCompletion       Boolean   @default(true)
+  allowedResourceTypes                  String[]  @default(["VIDEO", "PDF", "DOCUMENT", "PRESENTATION", "LINK", "IMAGE"])
+  maxFileSizeMb                         Int       @default(50)
+  requireResourceReview                 Boolean   @default(false)
+  allowExternalUrls                     Boolean   @default(true)
+  assessmentDefaultPassingScore         Int       @default(60)
+  assessmentMaxAttempts                 Int       @default(3)
+  assessmentAllowRetakes                Boolean   @default(true)
+  assessmentRandomizeQuestions          Boolean   @default(true)
+  assessmentShowCorrectAnswers          Boolean   @default(true)
+  assessmentShowExplanation             Boolean   @default(true)
+  assessmentTimeLimitMinutes            Int       @default(60)
+
+  // Revision Engine Settings
+  revisionMasteryThreshold              Float     @default(85.0)
+  revisionCooldownHours                 Int       @default(24)
+  revisionMaxTopicsPerSession           Int       @default(6)
+  revisionDiagnosticConfidenceThreshold Float     @default(0.40)
+  topicWeaknessWeight                   Float     @default(0.35)
+  topicForgettingWeight                 Float     @default(0.18)
+  topicImportanceWeight                 Float     @default(0.12)
+  topicDependencyWeight                 Float     @default(0.12)
+  topicErrorWeight                      Float     @default(0.10)
+  topicUncertaintyWeight                Float     @default(0.08)
+  topicRecencyWeight                    Float     @default(0.05)
+
+  // Notification Policies
+  enableInAppNotifications              Boolean   @default(true)
+  enableEmailNotifications              Boolean   @default(false)
+  enableAnnouncementNotifications       Boolean   @default(true)
+  notifyTraineesOnAnnouncement          Boolean   @default(true)
+  notifyTrainersOnAnnouncement          Boolean   @default(true)
+  notifyCourseApproved                  Boolean   @default(true)
+  notifyCourseRejected                  Boolean   @default(true)
+  notifyCoursePublished                 Boolean   @default(true)
+  notifyCourseUnpublished               Boolean   @default(true)
+  notifyCourseEnrollment                Boolean   @default(true)
+  notifyAssessmentResult                Boolean   @default(true)
+  notifyCourseCompletion                Boolean   @default(true)
+  notifyRevisionReminder                Boolean   @default(true)
+
+  // AI & Analytics Settings
+  enableAiFeatures                      Boolean   @default(true)
+  enableAiSkillGapAnalyzer              Boolean   @default(true)
+  enableAiCourseRecommendations         Boolean   @default(true)
+  enableAiRevisionAssistant             Boolean   @default(true)
+  enableAiAnalyticsAssistant            Boolean   @default(true)
+  enableAiChatbot                       Boolean   @default(true)
+  aiProvider                            String    @default("Google Gemini")
+  aiModel                               String    @default("gemini-1.5-pro")
+  aiTemperature                         Float     @default(0.7)
+  aiMaxTokens                           Int       @default(2048)
+  aiAnalyticsMaxQueryComplexity         String    @default("STANDARD")
+  aiAnalyticsDateRangeLimitDays         Int       @default(365)
+  aiAnalyticsEnableChartGen             Boolean   @default(true)
+  aiAllowAggregatedAnalytics            Boolean   @default(true)
+  aiAllowCoursePerformance              Boolean   @default(true)
+  aiAllowTrainerPerformance             Boolean   @default(true)
+  aiAllowCompetencyAnalytics            Boolean   @default(true)
+  aiApiKeyMasked                        String?   @default("••••••••••••••••")
+
+  // Security Policies
+  sessionTimeoutMinutes                 Int       @default(30)
+  jwtAccessExpirationMinutes            Int       @default(15)
+  jwtRefreshExpirationDays              Int       @default(7)
+  requireStrongPassword                 Boolean   @default(true)
+  passwordMinLength                     Int       @default(8)
+  maxLoginAttempts                      Int       @default(5)
+  lockoutDurationMinutes                Int       @default(15)
+  publicRegistrationPolicy              String    @default("APPROVAL_REQUIRED")
+
+  // Localization
+  defaultLanguage                       String    @default("en")
+  availableLanguages                    String[]  @default(["en", "hi", "ta"])
+  defaultTimezone                       String    @default("Asia/Kolkata")
+  dateFormat                            String    @default("DD/MM/YYYY")
+  timeFormat                            String    @default("12h")
+  currency                              String    @default("INR")
+
+  createdAt                             DateTime  @default(now())
+  updatedAt                             DateTime  @updatedAt
+
+  @@map("system_settings")
+}
+
+

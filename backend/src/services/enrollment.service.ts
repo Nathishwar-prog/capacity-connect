@@ -10,6 +10,8 @@ import {
     ConflictError,
 } from '../errors/app-error';
 
+import { SettingsRepository } from '../repositories/settings.repository';
+
 export interface UserContext {
     userId: string;
     role: Role;
@@ -18,14 +20,26 @@ export interface UserContext {
 }
 
 export class EnrollmentService {
+    private settingsRepo: SettingsRepository;
+
     constructor(
         private enrollmentRepo: IEnrollmentRepository,
         private lessonProgressRepo: ILessonProgressRepository,
         private courseRepo: ICourseRepository,
-        private userRepo: IUserRepository
-    ) { }
+        private userRepo: IUserRepository,
+        settingsRepo?: SettingsRepository
+    ) {
+        this.settingsRepo = settingsRepo || new SettingsRepository();
+    }
 
     async enrollInCourse(userId: string, courseId: string, userCtx: UserContext) {
+        const settings = await this.settingsRepo.getSettings();
+
+        // 0. Enforce Self-Enrollment policy
+        if (!settings.allowSelfEnrollment && userCtx.role === Role.TRAINEE) {
+            throw new ForbiddenError('Self-enrollment is currently disabled by administrator policy.');
+        }
+
         // 1. Verify User exists and is approved
         const user = await this.userRepo.findById(userId);
         if (!user) {
@@ -35,6 +49,19 @@ export class EnrollmentService {
         // Enforce that userCtx caller is requesting for self, or is ADMIN/SUPER_ADMIN
         if (userCtx.userId !== userId && userCtx.role !== Role.ADMIN && userCtx.role !== Role.SUPER_ADMIN) {
             throw new ForbiddenError('Cannot enroll on behalf of another user');
+        }
+
+        // Check active enrollment limits
+        const userEnrollments = await this.enrollmentRepo.findByUser(userId, undefined, 0, 100);
+        const list = Array.isArray(userEnrollments) ? userEnrollments : (userEnrollments?.enrollments || []);
+        const activeCount = list.filter(
+            (e: any) => e.status === EnrollmentStatus.ENROLLED || e.status === EnrollmentStatus.IN_PROGRESS
+        ).length;
+
+        if (activeCount >= settings.maxActiveCoursesPerTrainee) {
+            throw new BadRequestError(
+                `Maximum active course enrollment limit reached (${settings.maxActiveCoursesPerTrainee} courses). Complete or drop an existing course to enroll in new ones.`
+            );
         }
 
         // 2. Verify Course exists
@@ -57,6 +84,9 @@ export class EnrollmentService {
         const existing = await this.enrollmentRepo.findByUserAndCourse(userId, courseId);
         if (existing) {
             if (existing.status === EnrollmentStatus.DROPPED) {
+                if (!settings.allowReenrollment) {
+                    throw new BadRequestError('Course re-enrollment is currently disabled by administrator policy.');
+                }
                 // Re-enroll dropped course
                 return this.enrollmentRepo.updateStatus(existing.id, EnrollmentStatus.ENROLLED);
             }
@@ -66,6 +96,7 @@ export class EnrollmentService {
         // 6. Create Enrollment
         return this.enrollmentRepo.create(userId, courseId);
     }
+
 
     async getMyEnrollments(userId: string, status?: EnrollmentStatus, skip = 0, take = 20, userCtx?: UserContext) {
         if (userCtx && userCtx.userId !== userId && userCtx.role !== Role.ADMIN && userCtx.role !== Role.SUPER_ADMIN) {
@@ -144,13 +175,18 @@ export class EnrollmentService {
         let status: EnrollmentStatus = enrollment.status;
         let completedAt: Date | null | undefined = undefined;
 
-        if (totalLessonsCount > 0 && completedCount === totalLessonsCount) {
+        const settings = await this.settingsRepo.getSettings();
+        const threshold = settings.completionPercentage || 80;
+        const isCompleted = (totalLessonsCount > 0 && completedCount === totalLessonsCount) || (progressPercentage >= threshold && progressPercentage > 0);
+
+        if (isCompleted) {
             status = EnrollmentStatus.COMPLETED;
             completedAt = new Date();
         } else if (completedCount > 0 || progressPercentage > 0) {
             status = EnrollmentStatus.IN_PROGRESS;
             completedAt = null;
         }
+
 
         const updatedEnrollment = await this.enrollmentRepo.updateProgress(
             enrollmentId,

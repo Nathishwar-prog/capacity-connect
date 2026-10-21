@@ -16,6 +16,8 @@ import {
   AuthRepository,
   UserWithRelations,
 } from '../repositories/auth.repository';
+import { SettingsRepository } from '../repositories/settings.repository';
+
 
 export class AuthService {
   private authRepository: IAuthRepository;
@@ -108,7 +110,11 @@ export class AuthService {
     // Assign requested role (TRAINER or TRAINEE, default TRAINEE)
     const assignedRole = dto.role === Role.TRAINER ? Role.TRAINER : Role.TRAINEE;
 
-    // Create user in PENDING status requiring administrator verification and approval
+    const settingsRepo = new SettingsRepository();
+    const settings = await settingsRepo.getSettings();
+    const initialStatus = settings.publicRegistrationPolicy === 'AUTO_ACTIVE' ? UserStatus.APPROVED : UserStatus.PENDING;
+
+    // Create user in initial status based on platform governance registration policy
     const user = await this.authRepository.createPendingUser({
       email: dto.email,
       passwordHash,
@@ -118,10 +124,11 @@ export class AuthService {
       organizationId,
       departmentId: dto.departmentId,
       role: assignedRole,
-      status: UserStatus.PENDING,
+      status: initialStatus,
       ipAddress,
       userAgent,
     });
+
 
     // Generate Email Verification Token & Dispatch Verification Email
     try {

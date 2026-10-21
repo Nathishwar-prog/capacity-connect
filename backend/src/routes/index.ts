@@ -20,8 +20,10 @@ import { learningEventRouter } from './learning-event.routes';
 import { analyticsRouter } from './analytics.routes';
 import roleRouter from './role.routes';
 import { notificationRouter } from './notification.routes';
+import { settingsRouter } from './settings.routes';
 
 const router = Router();
+
 
 // API index catalog
 router.get('/', (_req, res) => {
@@ -189,5 +191,7 @@ router.use('/skill-gaps', skillGapRouter);
 router.use('/recommendations', recommendationRouter);
 router.use('/analytics', analyticsRouter);
 router.use('/notifications', notificationRouter);
+router.use('/settings', settingsRouter);
 
 export default router;
+
